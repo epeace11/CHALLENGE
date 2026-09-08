@@ -14,9 +14,8 @@ import type { Challenge, Entry, Point, Profile, Rule, WeeklyAssessment } from "@
 /**
  * All scheduled work, written to be idempotent and "catch-up" safe:
  * every step asks "has this already been applied?" rather than "is it
- * exactly noon right now?". So it can run hourly from Vercel Cron, daily on
- * the Hobby plan, and opportunistically on dashboard loads — the result is
- * the same.
+ * exactly noon right now?". So it can run hourly from the Cloudflare cron
+ * trigger and opportunistically on dashboard loads — the result is the same.
  *
  *  1. Noon lock: for every day whose deadline has passed and isn't locked
  *     yet, apply the unlogged policy and record the lock.

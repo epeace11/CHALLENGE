@@ -42,3 +42,8 @@ next-env.d.ts
 
 # keep the template
 !.env.example
+
+# cloudflare
+/.open-next/
+/.wrangler/
+.dev.vars*

@@ -5,8 +5,8 @@ import { env } from "@/lib/env";
 export const dynamic = "force-dynamic";
 
 /**
- * Vercel Cron target. Vercel sends `Authorization: Bearer $CRON_SECRET`
- * automatically when CRON_SECRET is set in the project's environment.
+ * Cron target. The Cloudflare `scheduled` handler in worker.ts calls this
+ * with `Authorization: Bearer $CRON_SECRET`; it can also be hit manually.
  */
 export async function GET(request: NextRequest) {
   const auth = request.headers.get("authorization") ?? "";

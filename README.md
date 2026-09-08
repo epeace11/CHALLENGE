@@ -6,7 +6,7 @@ of escalating dollar penalties. The rule set lives in the database, so a new
 month is a new challenge row plus its rules — no code changes.
 
 Stack: Next.js (App Router, TypeScript), Tailwind, Supabase (Postgres, Auth,
-Storage), deployed on Vercel.
+Storage), deployed on Cloudflare Workers via OpenNext.
 
 ## How it works
 
@@ -67,11 +67,44 @@ npm install
 npm run dev
 ```
 
-### 4. Deploy to Vercel
+`npm run dev` is plain Next.js and needs only `.env.local`. To run the real
+Cloudflare bundle locally, see the preview note below.
 
-Import the repo, add the four environment variables, deploy. `vercel.json`
-registers an hourly cron that calls `/api/cron/tick`; Vercel sends
-`Authorization: Bearer $CRON_SECRET` automatically.
+### 4. Deploy to Cloudflare Workers
+
+The app runs on Cloudflare Workers through the OpenNext adapter. `wrangler.jsonc`
+declares the worker, its static assets, and an hourly cron trigger; `worker.ts`
+wraps the generated worker and adds the `scheduled` handler that runs the jobs.
+
+**Connect the repo (Workers & Pages → Create → Import a repository):**
+
+| field | value |
+|---|---|
+| Build command | `npx opennextjs-cloudflare build` |
+| Deploy command | `npx opennextjs-cloudflare deploy` |
+| Production branch | the branch you want live |
+
+**Variables.** In the Worker's Settings → Variables and Secrets, add all four
+as secrets:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CRON_SECRET`
+
+The two `NEXT_PUBLIC_*` values are also baked into the browser bundle at build
+time, so add those same two under Settings → Build → Build variables as well.
+
+**From the command line instead:**
+
+```bash
+npx wrangler login
+npx wrangler secret put NEXT_PUBLIC_SUPABASE_URL      # repeat for the other three
+npm run deploy
+```
+
+Local preview of the production bundle: put the four values in `.dev.vars`
+(git-ignored) and run `npm run preview`.
 
 ## Scheduled jobs
 
@@ -89,11 +122,11 @@ safe to run at any frequency:
 
 It runs from three places:
 
-- Vercel Cron, hourly (`vercel.json`). On the Hobby plan crons are limited to
-  once a day; change the schedule to `5 16 * * *` (12:05 Toronto during
-  daylight time) if needed.
-- Every dashboard load, throttled to once per five minutes per server instance.
-  This is the safety net if the cron is delayed.
+- The Cloudflare cron trigger, hourly (`triggers.crons` in `wrangler.jsonc`).
+  The `scheduled` handler in `worker.ts` calls `/api/cron/tick` with the
+  `CRON_SECRET` bearer token.
+- Every dashboard load, throttled to once per five minutes per worker
+  instance. This is the safety net if the cron is delayed.
 - Manually: `curl -H "Authorization: Bearer $CRON_SECRET" https://your-app/api/cron/tick`
   returns a JSON report of what it did.
 
