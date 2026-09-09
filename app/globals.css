@@ -12,3 +12,18 @@ button{display:inline-flex;align-items:center;justify-content:center;gap:9px;fon
 .history-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}.history-cols .col-name{font:26px Georgia,serif;margin:0 0 4px 4px}.history-tabs{display:none!important}
 @media(max-width:720px){.history-cols{grid-template-columns:1fr}.history-cols .col:not(.active){display:none}.history-cols .col-name{display:none}.history-tabs{display:inline-flex!important}}
 .money-block{margin-top:22px}.money-block .text-link{margin-top:6px}
+
+[data-slot=dialog-overlay]{background:#2a2f4a33!important;backdrop-filter:blur(6px)!important}
+[data-slot=dialog-content]{display:flex!important;flex-direction:column;gap:14px;width:min(92vw,480px)!important;max-width:none!important;max-height:86vh;overflow:auto;padding:28px 26px 24px!important;border-radius:22px!important;border:1px solid #ffffff;background:linear-gradient(135deg,#fffffff5,#f6f5fcf2)!important;box-shadow:0 24px 70px #23285c2e,0 2px 6px #23285c14!important;--tw-ring-shadow:0 0 #0000!important;--tw-ring-offset-shadow:0 0 #0000!important;font-size:15px;color:#252234}
+[data-slot=dialog-content] .eyebrow{margin:0}
+[data-slot=dialog-title]{font:30px/1.15 Georgia,serif;margin:0;padding-right:36px;letter-spacing:-.3px}
+[data-slot=dialog-description]{margin:0;color:#63708a;font-size:14px}
+[data-slot=dialog-close]{position:absolute;top:14px;right:14px;width:34px;height:34px;padding:0;border-radius:50%;border:1px solid #e4e7f0;background:#ffffffcc!important;color:#63708a}
+[data-slot=dialog-close]:hover{background:#f1effa!important;color:#252234}
+[data-slot=dialog-content] textarea{width:100%;min-height:110px;resize:vertical;border:1px solid #dfe3ee;border-radius:14px;padding:12px 14px;font-size:15px;background:#fff}
+.detail-status{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.detail-note{margin:0;font:19px/1.4 Georgia,serif;color:#33384a}
+.detail-meta{margin:0;padding:12px 14px;border-radius:12px;background:#f2f1f8;font-size:13px;color:#4c5568;white-space:pre-wrap}.detail-meta b{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#7863a7;margin-bottom:3px}
+[data-slot=dialog-content] .proof{margin:2px 0}
+.dialog-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:16px;border-top:1px solid #e6e9f1}.dialog-actions button{flex:1 1 auto;padding:13px 16px;border-radius:12px}
+[data-slot=dialog-content] textarea:focus{outline:none;border-color:#a691de;box-shadow:0 0 0 4px #ece8f8}
