@@ -46,3 +46,4 @@ input,textarea,select{font-size:16px!important}
 @keyframes fadepulse{0%,100%{opacity:.55}50%{opacity:1}}
 @media(prefers-reduced-motion:reduce){.orbit,.orbit::after,.loading-text{animation:none}}
 .missed-total{margin:10px 0 0;font-size:13px;color:#63708a}
+.history-group .history-row:last-child,.day-summary .history-row:last-of-type{padding-bottom:4px}
