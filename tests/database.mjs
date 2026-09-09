@@ -47,5 +47,21 @@ assert.equal((await db.query(`select count(*)::int n from challenge_points where
 await db.exec(`set role authenticated`);
 await assert.rejects(()=>db.exec(`update challenge_entries set done=true`),/permission denied/);
 await db.exec(`reset role`);
-console.log('PASS: late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.');
+// Forgiveness: partner can forgive directly and undo it; owner cannot; re-asking after a denial works.
+await actor(erin);await db.exec(`select challenge_log('food',(now() at time zone 'America/Toronto')::date,false)`);
+const foodPt=(await db.query(`select p.id from challenge_points p join challenge_entries e on e.id=p.entry_id where e.user_id='${erin}' and e.rule_id='food' and not p.voided and not p.forgiven`)).rows[0];
+await assert.rejects(()=>db.exec(`select challenge_partner_forgive('${foodPt.id}',true)`),/partner/);
+await actor(kazzy);await db.exec(`select challenge_partner_forgive('${foodPt.id}',true)`);
+assert.equal((await db.query(`select forgiven from challenge_points where id='${foodPt.id}'`)).rows[0].forgiven,true);
+assert.equal((await db.query(`select status from challenge_entries where id=(select entry_id from challenge_points where id='${foodPt.id}')`)).rows[0].status,'excused');
+await db.exec(`select challenge_partner_forgive('${foodPt.id}',false)`);
+assert.equal((await db.query(`select forgiven from challenge_points where id='${foodPt.id}'`)).rows[0].forgiven,false);
+assert.equal((await db.query(`select status from challenge_entries where id=(select entry_id from challenge_points where id='${foodPt.id}')`)).rows[0].status,'missed');
+await actor(erin);await db.exec(`select challenge_forgive('${foodPt.id}','first ask')`);
+const ask=(await db.query(`select id from challenge_requests where point_id='${foodPt.id}'`)).rows[0];
+await actor(kazzy);await db.exec(`select challenge_decide('${ask.id}',false)`);
+await actor(erin);await db.exec(`select challenge_forgive('${foodPt.id}','second ask')`);
+const again=(await db.query(`select status,reason from challenge_requests where point_id='${foodPt.id}'`)).rows;
+assert.equal(again.length,1);assert.equal(again[0].status,'pending');assert.equal(again[0].reason,'second ask');
+console.log('PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.');
 await db.close();
