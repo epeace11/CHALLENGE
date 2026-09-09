@@ -28,3 +28,8 @@ button{display:inline-flex;align-items:center;justify-content:center;gap:9px;fon
 .dialog-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:16px;border-top:1px solid #e6e9f1}.dialog-actions button{flex:1 1 auto;padding:13px 16px;border-radius:12px}
 [data-slot=dialog-content] textarea:focus{outline:none;border-color:#a691de;box-shadow:0 0 0 4px #ece8f8}
 .login .forgot{display:block;width:100%;text-align:center;margin-top:14px;font-size:14px;color:#7863a7}.login .muted b{color:#252234}
+/* App-like feel on phones: no pinch/double-tap zoom, no rubber-band overscroll, no tap flash, no text-select on controls. */
+html{overscroll-behavior:none;-webkit-text-size-adjust:100%}
+body{touch-action:manipulation;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+button,.mobile-nav,.desktop-nav,.cal .cell,.history-row,.choice{-webkit-user-select:none;user-select:none}
+input,textarea,select{font-size:16px!important}
