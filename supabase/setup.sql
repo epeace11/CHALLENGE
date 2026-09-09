@@ -23,7 +23,7 @@ create table public.challenge_audit(id bigint generated always as identity prima
 create function public.challenge_member() returns boolean language sql stable security definer set search_path=public as $$ select exists(select 1 from challenge_profiles where id=auth.uid()) $$;
 create function public.challenge_assert() returns void language plpgsql security definer set search_path=public as $$ begin if not challenge_member() then raise exception 'This challenge is only for Erin and Kazzy.'; end if; perform pg_advisory_xact_lock(8092026); if (select finalized from challenge_config where id=1) then raise exception 'This challenge is finalized.'; end if; end $$;
 create function public.challenge_rescore() returns void language plpgsql security definer set search_path=public as $$ declare w record;p record;n integer;i integer;begin
- for w in select * from challenge_weeks where ((end_date+1)+time '12:00') at time zone 'America/Toronto'<=now() loop
+ for w in select * from challenge_weeks where ((end_date+1)+time '14:00') at time zone 'America/Toronto'<=now() loop
  for p in select * from challenge_profiles loop
  select greatest(0,w.target-count(*)::integer) into n from challenge_entries where user_id=p.id and rule_id='gym' and day between w.start_date and w.end_date and done and status not in ('conceded','missed','unlogged');
  for i in 1..w.target loop
@@ -33,7 +33,7 @@ create function public.challenge_tick() returns void language plpgsql security d
  perform pg_advisory_xact_lock(8092026);
  if (select finalized from challenge_config where id=1) then return; end if;
  insert into challenge_entries(user_id,rule_id,day,done,status)
- select p.id,r.id,d::date,false,'unlogged' from challenge_config c cross join challenge_profiles p cross join challenge_rules r cross join lateral generate_series(c.start_date::timestamp,least(c.end_date,((now() at time zone 'America/Toronto')-interval '12 hours')::date-1)::timestamp,interval '1 day') d
+ select p.id,r.id,d::date,false,'unlogged' from challenge_config c cross join challenge_profiles p cross join challenge_rules r cross join lateral generate_series(c.start_date::timestamp,least(c.end_date,((now() at time zone 'America/Toronto')-interval '14 hours')::date-1)::timestamp,interval '1 day') d
  where not r.weekly and (r.person is null or r.person=p.name) and (not r.weeknights or extract(dow from d)<=4) on conflict do nothing;
  insert into challenge_points(user_id,rule_id,day,reason,entry_id) select user_id,rule_id,day,'unlogged',id from challenge_entries where status='unlogged' and rule_id<>'gym' on conflict do nothing;
  update challenge_entries set status='confirmed' where status='pending' and proposed_done is null and updated_at<=now()-interval '48 hours';
@@ -46,7 +46,7 @@ create function public.challenge_log(p_rule text,p_day date,p_done boolean,p_not
  if p_proof is not null and not exists(select 1 from storage.objects where bucket_id='challenge-proof' and name=p_proof and (storage.foldername(name))[1]=auth.uid()::text) then raise exception 'Invalid proof attachment.'; end if;
  select * into e from challenge_entries where user_id=auth.uid() and rule_id=p_rule and day=p_day;
  if e.status='disputed' then raise exception 'Resolve the dispute before editing.'; end if;
- late:=now()>((p_day+1)+time '12:00') at time zone 'America/Toronto';
+ late:=now()>((p_day+1)+time '14:00') at time zone 'America/Toronto';
  if late and e.id is null then
  insert into challenge_entries(user_id,rule_id,day,done,status) values(auth.uid(),p_rule,p_day,false,'unlogged') returning * into e;
  end if;
@@ -90,7 +90,7 @@ create function public.challenge_decide(p_request uuid,p_approve boolean) return
  if p_approve then update challenge_points set forgiven=true where id=r.point_id returning * into p;update challenge_entries set status='excused' where id=p.entry_id;end if;delete from challenge_finalizations where true;end $$;
 create function public.challenge_finalize() returns void language plpgsql security definer set search_path=public as $$ begin
  perform challenge_assert();perform challenge_tick();
- if now()<((select end_date+1 from challenge_config)+time '12:00') at time zone 'America/Toronto' then raise exception 'Finalize after October 1 at noon.';end if;
+ if now()<((select end_date+1 from challenge_config)+time '14:00') at time zone 'America/Toronto' then raise exception 'Finalize after October 1 at 2 pm.';end if;
  if exists(select 1 from challenge_entries where status in ('pending','disputed') or proposed_done is not null) or exists(select 1 from challenge_requests where status='pending') then raise exception 'Resolve all reviews, corrections and forgiveness requests first.';end if;
  insert into challenge_finalizations(user_id) values(auth.uid()) on conflict do nothing;
  if (select count(*) from challenge_finalizations)=2 then update challenge_config set finalized=true where id=1;end if;end $$;
