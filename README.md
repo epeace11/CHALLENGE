@@ -33,3 +33,9 @@ As agreed, new challenges are set up through Codex rather than an in-app admin e
 ## Agent navigation
 
 A feature-detected WebMCP `open_challenge_page` tool provides navigation only. It cannot bypass Supabase auth or save habits. Unsupported browsers ignore it.
+
+## Direct Cloudflare Workers deployment
+
+Connect the GitHub `main` branch (the separate Claude branch uses a different framework). In Cloudflare Workers Builds, use repository root `/`, leave the build command empty, and set the deploy command to `npm run deploy`. This command always runs the Vinext build before deploying `dist/server/wrangler.json`. Use Node 22.13 or later. The generated Worker is named `sites-project`; to use a different Worker name, append `-- --name YOUR-WORKER-NAME` to `npm run deploy`.
+
+For local packaging verification without publishing: `npm run deploy -- --dry-run`.
