@@ -30,6 +30,18 @@ button{display:inline-flex;align-items:center;justify-content:center;gap:9px;fon
 .login .forgot{display:block;width:100%;text-align:center;margin-top:14px;font-size:14px;color:#7863a7}.login .muted b{color:#252234}
 /* App-like feel on phones: no pinch/double-tap zoom, no rubber-band overscroll, no tap flash, no text-select on controls. */
 html{overscroll-behavior:none;-webkit-text-size-adjust:100%}
-body{touch-action:manipulation;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+html,body{touch-action:manipulation}body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 button,.mobile-nav,.desktop-nav,.cal .cell,.history-row,.choice{-webkit-user-select:none;user-select:none}
 input,textarea,select{font-size:16px!important}
+
+.loading{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:40px 20px;text-align:center}
+.loading.inline{min-height:50vh}
+.loading .brand{margin:0 0 6px;font-size:20px;letter-spacing:.5px}
+.orbit{position:relative;width:72px;height:72px;border-radius:50%;border:3px solid #e9e4f6;animation:spin 1.2s linear infinite}
+.orbit i{position:absolute;top:-9px;left:50%;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:linear-gradient(135deg,#ff8fb8,#e94f8a);box-shadow:0 4px 12px #e94f8a55}
+.orbit::after{content:'';position:absolute;inset:16px;border-radius:50%;background:radial-gradient(circle,#fbe0ec 0,#fbe0ec00 70%);animation:breathe 1.2s ease-in-out infinite}
+.loading-text{margin:0;font-size:14px;color:#7a8497;animation:fadepulse 1.6s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{0%,100%{transform:scale(.8);opacity:.6}50%{transform:scale(1.1);opacity:1}}
+@keyframes fadepulse{0%,100%{opacity:.55}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.orbit,.orbit::after,.loading-text{animation:none}}
