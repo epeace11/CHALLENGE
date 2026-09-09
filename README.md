@@ -10,7 +10,7 @@ Run `npm install`, then `npm run dev`. Run `npm run build` for the Sites/Cloudfl
 
 ## Database
 
-`supabase/setup.sql` initializes an empty project once. It only enrolls the two existing Auth accounts, matching their names/email; it refuses other account counts. Never rerun the setup against a populated database. `supabase/schedule.sql` installs the hourly pg_cron job. Both were applied to the connected project during setup.
+`supabase/setup.sql` initializes an empty project once. If the project was set up before the safeupdate fix, run `supabase/fix-safeupdate.sql` once in the SQL editor; it is rerunnable and only replaces function bodies. It only enrolls the two existing Auth accounts, matching their names/email; it refuses other account counts. Never rerun the setup against a populated database. `supabase/schedule.sql` installs the hourly pg_cron job. Both were applied to the connected project during setup.
 
 All challenge tables enable Row Level Security. Authenticated members may read challenge data; clients cannot directly insert/update/delete rows. Security-definer functions validate membership, ownership, partner review, proof, deadline, and finalization under a transaction lock. Storage permits only member reads and uploads to the signed-in member’s folder. Proof is compressed before upload, and available EXIF date metadata is captured first.
 

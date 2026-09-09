@@ -58,7 +58,7 @@ create function public.challenge_log(p_rule text,p_day date,p_done boolean,p_not
  insert into challenge_points(user_id,rule_id,day,reason,entry_id,voided) values(auth.uid(),p_rule,p_day,'missed',e.id,p_done) on conflict(user_id,rule_id,day,slot) do update set voided=excluded.voided;
  end if;end if;
  insert into challenge_audit(entry_id,actor,action,details) values(e.id,auth.uid(),'log',jsonb_build_object('done',p_done,'late',late));
- delete from challenge_finalizations;perform challenge_rescore();end $$;
+ delete from challenge_finalizations where true;perform challenge_rescore();end $$;
 create function public.challenge_review(p_entry uuid,p_action text,p_comment text default '') returns void language plpgsql security definer set search_path=public as $$ declare e challenge_entries;d challenge_disputes;begin
  perform challenge_assert();select * into e from challenge_entries where id=p_entry for update;if e.id is null then raise exception 'Entry not found';end if;
  if p_action in ('approve','dispute','reject_correction') then
@@ -79,21 +79,21 @@ create function public.challenge_review(p_entry uuid,p_action text,p_comment tex
  update challenge_entries set status=case when p_action='concede' then 'conceded' else 'confirmed' end,done=p_action<>'concede' where id=e.id;
  if p_action='concede' and e.rule_id<>'gym' then insert into challenge_points(user_id,rule_id,day,reason,entry_id) values(e.user_id,e.rule_id,e.day,'dispute_conceded',e.id) on conflict(user_id,rule_id,day,slot) do update set voided=false,reason='dispute_conceded';end if;
  else raise exception 'Unknown review action';end if;
- insert into challenge_audit(entry_id,actor,action,details) values(e.id,auth.uid(),p_action,jsonb_build_object('comment',p_comment));delete from challenge_finalizations;perform challenge_rescore();end $$;
+ insert into challenge_audit(entry_id,actor,action,details) values(e.id,auth.uid(),p_action,jsonb_build_object('comment',p_comment));delete from challenge_finalizations where true;perform challenge_rescore();end $$;
 create function public.challenge_forgive(p_point uuid,p_reason text) returns void language plpgsql security definer set search_path=public as $$ begin
  perform challenge_assert();if length(trim(p_reason))=0 or not exists(select 1 from challenge_points where id=p_point and user_id=auth.uid() and not forgiven and not voided) then raise exception 'An active point and reason are required.';end if;
- insert into challenge_requests(point_id,requester_id,reason) values(p_point,auth.uid(),left(p_reason,2000));delete from challenge_finalizations;end $$;
+ insert into challenge_requests(point_id,requester_id,reason) values(p_point,auth.uid(),left(p_reason,2000));delete from challenge_finalizations where true;end $$;
 create function public.challenge_decide(p_request uuid,p_approve boolean) returns void language plpgsql security definer set search_path=public as $$ declare r challenge_requests;p challenge_points;begin
  perform challenge_assert();select * into r from challenge_requests where id=p_request for update;
  if r.id is null or r.requester_id=auth.uid() or r.status<>'pending' then raise exception 'Only your partner can decide a pending request.';end if;
  update challenge_requests set status=case when p_approve then 'approved' else 'denied' end,decided_by=auth.uid(),decided_at=now() where id=r.id;
- if p_approve then update challenge_points set forgiven=true where id=r.point_id returning * into p;update challenge_entries set status='excused' where id=p.entry_id;end if;delete from challenge_finalizations;end $$;
+ if p_approve then update challenge_points set forgiven=true where id=r.point_id returning * into p;update challenge_entries set status='excused' where id=p.entry_id;end if;delete from challenge_finalizations where true;end $$;
 create function public.challenge_finalize() returns void language plpgsql security definer set search_path=public as $$ begin
  perform challenge_assert();perform challenge_tick();
  if now()<((select end_date+1 from challenge_config)+time '12:00') at time zone 'America/Toronto' then raise exception 'Finalize after October 1 at noon.';end if;
  if exists(select 1 from challenge_entries where status in ('pending','disputed') or proposed_done is not null) or exists(select 1 from challenge_requests where status='pending') then raise exception 'Resolve all reviews, corrections and forgiveness requests first.';end if;
  insert into challenge_finalizations(user_id) values(auth.uid()) on conflict do nothing;
- if (select count(*) from challenge_finalizations)=2 then update challenge_config set finalized=true;end if;end $$;
+ if (select count(*) from challenge_finalizations)=2 then update challenge_config set finalized=true where id=1;end if;end $$;
 -- Client reads are member-only; writes are exclusively validated functions.
 do $$ declare t text;begin foreach t in array array['challenge_profiles','challenge_config','challenge_rules','challenge_weeks','challenge_entries','challenge_points','challenge_requests','challenge_disputes','challenge_finalizations','challenge_audit'] loop execute format('alter table public.%I enable row level security',t);execute format('create policy member_read on public.%I for select to authenticated using(public.challenge_member())',t);execute format('grant select on public.%I to authenticated',t);execute format('revoke insert,update,delete on public.%I from anon,authenticated',t);end loop;end $$;
 revoke all on function public.challenge_assert(),public.challenge_tick(),public.challenge_rescore() from public,anon,authenticated;
