@@ -11,7 +11,10 @@ await actor(erin);
 await db.exec(`select challenge_sync()`);
 assert.equal((await db.query(`select count(*)::int n from challenge_profiles`)).rows[0].n,2);
 // Use actual Toronto date in the configured interval for a deterministic present-time edit.
-await db.exec(`update challenge_config set start_date=(now() at time zone 'America/Toronto')::date,end_date=(now() at time zone 'America/Toronto')::date+2`);
+await db.exec(`update challenge_config set start_date=(now() at time zone 'America/Toronto')::date,end_date=(now() at time zone 'America/Toronto')::date+2,allow_same_day=true`);
+// Same-day logging is normally rejected; the app only offers days that have ended.
+await assert.rejects(()=>db.exec(`update challenge_config set allow_same_day=false where id=1;select challenge_log('prayer',(now() at time zone 'America/Toronto')::date,true)`),/not available/);
+await db.exec(`update challenge_config set allow_same_day=true where id=1`);
 await db.exec(`select challenge_log('prayer',(now() at time zone 'America/Toronto')::date,false)`);
 assert.equal((await db.query(`select count(*)::int n from challenge_points where user_id='${erin}' and rule_id='prayer' and not voided and not forgiven`)).rows[0].n>=1,true);
 await db.exec(`select challenge_log('prayer',(now() at time zone 'America/Toronto')::date,true)`);

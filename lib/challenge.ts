@@ -14,7 +14,7 @@ export const rules:Rule[]=[
 {id:'gym',title:'Go to gym',question:'Did you go to the gym today?',description:'Condo or regular gym. One visit per day. Four visits per full week; Sep 8–12: three. Sep 28–30: one.',days:'Weekly',group:'Movement',weekly:true}];
 export function toronto(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(now)}
 export function shift(date:string,n:number){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
-export function defaultDate(now=new Date()){const day=toronto(now),hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'America/Toronto',hour:'numeric',hourCycle:'h23'}).format(now));return clampDate(hour<12?shift(day,-1):day)}
+export function defaultDate(now=new Date()){return clampDate(shift(toronto(now),-1))}
 export function clampDate(d:string){return d<'2026-09-08'?'2026-09-08':d>'2026-09-30'?'2026-09-30':d}
 export function activeRules(person:Person,date:string){const dow=new Date(date+'T12:00Z').getUTCDay();return rules.filter(r=>(!r.person||r.person===person)&&(r.days!=='Sun–Thu'||dow<=4))}
 export function money(points:number){return points*(points+1)/2}
