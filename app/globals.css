@@ -27,3 +27,4 @@ button{display:inline-flex;align-items:center;justify-content:center;gap:9px;fon
 [data-slot=dialog-content] .proof{margin:2px 0}
 .dialog-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:16px;border-top:1px solid #e6e9f1}.dialog-actions button{flex:1 1 auto;padding:13px 16px;border-radius:12px}
 [data-slot=dialog-content] textarea:focus{outline:none;border-color:#a691de;box-shadow:0 0 0 4px #ece8f8}
+.login .forgot{display:block;width:100%;text-align:center;margin-top:14px;font-size:14px;color:#7863a7}.login .muted b{color:#252234}
