@@ -11,15 +11,15 @@ export const rules:Rule[]=[
 {id:'entertainment',title:'No entertainment before 6 pm',question:'Did you avoid entertainment before 6 pm?',description:'Content before 6 pm must be educational and related to work, including YouTube.',days:'Every day',group:'Focus'},
 {id:'steps',title:'10,000 steps',question:'Did you walk at least 10,000 steps?',description:'Reach 10,000 steps and attach a step-count screenshot.',days:'Every day',group:'Movement',person:'Erin',proof:true},
 {id:'calories',title:'2,300 calories or less',fullTitle:'2,300 calories or less + macros tracked',question:'Did you stay within 2,300 calories and track your macros?',description:'Both are required. Attach your ChatGPT macro screenshot.',days:'Every day',group:'Food',person:'Kazzy',proof:true},
-{id:'gym',title:'Go to gym',question:'Did you go to the gym today?',description:'Condo or regular gym. One visit per day. Four visits per full week; Sep 8–12: three. Sep 28–30: one.',days:'Weekly',group:'Movement',weekly:true}];
+{id:'gym',title:'Go to gym',question:'Did you go to the gym today?',description:'Condo or regular gym. One visit per day. Four visits per full week; Sep 15–19: three. Oct 11–14: one.',days:'Weekly',group:'Movement',weekly:true}];
 export function toronto(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(now)}
 export function shift(date:string,n:number){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 export function defaultDate(now=new Date()){return clampDate(shift(toronto(now),-1))}
-export function clampDate(d:string){return d<'2026-09-08'?'2026-09-08':d>'2026-09-30'?'2026-09-30':d}
+export function clampDate(d:string){return d<'2026-09-15'?'2026-09-15':d>'2026-10-14'?'2026-10-14':d}
 export function activeRules(person:Person,date:string){const dow=new Date(date+'T12:00Z').getUTCDay();return rules.filter(r=>(!r.person||r.person===person)&&(r.days!=='Sun–Thu'||dow<=4))}
 export function money(points:number){return points*(points+1)/2}
 export function formatDate(d:string){return new Date(d+'T12:00Z').toLocaleDateString('en-CA',{weekday:'long',month:'short',day:'numeric',timeZone:'UTC'})}
-export function week(d:string){if(d<='2026-09-12')return {start:'2026-09-08',end:'2026-09-12',target:3};if(d<='2026-09-19')return {start:'2026-09-13',end:'2026-09-19',target:4};if(d<='2026-09-26')return {start:'2026-09-20',end:'2026-09-26',target:4};return {start:'2026-09-27',end:'2026-09-30',target:1}}
+export function week(d:string){if(d<='2026-09-19')return {start:'2026-09-15',end:'2026-09-19',target:3};if(d<='2026-09-26')return {start:'2026-09-20',end:'2026-09-26',target:4};if(d<='2026-10-03')return {start:'2026-09-27',end:'2026-10-03',target:4};if(d<='2026-10-10')return {start:'2026-10-04',end:'2026-10-10',target:4};return {start:'2026-10-11',end:'2026-10-14',target:1}}
 export type Profile={id:string;name:Person};
 export type Entry={id:string;user_id:string;rule_id:string;day:string;done:boolean;status:string;note:string;proof:string|null;proposed_done:boolean|null;proposed_note:string|null;proposed_proof:string|null;updated_at:string};
 export type Point={id:string;user_id:string;rule_id:string;day:string;reason:string;forgiven:boolean;voided:boolean;entry_id:string|null;created_at:string};

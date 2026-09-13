@@ -1,4 +1,4 @@
--- September Challenge: run once in the Supabase SQL editor.
+-- 30 Day Challenge: run once in the Supabase SQL editor.
 -- Only the two existing Auth accounts are enrolled. No public signup enrollment.
 begin;
 create table public.challenge_profiles(id uuid primary key references auth.users(id),name text unique not null check(name in ('Erin','Kazzy')));
@@ -8,12 +8,12 @@ do $$ declare u record; n integer:=0; begin
  insert into public.challenge_profiles values(u.id,case when lower(coalesce(u.raw_user_meta_data->>'name','')||u.email) like '%erin%' then 'Erin' when lower(coalesce(u.raw_user_meta_data->>'name','')||u.email) like '%kaz%' then 'Kazzy' else null end);
  end loop;
 end $$;
-create table public.challenge_config(id integer primary key default 1 check(id=1),name text not null default 'September Challenge',start_date date not null default '2026-09-08',end_date date not null default '2026-09-30',finalized boolean not null default false,allow_same_day boolean not null default false);
+create table public.challenge_config(id integer primary key default 1 check(id=1),name text not null default '30 Day Challenge',start_date date not null default '2026-09-15',end_date date not null default '2026-10-14',finalized boolean not null default false,allow_same_day boolean not null default false);
 insert into public.challenge_config(id) values(1);
 create table public.challenge_rules(id text primary key,title text not null,person text,weeknights boolean not null default false,proof_required boolean not null default false,weekly boolean not null default false);
 insert into public.challenge_rules values ('bed','In bed by 11 pm',null,true,false,false),('phone','Phone outside the bedroom',null,true,false,false),('screens','No screens before sleep',null,true,false,false),('weed','No smoking weed',null,true,false,false),('prayer','Pray daily',null,false,false,false),('food','No eating out',null,false,false,false),('time','Screen time: 1 hour or less',null,false,true,false),('entertainment','No entertainment before 6 pm',null,false,false,false),('steps','10,000 steps','Erin',false,true,false),('calories','2,300 calories or less + macros tracked','Kazzy',false,true,false),('gym','Go to gym',null,false,false,true);
 create table public.challenge_weeks(start_date date primary key,end_date date not null,target integer not null);
-insert into public.challenge_weeks values('2026-09-08','2026-09-12',3),('2026-09-13','2026-09-19',4),('2026-09-20','2026-09-26',4),('2026-09-27','2026-09-30',1);
+insert into public.challenge_weeks values('2026-09-15','2026-09-19',3),('2026-09-20','2026-09-26',4),('2026-09-27','2026-10-03',4),('2026-10-04','2026-10-10',4),('2026-10-11','2026-10-14',1);
 create table public.challenge_entries(id uuid primary key default gen_random_uuid(),user_id uuid not null references public.challenge_profiles,rule_id text not null references public.challenge_rules,day date not null,done boolean not null,status text not null check(status in ('pending','confirmed','missed','disputed','conceded','excused','unlogged')),note text not null default '',proof text,proposed_done boolean,proposed_note text,proposed_proof text,updated_at timestamptz not null default now(),unique(user_id,rule_id,day));
 create table public.challenge_points(id uuid primary key default gen_random_uuid(),user_id uuid not null references public.challenge_profiles,rule_id text not null references public.challenge_rules,day date not null,reason text not null,forgiven boolean not null default false,voided boolean not null default false,entry_id uuid references public.challenge_entries,slot integer not null default 0,created_at timestamptz not null default now(),unique(user_id,rule_id,day,slot));
 create table public.challenge_requests(id uuid primary key default gen_random_uuid(),point_id uuid unique not null references public.challenge_points,requester_id uuid not null references public.challenge_profiles,reason text not null,status text not null default 'pending',decided_by uuid references public.challenge_profiles,decided_at timestamptz);
@@ -101,7 +101,7 @@ create function public.challenge_decide(p_request uuid,p_approve boolean) return
  if p_approve then update challenge_points set forgiven=true where id=r.point_id returning * into p;update challenge_entries set status='excused' where id=p.entry_id;end if;delete from challenge_finalizations where true;end $$;
 create function public.challenge_finalize() returns void language plpgsql security definer set search_path=public as $$ begin
  perform challenge_assert();perform challenge_tick();
- if now()<((select end_date+1 from challenge_config)+time '14:00') at time zone 'America/Toronto' then raise exception 'Finalize after October 1 at 2 pm.';end if;
+ if now()<((select end_date+1 from challenge_config)+time '14:00') at time zone 'America/Toronto' then raise exception 'Finalize after % at 2 pm.',to_char((select end_date+1 from challenge_config),'FMMonth FMDD');end if;
  if exists(select 1 from challenge_entries where status in ('pending','disputed') or proposed_done is not null) or exists(select 1 from challenge_requests where status='pending') then raise exception 'Resolve all reviews, corrections and forgiveness requests first.';end if;
  insert into challenge_finalizations(user_id) values(auth.uid()) on conflict do nothing;
  if (select count(*) from challenge_finalizations)=2 then update challenge_config set finalized=true where id=1;end if;end $$;
