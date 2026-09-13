@@ -47,3 +47,4 @@ input,textarea,select{font-size:16px!important}
 @media(prefers-reduced-motion:reduce){.orbit,.orbit::after,.loading-text{animation:none}}
 .missed-total{margin:10px 0 0;font-size:13px;color:#63708a}
 .history-group .history-row:last-child,.day-summary .history-row:last-of-type{padding-bottom:4px}
+.day-dialog{max-width:540px!important}.day-person{margin-top:14px}.day-person .row h3{font-size:21px}.day-person .row .muted{font-size:13px}.day-person .history-row{padding:12px 0}.day-person .history-row>span:first-child{font-size:17px}.day-person .history-row:disabled{opacity:.6}

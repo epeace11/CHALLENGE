@@ -22,7 +22,7 @@ insert into public.challenge_weeks values('2026-09-15','2026-09-19',3),('2026-09
 -- The finalize message named October 1; derive it from the configured end date instead.
 create or replace function public.challenge_finalize() returns void language plpgsql security definer set search_path=public as $$ begin
  perform challenge_assert();perform challenge_tick();
- if now()<((select end_date+1 from challenge_config)+time '14:00') at time zone 'America/Toronto' then raise exception 'Finalize after % at 2 pm.',to_char((select end_date+1 from challenge_config),'FMMonth FMDD');end if;
+ if now()<((select end_date+1 from challenge_config)+time '18:00') at time zone 'America/Toronto' then raise exception 'Finalize after % at 6 pm.',to_char((select end_date+1 from challenge_config),'FMMonth FMDD');end if;
  if exists(select 1 from challenge_entries where status in ('pending','disputed') or proposed_done is not null) or exists(select 1 from challenge_requests where status='pending') then raise exception 'Resolve all reviews, corrections and forgiveness requests first.';end if;
  insert into challenge_finalizations(user_id) values(auth.uid()) on conflict do nothing;
  if (select count(*) from challenge_finalizations)=2 then update challenge_config set finalized=true where id=1;end if;end $$;
