@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { tone,personBar,habitStats,habitOrder,daysWon,perfectDays,costByHabit,nextMissCost,badges,weeks,dayNumber,total,maxLoggable } from '../lib/progress.ts';
+import { tone,days,personBar,habitStats,habitOrder,daysWon,perfectDays,costByHabit,nextMissCost,badges,weeks,dayNumber,total,maxLoggable } from '../lib/progress.ts';
 const erin={id:'e',name:'Erin'},kazzy={id:'k',name:'Kazzy'};
 const now=Date.parse('2026-09-20T16:00:00Z'); // Sunday Sep 20, noon Toronto: Sep 15–18 closed, Sep 19 still open
 let n=0;const entry=(uid,rule,day,o={})=>({id:`x${++n}`,user_id:uid,rule_id:rule,day,done:true,status:'confirmed',note:'',proof:null,proposed_done:null,proposed_note:null,proposed_proof:null,updated_at:day,...o});
@@ -33,9 +33,9 @@ assert.equal(tone(undefined,'2026-09-20',now),'future');
 assert.equal(tone(entry('e','bed','2026-09-16',{status:'pending'}),'2026-09-16',now),'review');
 assert.equal(tone(entry('e','bed','2026-09-16',{proposed_done:true,done:false,status:'unlogged'}),'2026-09-16',now),'review');
 
-// Erin's bar: Sep 18 is a Friday so weeknight rules are off; 9+8+8+5 done, 1 excused, 1 missed, 3 reviewing, 2 open daily + 3 open gym.
+// Erin's bar: Sep 18 is a Friday so weeknight rules are off; 9+8+8+5 done, 1 excused, 1 missed, 3 reviewing, 2 open daily. The 3 unmet gym visits stay ahead until the week is assessed.
 const bar=personBar(data,erin,now);
-assert.deepEqual({done:bar.done,excused:bar.excused,missed:bar.missed,review:bar.review,open:bar.open},{done:30,excused:1,missed:1,review:3,open:5});
+assert.deepEqual({done:bar.done,excused:bar.excused,missed:bar.missed,review:bar.review,open:bar.open},{done:30,excused:1,missed:1,review:3,open:2});
 assert.equal(total(bar),total(personBar(data,kazzy,now)));
 const kbar=personBar(data,kazzy,now);assert.equal(kbar.done,0);assert.equal(kbar.review,0);
 // Kazzy's 4 closed days all missed: Tue/Wed/Thu 9 rules, Fri 5 rules.
@@ -72,4 +72,15 @@ assert.equal(get(eb,'gracious').earned,false);
 assert.equal(get(kb,'gracious').earned,true); // Erin's point was forgiven, so Kazzy forgave
 assert.equal(get(kb,'first_clean').earned,false);
 assert.equal(get(eb,'halfway').earned,false);
+// New badges: Erin won Sep 15–17 in a row; nobody has a closed gym week yet; the finish is far off.
+assert.deepEqual({earned:get(eb,'hat_trick').earned,date:get(eb,'hat_trick').date},{earned:true,date:'2026-09-17'});
+assert.equal(get(kb,'hat_trick').earned,false);
+assert.equal(get(eb,'iron_week').earned,false);
+assert.equal(get(eb,'strong_finish').earned,false);
+assert.equal(eb.length,12);
+// Iron week: three visits in the first partial week, checked after that week closes.
+const gymData={...data,entries:[...entries,...['2026-09-15','2026-09-16','2026-09-17'].map(d=>entry('e','gym',d))]};
+assert.equal(badges(gymData,erin,Date.parse('2026-09-21T16:00:00Z')).find(b=>b.id==='iron_week').date,'2026-09-19');
+// The bar's denominator is every habit-day of the challenge, so Erin's 9 daily rules over 30 days plus 16 gym visits.
+assert.equal(total(bar),5*30+4*days().filter(d=>new Date(d+'T12:00Z').getUTCDay()<=4).length+16);
 console.log('PASS: progress stats — tones, bars, streaks (excused keeps them), worst-first order, days won, perfect days, costs, badges.');

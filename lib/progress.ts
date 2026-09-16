@@ -31,14 +31,14 @@ export function tone(e:Entry|undefined,day:string,now:number,maxDate=maxLoggable
 export const dailyRules=(name:Person,day:string)=>activeRules(name,day).filter(r=>!r.weekly);
 export const gymVisits=(data:Data,uid:string,w:{start:string;end:string})=>data.entries.filter(e=>e.user_id===uid&&e.rule_id==='gym'&&e.day>=w.start&&e.day<=w.end&&e.done&&!['conceded','missed','unlogged'].includes(e.status)).length;
 
-/** Every habit-day of the challenge plus the weekly gym targets, bucketed by colour. */
+/** Every habit-day of the challenge plus the weekly gym targets, bucketed by colour. Gym visits count as done when logged and otherwise stay ahead until their week closes. */
 export function personBar(data:Data,p:Profile,now:number,ix=index(data)):Counts{
  const c=emptyCounts(),maxDate=maxLoggable(now);
  for(const d of days())for(const r of dailyRules(p.name,d))c[tone(ix.get(key(p.id,r.id,d)),d,now,maxDate)]++;
  for(const w of weeks){const t=w.target,v=Math.min(t,gymVisits(data,p.id,w));c.done+=v;
   if(w.start>maxDate)c.future+=t;
   else if(closed(w.end,now)){const short=t-v,forgiven=data.points.filter(q=>q.user_id===p.id&&q.rule_id==='gym'&&q.day===w.end&&!q.voided&&q.forgiven).length,ex=Math.min(short,forgiven);c.excused+=ex;c.missed+=short-ex}
-  else c.open+=t-v}
+  else c.future+=t-v} // A week in progress is not 'open': the remaining visits only resolve when the week is assessed.
  return c}
 
 export type HabitStat={rule:Rule;counts:Counts;done:number;missed:number;rate:number|null;streak:number;best:number;reached:Record<number,string>;dollars:number};
@@ -71,7 +71,7 @@ export function daysWon(data:Data,now:number,ix=index(data)){
  const wins:Record<string,number>={},recent:{day:string;winner:string|null}[]=[];let ties=0;
  for(const p of data.profiles)wins[p.id]=0;
  if(data.profiles.length===2)for(const d of days()){if(!closed(d,now))break;const [a,b]=data.profiles,ma=missesOn(data,a,d,now,ix),mb=missesOn(data,b,d,now,ix),winner=ma<mb?a.id:mb<ma?b.id:null;if(winner)wins[winner]++;else ties++;recent.push({day:d,winner})}
- return {wins,ties,recent:recent.slice(-7)}}
+ return {wins,ties,recent:recent.slice(-7),all:recent}}
 
 /** Days with every daily habit done or excused, and the longest run of them. */
 export function perfectDays(data:Data,p:Profile,now:number,ix=index(data)){
@@ -87,6 +87,12 @@ export function badges(data:Data,p:Profile,now:number,ix=index(data)):Badge[]{
  const half='2026-09-29',halfPoints=data.points.filter(q=>q.user_id===p.id&&!q.forgiven&&!q.voided&&q.day<=half).length;
  const gymShort=weeks.filter(w=>closed(w.end,now)).some(w=>gymVisits(data,p.id,w)<w.target);
  const b=(id:string,title:string,how:string,date:string|undefined|false,earned=!!date):Badge=>({id,title,how,earned,date:date||undefined});
+ // Three days won in a row (ties break the run).
+ let hatTrick:string|undefined;{let run=0;for(const r of daysWon(data,now,ix).all){run=r.winner===p.id?run+1:0;if(run===3){hatTrick=r.day;break}}}
+ // First closed week where the gym target was met.
+ const ironWeek=weeks.find(w=>closed(w.end,now)&&gymVisits(data,p.id,w)>=w.target)?.end;
+ // The last seven days all clean.
+ const finish=days(shift(END,-6),END),strongFinish=over&&finish.every(d=>perfect.list.includes(d))&&END;
  return [
   b('first_clean','First clean day','A day with nothing missed',perfect.first),
   b('clean_week','Clean week','Seven clean days in a row',cleanWeek),
@@ -96,4 +102,7 @@ export function badges(data:Data,p:Profile,now:number,ix=index(data)):Badge[]{
   b('untouchable','Untouchable','One habit with zero misses all challenge',over&&stats.some(s=>s.missed===0&&s.done>0)&&END),
   b('gym_regular','Gym regular','Every weekly gym target hit',over&&!gymShort&&END),
   b('halfway','Strong half','Fewer than five active misses by day 15',closed(half,now)&&halfPoints<5&&half),
-  b('gracious','Gracious','Forgave your partner at least once',undefined,!!partner&&data.points.some(q=>q.user_id===partner.id&&q.forgiven))]}
+  b('gracious','Gracious','Forgave your partner at least once',undefined,!!partner&&data.points.some(q=>q.user_id===partner.id&&q.forgiven)),
+  b('hat_trick','Hat trick','Win three days in a row',hatTrick),
+  b('iron_week','Iron week','Every gym visit in a week',ironWeek),
+  b('strong_finish','Strong finish','The last seven days all clean',strongFinish)]}

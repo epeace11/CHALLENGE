@@ -25,8 +25,9 @@ export type Entry={id:string;user_id:string;rule_id:string;day:string;done:boole
 export type Point={id:string;user_id:string;rule_id:string;day:string;reason:string;forgiven:boolean;voided:boolean;entry_id:string|null;created_at:string};
 export type Request={id:string;point_id:string;requester_id:string;reason:string;status:string};
 export type Dispute={id:string;entry_id:string;raised_by:string;comment:string;status:string};
-export type Data={profiles:Profile[];entries:Entry[];points:Point[];requests:Request[];disputes:Dispute[];finalizations:{user_id:string}[]};
-export const emptyData:Data={profiles:[],entries:[],points:[],requests:[],disputes:[],finalizations:[]};
+export type Journal={user_id:string;day:string;text:string;updated_at:string};
+export type Data={profiles:Profile[];entries:Entry[];points:Point[];requests:Request[];disputes:Dispute[];finalizations:{user_id:string}[];journals:Journal[]};
+export const emptyData:Data={profiles:[],entries:[],points:[],requests:[],disputes:[],finalizations:[],journals:[]};
 
 /** Instant (ms) when logging for `date` locks: 6 pm the next day, Toronto time, DST-aware. */
 export function lockTime(date:string){const next=shift(date,1);let guess=Date.UTC(+next.slice(0,4),+next.slice(5,7)-1,+next.slice(8,10),18);for(let i=0;i<2;i++){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit',hour:'numeric',hourCycle:'h23'}).formatToParts(new Date(guess));const get=(t:string)=>parts.find(p=>p.type===t)?.value??'';const localDay=`${get('year')}-${get('month')}-${get('day')}`,hour=Number(get('hour'));const dayDiff=(Date.UTC(+localDay.slice(0,4),+localDay.slice(5,7)-1,+localDay.slice(8,10))-Date.UTC(+next.slice(0,4),+next.slice(5,7)-1,+next.slice(8,10)))/864e5;guess-=(dayDiff*24+hour-18)*36e5;}return guess}
