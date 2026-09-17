@@ -1,9 +1,8 @@
 export type Person='Erin'|'Kazzy';
 export type Rule={id:string;title:string;fullTitle?:string;question:string;description:string;days:string;group:string;person?:Person;proof?:boolean;weekly?:boolean};
 export const rules:Rule[]=[
-{id:'bed',title:'In bed by 11 pm',question:'Were you in bed by 11 pm?',description:'Be in bed by 11 pm.',days:'Sun–Thu',group:'Sleep'},
-{id:'phone',title:'Phone outside the bedroom',question:'Did you leave your phone outside the bedroom?',description:'Keep your phone outside the bedroom after 11 pm.',days:'Sun–Thu',group:'Sleep'},
-{id:'screens',title:'No screens before sleep',question:'Did you stay screen-free after 11 pm?',description:'No screens of any kind from 11 pm until you fall asleep.',days:'Sun–Thu',group:'Sleep'},
+{id:'bed',title:'In bed by 11 pm, then read',fullTitle:'In bed by 11 pm, then read until you sleep',question:'Were you in bed by 11 pm, reading until you fell asleep?',description:'Be in bed by 11 pm and read until you fall asleep.',days:'Sun–Thu',group:'Sleep'},
+{id:'screens',title:'No screens in the bedroom',question:'Did you keep screens out of the bedroom?',description:'No screens of any kind in the bedroom. Phones stay outside the room.',days:'Sun–Thu',group:'Sleep'},
 {id:'weed',title:'No smoking weed',question:'Did you avoid smoking weed?',description:'No smoking weed on Sunday through Thursday.',days:'Sun–Thu',group:'Habits'},
 {id:'prayer',title:'Pray daily',question:'Did you pray today?',description:'At least once, every day.',days:'Every day',group:'Habits'},
 {id:'food',title:'No eating out',question:'Did you avoid eating out?',description:'Takeout and delivery count. Coffee is allowed.',days:'Every day',group:'Food'},

@@ -3,12 +3,12 @@ import { tone,days,personBar,habitStats,habitOrder,daysWon,perfectDays,costByHab
 const erin={id:'e',name:'Erin'},kazzy={id:'k',name:'Kazzy'};
 const now=Date.parse('2026-09-20T16:00:00Z'); // Sunday Sep 20, noon Toronto: Sep 15–18 closed, Sep 19 still open
 let n=0;const entry=(uid,rule,day,o={})=>({id:`x${++n}`,user_id:uid,rule_id:rule,day,done:true,status:'confirmed',note:'',proof:null,proposed_done:null,proposed_note:null,proposed_proof:null,updated_at:day,...o});
-const erinDaily=['bed','phone','screens','weed','prayer','food','time','entertainment','steps'];
+const erinDaily=['bed','screens','weed','prayer','food','time','entertainment','steps'];
 const entries=[
  ...erinDaily.map(r=>entry('e',r,'2026-09-15')),
  ...erinDaily.map(r=>entry('e',r,'2026-09-16',r==='prayer'?{done:false,status:'missed'}:{})),
  ...erinDaily.map(r=>entry('e',r,'2026-09-17',r==='prayer'?{done:false,status:'excused'}:{})),
- ...erinDaily.filter(r=>!['bed','phone','screens','weed'].includes(r)).map(r=>entry('e',r,'2026-09-18')),
+ ...erinDaily.filter(r=>!['bed','screens','weed'].includes(r)).map(r=>entry('e',r,'2026-09-18')),
  ...['prayer','food','time'].map(r=>entry('e',r,'2026-09-19',{status:'pending'})),
 ];
 const point=(id,uid,rule,day,created,o={})=>({id,user_id:uid,rule_id:rule,day,reason:'missed',forgiven:false,voided:false,entry_id:null,created_at:created,...o});
@@ -16,7 +16,6 @@ const points=[
  point('p1','e','prayer','2026-09-16','2026-09-16T20:00:00Z'),
  point('p2','e','prayer','2026-09-17','2026-09-17T20:00:00Z',{forgiven:true}),
  point('p3','k','bed','2026-09-15','2026-09-16T22:00:00Z',{reason:'unlogged'}),
- point('p4','k','phone','2026-09-15','2026-09-16T22:00:00Z',{reason:'unlogged'}),
  point('p5','k','screens','2026-09-15','2026-09-16T22:00:00Z',{reason:'unlogged'}),
 ];
 const data={profiles:[erin,kazzy],entries,points,requests:[],disputes:[],finalizations:[]};
@@ -33,13 +32,13 @@ assert.equal(tone(undefined,'2026-09-20',now),'future');
 assert.equal(tone(entry('e','bed','2026-09-16',{status:'pending'}),'2026-09-16',now),'review');
 assert.equal(tone(entry('e','bed','2026-09-16',{proposed_done:true,done:false,status:'unlogged'}),'2026-09-16',now),'review');
 
-// Erin's bar: Sep 18 is a Friday so weeknight rules are off; 9+8+8+5 done, 1 excused, 1 missed, 3 reviewing, 2 open daily. The 3 unmet gym visits stay ahead until the week is assessed.
+// Erin's bar: Sep 18 is a Friday so weeknight rules are off; 8+7+7+5 done, 1 excused, 1 missed, 3 reviewing, 2 open daily. The 3 unmet gym visits stay ahead until the week is assessed.
 const bar=personBar(data,erin,now);
-assert.deepEqual({done:bar.done,excused:bar.excused,missed:bar.missed,review:bar.review,open:bar.open},{done:30,excused:1,missed:1,review:3,open:2});
+assert.deepEqual({done:bar.done,excused:bar.excused,missed:bar.missed,review:bar.review,open:bar.open},{done:27,excused:1,missed:1,review:3,open:2});
 assert.equal(total(bar),total(personBar(data,kazzy,now)));
 const kbar=personBar(data,kazzy,now);assert.equal(kbar.done,0);assert.equal(kbar.review,0);
-// Kazzy's 4 closed days all missed: Tue/Wed/Thu 9 rules, Fri 5 rules.
-assert.equal(kbar.missed,9+9+9+5);
+// Kazzy's 4 closed days all missed: Tue/Wed/Thu 8 rules, Fri 5 rules.
+assert.equal(kbar.missed,8+8+8+5);
 
 // Streaks: excused neither breaks nor extends; pending counts as done.
 const es=habitStats(data,erin,now);
@@ -60,8 +59,8 @@ assert.deepEqual({count:perfect.count,longest:perfect.longest,first:perfect.firs
 
 // Money: position-based, forgiven excluded
 assert.equal(nextMissCost(data,erin.id),2);
-assert.equal(nextMissCost(data,kazzy.id),4);
-assert.deepEqual(costByHabit(data,kazzy.id)[0],{rule:'screens',dollars:3,count:1});
+assert.equal(nextMissCost(data,kazzy.id),3);
+assert.deepEqual(costByHabit(data,kazzy.id)[0],{rule:'screens',dollars:2,count:1});
 
 // Badges
 const eb=badges(data,erin,now),kb=badges(data,kazzy,now);
@@ -81,6 +80,6 @@ assert.equal(eb.length,12);
 // Iron week: three visits in the first partial week, checked after that week closes.
 const gymData={...data,entries:[...entries,...['2026-09-15','2026-09-16','2026-09-17'].map(d=>entry('e','gym',d))]};
 assert.equal(badges(gymData,erin,Date.parse('2026-09-21T16:00:00Z')).find(b=>b.id==='iron_week').date,'2026-09-19');
-// The bar's denominator is every habit-day of the challenge, so Erin's 9 daily rules over 30 days plus 16 gym visits.
-assert.equal(total(bar),5*30+4*days().filter(d=>new Date(d+'T12:00Z').getUTCDay()<=4).length+16);
+// The bar's denominator is every habit-day of the challenge, so Erin's 8 daily rules over 30 days plus 16 gym visits.
+assert.equal(total(bar),5*30+3*days().filter(d=>new Date(d+'T12:00Z').getUTCDay()<=4).length+16);
 console.log('PASS: progress stats — tones, bars, streaks (excused keeps them), worst-first order, days won, perfect days, costs, badges.');
