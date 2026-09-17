@@ -71,11 +71,15 @@ await assert.rejects(()=>db.exec(`select challenge_journal_add((now() at time zo
 await assert.rejects(()=>db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date+30,'x')`),/outside/);
 await actor('00000000-0000-0000-0000-000000000099');await assert.rejects(()=>db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date,'x')`),/only for/);
 const noteId=(await db.query(`select id from challenge_journal_notes where text='Rough start.'`)).rows[0].id;
+await actor(erin);await db.exec(`select challenge_journal_edit('${noteId}',' Rough start, honestly. ')`);
+assert.equal((await db.query(`select text from challenge_journal_notes where id='${noteId}'`)).rows[0].text,'Rough start, honestly.');
+await assert.rejects(()=>db.exec(`select challenge_journal_edit('${noteId}','  ')`),/Write something/);
+await actor(kazzy);await assert.rejects(()=>db.exec(`select challenge_journal_edit('${noteId}','mine now')`),/own notes/);
 await actor(kazzy);assert.equal((await db.query(`select count(*)::int n from challenge_journal_notes`)).rows[0].n,2);
 await assert.rejects(()=>db.exec(`select challenge_journal_delete('${noteId}')`),/own notes/);
 await actor(erin);await db.exec(`select challenge_journal_delete('${noteId}')`);
 assert.equal((await db.query(`select count(*)::int n from challenge_journal_notes`)).rows[0].n,1);
 await db.exec(`set role authenticated`);await assert.rejects(()=>db.exec(`insert into challenge_journal_notes(user_id,day,text) values('${kazzy}',current_date,'x')`),/permission denied/);await db.exec(`reset role`);
-console.log('PASS: journal notes add/remove, read by both, author-only removal, member and date checks;');
+console.log('PASS: journal notes add/edit/remove, read by both, author-only removal, member and date checks;');
 console.log('PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.');
 await db.close();
