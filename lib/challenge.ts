@@ -26,7 +26,7 @@ export type Point={id:string;user_id:string;rule_id:string;day:string;reason:str
 export type Request={id:string;point_id:string;requester_id:string;reason:string;status:string};
 export type Dispute={id:string;entry_id:string;raised_by:string;comment:string;status:string};
 export type Journal={id:string;user_id:string;day:string;text:string;created_at:string};
-export function formatTime(iso:string){return new Date(iso).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit',timeZone:'America/Toronto'})}
+export function formatTime(iso:string){return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Toronto'})}
 export type Data={profiles:Profile[];entries:Entry[];points:Point[];requests:Request[];disputes:Dispute[];finalizations:{user_id:string}[];journals:Journal[]};
 export const emptyData:Data={profiles:[],entries:[],points:[],requests:[],disputes:[],finalizations:[],journals:[]};
 
