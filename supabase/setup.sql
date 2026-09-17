@@ -128,21 +128,28 @@ end $$;
 revoke all on function public.challenge_add_photo(text,text) from public,anon;
 grant execute on function public.challenge_add_photo(text,text) to authenticated;
 
--- Daily journal, one per person per day; never affects scoring.
-create table if not exists public.challenge_journals(user_id uuid not null references public.challenge_profiles,day date not null,text text not null default '',updated_at timestamptz not null default now(),primary key(user_id,day));
-alter table public.challenge_journals enable row level security;
-drop policy if exists journal_member_read on public.challenge_journals;
-create policy journal_member_read on public.challenge_journals for select to authenticated using(public.challenge_member());
-grant select on public.challenge_journals to authenticated;
-revoke insert,update,delete on public.challenge_journals from anon,authenticated;
-create or replace function public.challenge_journal(p_day date,p_text text) returns void language plpgsql security definer set search_path=public as $$ begin
+-- Daily journal notes, any number per person per day; never affect scoring.
+create table if not exists public.challenge_journal_notes(id uuid primary key default gen_random_uuid(),user_id uuid not null references public.challenge_profiles,day date not null,text text not null check(length(text) between 1 and 4000),created_at timestamptz not null default now());
+create index if not exists challenge_journal_notes_day on public.challenge_journal_notes(user_id,day,created_at);
+alter table public.challenge_journal_notes enable row level security;
+drop policy if exists journal_notes_member_read on public.challenge_journal_notes;
+create policy journal_notes_member_read on public.challenge_journal_notes for select to authenticated using(public.challenge_member());
+grant select on public.challenge_journal_notes to authenticated;
+revoke insert,update,delete on public.challenge_journal_notes from anon,authenticated;
+create or replace function public.challenge_journal_add(p_day date,p_text text) returns uuid language plpgsql security definer set search_path=public as $$ declare n uuid; begin
  if not challenge_member() then raise exception 'This challenge is only for Erin and Kazzy.'; end if;
  if p_day not between (select start_date from challenge_config) and (select end_date from challenge_config) then raise exception 'That day is outside the challenge.'; end if;
- if length(coalesce(p_text,''))>4000 then raise exception 'Keep the journal under 4,000 characters.'; end if;
- insert into challenge_journals(user_id,day,text) values(auth.uid(),p_day,coalesce(p_text,'')) on conflict(user_id,day) do update set text=excluded.text,updated_at=now();
+ if length(trim(coalesce(p_text,'')))=0 then raise exception 'Write something first.'; end if;
+ if length(p_text)>4000 then raise exception 'Keep each note under 4,000 characters.'; end if;
+ insert into challenge_journal_notes(user_id,day,text) values(auth.uid(),p_day,trim(p_text)) returning id into n; return n;
 end $$;
-revoke all on function public.challenge_journal(date,text) from public,anon;
-grant execute on function public.challenge_journal(date,text) to authenticated;
+create or replace function public.challenge_journal_delete(p_id uuid) returns void language plpgsql security definer set search_path=public as $$ begin
+ if not challenge_member() then raise exception 'This challenge is only for Erin and Kazzy.'; end if;
+ delete from challenge_journal_notes where id=p_id and user_id=auth.uid();
+ if not found then raise exception 'You can only remove your own notes.'; end if;
+end $$;
+revoke all on function public.challenge_journal_add(date,text),public.challenge_journal_delete(uuid) from public,anon;
+grant execute on function public.challenge_journal_add(date,text),public.challenge_journal_delete(uuid) to authenticated;
 commit;
 -- Optional but recommended: enable pg_cron in Database > Extensions, then run:
 -- select cron.schedule('challenge-hourly','0 * * * *','select public.challenge_tick()');

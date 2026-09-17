@@ -10,7 +10,7 @@ Run `npm install`, then `npm run dev`. Run `npm run build` for the Sites/Cloudfl
 
 ## Database
 
-`supabase/setup.sql` initializes an empty project once. The challenge was restarted on September 15, 2026 as the 30 Day Challenge (Sep 15 – Oct 14) with `supabase/reset-30-day.sql`, which wiped the Sep 8–13 data and replaced the config and gym weeks; run it once, never again. `supabase/fix-deadline-6pm.sql` moves the logging deadline to 6 pm and is rerunnable; run it once on the live project. If the project was set up before the safeupdate fix, run `supabase/fix-safeupdate.sql` once in the SQL editor; it is rerunnable and only replaces function bodies. It only enrolls the two existing Auth accounts, matching their names/email; it refuses other account counts. Never rerun the setup against a populated database. `supabase/add-journal.sql` adds the daily journal table and its save function; it is rerunnable and must be run once on the live project (fresh installs get it from `setup.sql`). `supabase/schedule.sql` installs the hourly pg_cron job. Both were applied to the connected project during setup.
+`supabase/setup.sql` initializes an empty project once. The challenge was restarted on September 15, 2026 as the 30 Day Challenge (Sep 15 – Oct 14) with `supabase/reset-30-day.sql`, which wiped the Sep 8–13 data and replaced the config and gym weeks; run it once, never again. `supabase/fix-deadline-6pm.sql` moves the logging deadline to 6 pm and is rerunnable; run it once on the live project. If the project was set up before the safeupdate fix, run `supabase/fix-safeupdate.sql` once in the SQL editor; it is rerunnable and only replaces function bodies. It only enrolls the two existing Auth accounts, matching their names/email; it refuses other account counts. Never rerun the setup against a populated database. `supabase/add-journal-notes.sql` adds the journal notes table and its add/remove functions, carrying over and retiring the earlier single-text `challenge_journals` table if present; it is rerunnable and must be run once on the live project (fresh installs get it from `setup.sql`). `supabase/schedule.sql` installs the hourly pg_cron job. Both were applied to the connected project during setup.
 
 All challenge tables enable Row Level Security. Authenticated members may read challenge data; clients cannot directly insert/update/delete rows. Security-definer functions validate membership, ownership, partner review, proof, deadline, and finalization under a transaction lock. Storage permits only member reads and uploads to the signed-in member’s folder. Proof is compressed before upload, and available EXIF date metadata is captured first.
 
@@ -18,7 +18,7 @@ At 6 pm Toronto time, unlogged daily habits become provisional misses. Late corr
 
 The scheduled function runs every hour; checks use Toronto local dates, so daylight-saving changes are handled by Postgres timezone conversion. It also runs on authenticated data refresh. No individual logging action waits until the form is finished to save.
 
-Each person can write one journal entry per day, from the Log page or the calendar day view. Journals are readable by both members, editable only by the author, never lock, and never affect scoring.
+Each person can add any number of timestamped journal notes to a day, from the Overview (today), the Log page (the day being logged) or the calendar day view. Notes are readable by both members, removable only by their author, never lock, and never affect scoring.
 
 ## Validation
 

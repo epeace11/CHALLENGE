@@ -63,14 +63,19 @@ await actor(kazzy);await db.exec(`select challenge_decide('${ask.id}',false)`);
 await actor(erin);await db.exec(`select challenge_forgive('${foodPt.id}','second ask')`);
 const again=(await db.query(`select status,reason from challenge_requests where point_id='${foodPt.id}'`)).rows;
 assert.equal(again.length,1);assert.equal(again[0].status,'pending');assert.equal(again[0].reason,'second ask');
-// Journal: own day only, both can read, outsiders and out-of-range days rejected, direct writes blocked.
-await actor(erin);await db.exec(`select challenge_journal((now() at time zone 'America/Toronto')::date,'Rough start, better evening.')`);
-await db.exec(`select challenge_journal((now() at time zone 'America/Toronto')::date,'Rough start, better evening. Slept well.')`);
-assert.deepEqual((await db.query(`select text from challenge_journals where user_id='${erin}'`)).rows.map(r=>r.text),['Rough start, better evening. Slept well.']);
-await assert.rejects(()=>db.exec(`select challenge_journal((now() at time zone 'America/Toronto')::date+30,'x')`),/outside/);
-await actor('00000000-0000-0000-0000-000000000099');await assert.rejects(()=>db.exec(`select challenge_journal((now() at time zone 'America/Toronto')::date,'x')`),/only for/);
-await actor(kazzy);assert.equal((await db.query(`select count(*)::int n from challenge_journals`)).rows[0].n,1);
-await db.exec(`set role authenticated`);await assert.rejects(()=>db.exec(`insert into challenge_journals(user_id,day,text) values('${kazzy}',current_date,'x')`),/permission denied/);await db.exec(`reset role`);
-console.log('PASS: journal upsert, read by both, member and date checks;');
+// Journal notes: several per day, both can read, only the author can remove, outsiders and out-of-range days rejected, direct writes blocked.
+await actor(erin);await db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date,'Rough start.')`);
+await db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date,'  Better evening.  ')`);
+assert.deepEqual((await db.query(`select text from challenge_journal_notes where user_id='${erin}' order by created_at`)).rows.map(r=>r.text),['Rough start.','Better evening.']);
+await assert.rejects(()=>db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date,'   ')`),/Write something/);
+await assert.rejects(()=>db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date+30,'x')`),/outside/);
+await actor('00000000-0000-0000-0000-000000000099');await assert.rejects(()=>db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date,'x')`),/only for/);
+const noteId=(await db.query(`select id from challenge_journal_notes where text='Rough start.'`)).rows[0].id;
+await actor(kazzy);assert.equal((await db.query(`select count(*)::int n from challenge_journal_notes`)).rows[0].n,2);
+await assert.rejects(()=>db.exec(`select challenge_journal_delete('${noteId}')`),/own notes/);
+await actor(erin);await db.exec(`select challenge_journal_delete('${noteId}')`);
+assert.equal((await db.query(`select count(*)::int n from challenge_journal_notes`)).rows[0].n,1);
+await db.exec(`set role authenticated`);await assert.rejects(()=>db.exec(`insert into challenge_journal_notes(user_id,day,text) values('${kazzy}',current_date,'x')`),/permission denied/);await db.exec(`reset role`);
+console.log('PASS: journal notes add/remove, read by both, author-only removal, member and date checks;');
 console.log('PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.');
 await db.close();
