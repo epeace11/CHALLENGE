@@ -31,6 +31,13 @@ await actor(kazzy);await db.exec(`select challenge_decide('${req.id}',true)`);
 assert.equal((await db.query(`select forgiven from challenge_points where id='${p.id}'`)).rows[0].forgiven,true);
 await actor(erin);
 await assert.rejects(()=>db.exec(`select challenge_log('time',(now() at time zone 'America/Toronto')::date,true)`),/screenshot/);
+// Proof: several screenshots, newline-separated; each must be the member's own upload; more than six is refused.
+await db.exec(`insert into storage.objects values('challenge-proof','${erin}/a.jpg'),('challenge-proof','${erin}/b.jpg'),('challenge-proof','${kazzy}/c.jpg')`);
+await db.exec(`select challenge_log('time',(now() at time zone 'America/Toronto')::date,true,'',E'${erin}/a.jpg\\n${erin}/b.jpg')`);
+assert.equal((await db.query(`select proof from challenge_entries where user_id='${erin}' and rule_id='time' and day=(now() at time zone 'America/Toronto')::date`)).rows[0].proof,`${erin}/a.jpg\n${erin}/b.jpg`);
+await assert.rejects(()=>db.exec(`select challenge_log('time',(now() at time zone 'America/Toronto')::date,true,'',E'${erin}/a.jpg\\n${kazzy}/c.jpg')`),/Invalid proof/);
+await assert.rejects(()=>db.exec(`select challenge_log('time',(now() at time zone 'America/Toronto')::date,true,'',E'${erin}/a.jpg\\n${erin}/missing.jpg')`),/Invalid proof/);
+await assert.rejects(()=>db.exec(`select challenge_log('time',(now() at time zone 'America/Toronto')::date,true,'',(select string_agg('${erin}/a.jpg',E'\\n') from generate_series(1,7)))`),/at most six/);
 await assert.rejects(()=>db.exec(`select challenge_log('calories',(now() at time zone 'America/Toronto')::date,false)`),/not available/);
 await actor('00000000-0000-0000-0000-000000000099');await assert.rejects(()=>db.exec(`select challenge_sync()`),/Unauthorized/);
 await actor(erin);
@@ -63,6 +70,13 @@ await actor(kazzy);await db.exec(`select challenge_decide('${ask.id}',false)`);
 await actor(erin);await db.exec(`select challenge_forgive('${foodPt.id}','second ask')`);
 const again=(await db.query(`select status,reason from challenge_requests where point_id='${foodPt.id}'`)).rows;
 assert.equal(again.length,1);assert.equal(again[0].status,'pending');assert.equal(again[0].reason,'second ask');
+// Weekend-only rule: Kazzy's 1 am bed rule is refused on a weekday and accepted on a weekend; Erin never has it.
+await actor(erin);await db.exec(`update challenge_config set start_date=(now() at time zone 'America/Toronto')::date-6 where id=1;select challenge_tick()`);
+const weekday=`(select d::date from generate_series((now() at time zone 'America/Toronto')::date-6,(now() at time zone 'America/Toronto')::date,'1 day') d where extract(dow from d)<=4 limit 1)`,weekend=`(select d::date from generate_series((now() at time zone 'America/Toronto')::date-6,(now() at time zone 'America/Toronto')::date,'1 day') d where extract(dow from d)>4 limit 1)`;
+await assert.rejects(()=>db.exec(`select challenge_log('bed_1am',${weekend},true)`),/not available/);
+await actor(kazzy);await assert.rejects(()=>db.exec(`select challenge_log('bed_1am',${weekday},true)`),/not available/);
+await db.exec(`select challenge_log('bed_1am',${weekend},true)`);
+assert.equal((await db.query(`select count(*)::int n from challenge_entries where rule_id='bed_1am' and extract(dow from day)<=4`)).rows[0].n,0);
 // Journal notes: several per day, both can read, only the author can remove, outsiders and out-of-range days rejected, direct writes blocked.
 await actor(erin);await db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date,'Rough start.')`);
 await db.exec(`select challenge_journal_add((now() at time zone 'America/Toronto')::date,'  Better evening.  ')`);
@@ -81,5 +95,6 @@ await actor(erin);await db.exec(`select challenge_journal_delete('${noteId}')`);
 assert.equal((await db.query(`select count(*)::int n from challenge_journal_notes`)).rows[0].n,1);
 await db.exec(`set role authenticated`);await assert.rejects(()=>db.exec(`insert into challenge_journal_notes(user_id,day,text) values('${kazzy}',current_date,'x')`),/permission denied/);await db.exec(`reset role`);
 console.log('PASS: journal notes add/edit/remove, read by both, author-only removal, member and date checks;');
+console.log('PASS: several screenshots per answer, each validated, capped at six; weekend-only rule gated on both sides;');
 console.log('PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.');
 await db.close();

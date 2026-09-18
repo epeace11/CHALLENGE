@@ -35,10 +35,14 @@ assert.equal(tone(entry('e','bed','2026-09-16',{proposed_done:true,done:false,st
 // Erin's bar: Sep 18 is a Friday so weeknight rules are off; 8+7+7+5 done, 1 excused, 1 missed, 3 reviewing, 2 open daily. The 3 unmet gym visits stay ahead until the week is assessed.
 const bar=personBar(data,erin,now);
 assert.deepEqual({done:bar.done,excused:bar.excused,missed:bar.missed,review:bar.review,open:bar.open},{done:27,excused:1,missed:1,review:3,open:2});
-assert.equal(total(bar),total(personBar(data,kazzy,now)));
+// Kazzy's weed rule runs every day and his 1 am bed rule runs Fri/Sat, so his bar has two more habit-days per weekend day than Erin's.
+const weekendDays=days().filter(d=>new Date(d+'T12:00Z').getUTCDay()>4).length;
+assert.equal(total(bar)+2*weekendDays,total(personBar(data,kazzy,now)));
 const kbar=personBar(data,kazzy,now);assert.equal(kbar.done,0);assert.equal(kbar.review,0);
-// Kazzy's 4 closed days all missed: Tue/Wed/Thu 8 rules, Fri 5 rules.
-assert.equal(kbar.missed,8+8+8+5);
+// Kazzy's 4 closed days all missed: Tue/Wed/Thu 8 rules, Fri 7 (weed still counts, plus the weekend bed rule).
+assert.equal(kbar.missed,8+8+8+7);
+const ks=habitStats(data,kazzy,now);assert.ok(ks.some(s=>s.rule.id==='bed')&&ks.some(s=>s.rule.id==='bed_1am')&&!ks.some(s=>s.rule.id==='weed'));
+assert.equal(ks.find(s=>s.rule.id==='bed_1am').missed,1); // only Fri Sep 18 has closed
 
 // Streaks: excused neither breaks nor extends; pending counts as done.
 const es=habitStats(data,erin,now);
