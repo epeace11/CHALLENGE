@@ -1,0 +1,27 @@
+/* App-like feel on phones: no pinch/double-tap zoom, no rubber-band overscroll, no tap flash, no text-select on controls. */
+html {
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+html,
+body {
+  touch-action: manipulation;
+}
+body {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+button,
+.mobile-nav,
+.desktop-nav,
+.cal .cell,
+.history-row,
+.choice {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}

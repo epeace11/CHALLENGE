@@ -1,0 +1,28 @@
+/* Theme toggle, badge dates, locked answers. */
+.theme-toggle svg {
+  transition: transform 0.4s;
+}
+.theme-toggle:hover svg {
+  transform: rotate(-20deg);
+}
+
+.badge {
+  position: relative;
+}
+.badge-date {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.3px;
+  color: #5b47a8;
+  opacity: 0.75;
+}
+[data-theme='dark'] .badge-date {
+  color: #c9bcff;
+}
+.locked-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

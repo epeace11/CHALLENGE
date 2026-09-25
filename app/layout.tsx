@@ -2,6 +2,39 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { NoZoom } from '@/components/no-zoom';
 import { themeScript } from '@/components/theme-toggle';
-export const metadata:Metadata={title:'30 DAY CHALLENGE',description:'Erin and Kazzy’s daily accountability challenge.',manifest:'/manifest.webmanifest',icons:{icon:'/favicon.svg',apple:'/apple-touch-icon.png'},appleWebApp:{capable:true,title:'30 DAY CHALLENGE',statusBarStyle:'default'}};
-export const viewport:Viewport={themeColor:'#f6f8fb',width:'device-width',initialScale:1,maximumScale:1,userScalable:false,viewportFit:'cover'};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{__html:themeScript}}/></head><body><NoZoom/>{children}</body></html>}
+export const metadata: Metadata = {
+  title: '30 DAY CHALLENGE',
+  description: 'Erin and Kazzy’s daily accountability challenge.',
+  manifest: '/manifest.webmanifest',
+  icons: { icon: '/favicon.svg', apple: '/apple-touch-icon.png' },
+  appleWebApp: {
+    capable: true,
+    title: '30 DAY CHALLENGE',
+    statusBarStyle: 'default',
+  },
+};
+export const viewport: Viewport = {
+  themeColor: '#f6f8fb',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body>
+        <NoZoom />
+        {children}
+      </body>
+    </html>
+  );
+}

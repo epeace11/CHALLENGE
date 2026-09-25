@@ -2,8 +2,16 @@
 import { useEffect } from 'react';
 /** True when the touch started inside an element that can actually scroll. */
 const insideScrollable = (el: EventTarget | null) => {
-  for (let n = el instanceof Element ? el : null; n && n !== document.body; n = n.parentElement) {
-    if (/auto|scroll/.test(getComputedStyle(n).overflowY) && n.scrollHeight > n.clientHeight) return true;
+  for (
+    let n = el instanceof Element ? el : null;
+    n && n !== document.body;
+    n = n.parentElement
+  ) {
+    if (
+      /auto|scroll/.test(getComputedStyle(n).overflowY) &&
+      n.scrollHeight > n.clientHeight
+    )
+      return true;
   }
   return false;
 };
@@ -20,8 +28,15 @@ export function NoZoom() {
   useEffect(() => {
     const block = (e: Event) => e.preventDefault();
     const touch = (e: TouchEvent) => {
-      if (e.touches.length > 1) { e.preventDefault(); return; }
-      if (document.querySelector('[data-slot=dialog-content]') && !insideScrollable(e.target)) e.preventDefault();
+      if (e.touches.length > 1) {
+        e.preventDefault();
+        return;
+      }
+      if (
+        document.querySelector('[data-slot=dialog-content]') &&
+        !insideScrollable(e.target)
+      )
+        e.preventDefault();
     };
     const opts: AddEventListenerOptions = { passive: false };
     document.addEventListener('gesturestart', block, opts);

@@ -9,16 +9,24 @@ export const themeScript = `(function(){var p;try{p=localStorage.getItem('theme'
 
 function apply(t: Theme) {
   document.documentElement.dataset.theme = t;
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', t === 'dark' ? '#0d0b14' : '#f6f8fb');
+  document
+    .querySelector('meta[name=theme-color]')
+    ?.setAttribute('content', t === 'dark' ? '#0d0b14' : '#f6f8fb');
 }
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme | null>(null);
   useEffect(() => {
-    const read = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    const read = () =>
+      setTheme(
+        document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+      );
     read();
     const watch = new MutationObserver(read);
-    watch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    watch.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
     return () => watch.disconnect();
   }, []);
   const next: Theme = theme === 'dark' ? 'light' : 'dark';
@@ -30,7 +38,9 @@ export function ThemeToggle() {
       aria-label={`Switch to ${next} mode`}
       onClick={() => {
         apply(next);
-        try { localStorage.setItem('theme', next); } catch {}
+        try {
+          localStorage.setItem('theme', next);
+        } catch {}
       }}
     >
       {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
