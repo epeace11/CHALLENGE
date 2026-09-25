@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict';
-import { tone,days,personBar,habitStats,habitOrder,daysWon,perfectDays,costByHabit,nextMissCost,badges,weeks,dayNumber,total,maxLoggable } from '../lib/progress.ts';
+import { tone,days,personBar,habitStats,habitOrder,daysWon,perfectDays,costByHabit,nextMissCost,badges,dayNumber,total,maxLoggable } from '../lib/progress.ts';
+import { toWeeks,START,END } from '../lib/challenge.ts';
+import { readFileSync } from 'node:fs';
+// Weeks and targets exactly as the database defines them, so the app and supabase/setup.sql cannot drift apart.
+const setup=readFileSync(new URL('../supabase/setup.sql',import.meta.url),'utf8');
+const weekRows=[...setup.match(/insert into public\.challenge_weeks values(.*);/)[1].matchAll(/\('([\d-]+)','([\d-]+)'\)/g)].map(m=>({start_date:m[1],end_date:m[2]}));
+const targetRows=[...setup.match(/insert into public\.challenge_weekly_targets values(.*);/)[1].matchAll(/\('(\w+)','([\d-]+)',(\d+)\)/g)].map(m=>({rule_id:m[1],start_date:m[2],target:+m[3]}));
+const weeks=toWeeks(weekRows,targetRows);
+assert.match(setup,new RegExp(`start_date date not null default '${START}',end_date date not null default '${END}'`));
 const erin={id:'e',name:'Erin'},kazzy={id:'k',name:'Kazzy'};
 const now=Date.parse('2026-09-20T16:00:00Z'); // Sunday Sep 20, noon Toronto: Sep 15–18 closed, Sep 19 still open
 let n=0;const entry=(uid,rule,day,o={})=>({id:`x${++n}`,user_id:uid,rule_id:rule,day,done:true,status:'confirmed',note:'',proof:null,proposed_done:null,proposed_note:null,proposed_proof:null,updated_at:day,...o});
@@ -18,14 +26,14 @@ const points=[
  point('p3','k','bed','2026-09-15','2026-09-16T22:00:00Z',{reason:'unlogged'}),
  point('p5','k','screens','2026-09-15','2026-09-16T22:00:00Z',{reason:'unlogged'}),
 ];
-const data={profiles:[erin,kazzy],entries,points,requests:[],disputes:[],finalizations:[]};
+const data={profiles:[erin,kazzy],entries,points,requests:[],disputes:[],finalizations:[],journals:[],weeks};
 
 assert.equal(maxLoggable(now),'2026-09-19');
 assert.equal(maxLoggable(Date.parse('2026-09-13T16:00:00Z')),'2026-09-14'); // before the start nothing is loggable
 assert.equal(tone(undefined,'2026-09-15',Date.parse('2026-09-13T16:00:00Z')),'future');
 assert.equal(personBar(data,erin,Date.parse('2026-09-13T16:00:00Z')).open,0);
 assert.equal(dayNumber(now),6);
-assert.equal(weeks.length,5);assert.deepEqual(weeks.map(w=>w.target),[3,4,4,4,1]);
+assert.equal(weeks.length,5);assert.deepEqual(weeks.map(w=>w.targets.gym),[3,4,4,4,1]);assert.deepEqual(weeks.map(w=>w.targets.steps_weekly??0),[0,1,3,3,1]);assert.equal(weeks[0].start,START);assert.equal(weeks.at(-1).end,END);
 assert.equal(tone(undefined,'2026-09-18',now),'missed');
 assert.equal(tone(undefined,'2026-09-19',now),'open');
 assert.equal(tone(undefined,'2026-09-20',now),'future');
@@ -35,9 +43,9 @@ assert.equal(tone(entry('e','bed','2026-09-16',{proposed_done:true,done:false,st
 // Erin's bar: Sep 18 is a Friday so weeknight rules are off; 8+7+7+5 done, 1 excused, 1 missed, 3 reviewing, 2 open daily. The 3 unmet gym visits stay ahead until the week is assessed.
 const bar=personBar(data,erin,now);
 assert.deepEqual({done:bar.done,excused:bar.excused,missed:bar.missed,review:bar.review,open:bar.open},{done:27,excused:1,missed:1,review:3,open:2});
-// Kazzy's weed rule runs every day and his 1 am bed rule runs Fri/Sat, so his bar has two more habit-days per weekend day than Erin's.
+// Kazzy's weed rule runs every day and his 1 am bed rule runs Fri/Sat, so his bar has two more habit-days per weekend day than Erin's, plus his weekly step days.
 const weekendDays=days().filter(d=>new Date(d+'T12:00Z').getUTCDay()>4).length;
-assert.equal(total(bar)+2*weekendDays,total(personBar(data,kazzy,now)));
+assert.equal(total(bar)+2*weekendDays+8,total(personBar(data,kazzy,now))); // plus his weekly steps targets, 1+3+3+1
 const kbar=personBar(data,kazzy,now);assert.equal(kbar.done,0);assert.equal(kbar.review,0);
 // Kazzy's 4 closed days all missed: Tue/Wed/Thu 8 rules, Fri 7 (weed still counts, plus the weekend bed rule).
 assert.equal(kbar.missed,8+8+8+7);

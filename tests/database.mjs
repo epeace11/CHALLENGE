@@ -96,5 +96,32 @@ assert.equal((await db.query(`select count(*)::int n from challenge_journal_note
 await db.exec(`set role authenticated`);await assert.rejects(()=>db.exec(`insert into challenge_journal_notes(user_id,day,text) values('${kazzy}',current_date,'x')`),/permission denied/);await db.exec(`reset role`);
 console.log('PASS: journal notes add/edit/remove, read by both, author-only removal, member and date checks;');
 console.log('PASS: several screenshots per answer, each validated, capped at six; weekend-only rule gated on both sides;');
+// Kazzy's weekly steps: targets come from challenge_weekly_targets; a closed week is assessed like the gym, a No adds no daily point, other people and target-less weeks are rejected.
+const T=`(now() at time zone 'America/Toronto')::date`;
+await actor(erin);
+await db.exec(`update challenge_config set finalized=false,start_date=${T}-10,end_date=${T}+2,allow_same_day=false where id=1;delete from challenge_weekly_targets where true;delete from challenge_weeks where true;insert into challenge_weeks values(${T}-10,${T}-3);insert into challenge_weekly_targets values('steps_weekly',${T}-10,2)`);
+await assert.rejects(()=>db.exec(`select challenge_log('steps_weekly',${T}-5,false)`),/not available/);
+await actor(kazzy);
+await assert.rejects(()=>db.exec(`select challenge_log('steps_weekly',${T}-5,true)`),/screenshot/);
+await assert.rejects(()=>db.exec(`select challenge_log('steps_weekly',${T}-2,false)`),/not available/); // no target that week
+await db.exec(`insert into storage.objects values('challenge-proof','${kazzy}/steps.jpg');select challenge_log('steps_weekly',${T}-6,true,'',$$${kazzy}/steps.jpg$$);select challenge_log('steps_weekly',${T}-5,false)`);
+// Both days are past their deadline, so they are late corrections until Erin approves the Yes.
+const stepEntry=(await db.query(`select id from challenge_entries where rule_id='steps_weekly' and day=${T}-6`)).rows[0];
+await actor(erin);await db.exec(`select challenge_review('${stepEntry.id}','approve')`);await actor(kazzy);
+const stepPoints=(await db.query(`select user_id,slot,voided from challenge_points where rule_id='steps_weekly' order by slot`)).rows;
+assert.deepEqual(stepPoints.map(r=>[r.user_id,r.slot,r.voided]),[[kazzy,1,false],[kazzy,2,true]]); // one of two days: one shortfall, no slot-0 point for the No
+// Change history: members' changes carry their id; changes with no signed-in member (the hourly job, scripts) are recorded too; unchanged rewrites are skipped.
+assert.ok((await db.query(`select count(*)::int n from challenge_history where table_name='challenge_points' and actor='${kazzy}' and new_row->>'rule_id'='steps_weekly'`)).rows[0].n>=2);
+await actor('');
+const before=(await db.query(`select count(*)::int n from challenge_history`)).rows[0].n;
+await db.exec(`select challenge_rescore()`);
+assert.equal((await db.query(`select count(*)::int n from challenge_history`)).rows[0].n,before);
+await db.exec(`update challenge_weekly_targets set target=3 where rule_id='steps_weekly'`);
+const sys=(await db.query(`select actor,source,op,statement from challenge_history where table_name='challenge_weekly_targets' order by id desc limit 1`)).rows[0];
+assert.equal(sys.actor,null);assert.notEqual(sys.source,'member');assert.equal(sys.op,'update');assert.match(sys.statement,/set target=3/);
+assert.ok((await db.query(`select updated_at from challenge_points limit 1`)).rows[0].updated_at);
+await assert.rejects(()=>db.exec(`set role authenticated;insert into challenge_history(table_name,op,source) values('x','x','x')`));
+await db.exec(`reset role`);
+console.log('PASS: weekly steps for Kazzy only, target-less weeks rejected, closed week assessed; change history records members and system changes, skips no-op rewrites, is read-only to clients.');
 console.log('PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.');
 await db.close();

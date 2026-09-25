@@ -1,6 +1,6 @@
-import { rules, activeRules, week, shift, lockTime, toronto, type Data, type Entry, type Person, type Profile, type Rule } from './challenge.ts';
+import { rules, activeRules, targetFor, shift, lockTime, toronto, START, END, type Data, type Entry, type Person, type Profile, type Rule } from './challenge.ts';
 
-export const START='2026-09-15',END='2026-10-14';
+export { START, END };
 export type Tone='done'|'excused'|'missed'|'review'|'open'|'future';
 export const tones:Tone[]=['done','excused','missed','review','open','future'];
 export const toneLabel:Record<Tone,string>={done:'done',excused:'excused',missed:'missed',review:'reviewing',open:'still open',future:'ahead'};
@@ -9,7 +9,6 @@ export const emptyCounts=():Counts=>({done:0,excused:0,missed:0,review:0,open:0,
 export const total=(c:Counts)=>tones.reduce((s,t)=>s+c[t],0);
 
 export function days(from=START,to=END){const out:string[]=[];for(let d=from;d<=to;d=shift(d,1))out.push(d);return out}
-export const weeks=(()=>{const out:{start:string;end:string;target:number}[]=[];for(const d of days()){const w=week(d);if(!out.some(o=>o.start===w.start))out.push(w)}return out})();
 export const closed=(day:string,now:number)=>now>lockTime(day);
 /** Latest day whose logging window has opened: yesterday, but never before the start or after the end. */
 export const maxLoggable=(now:number)=>{const y=shift(toronto(new Date(now)),-1);return y<START?shift(START,-1):y>END?END:y};
@@ -28,17 +27,18 @@ export function tone(e:Entry|undefined,day:string,now:number,maxDate=maxLoggable
  if(e.done&&e.status==='confirmed')return 'done';
  return 'missed'}
 
+export const weeklyRules=(name:Person)=>rules.filter(r=>r.weekly&&(!r.person||r.person===name));
 export const dailyRules=(name:Person,day:string)=>activeRules(name,day).filter(r=>!r.weekly);
-export const gymVisits=(data:Data,uid:string,w:{start:string;end:string})=>data.entries.filter(e=>e.user_id===uid&&e.rule_id==='gym'&&e.day>=w.start&&e.day<=w.end&&e.done&&!['conceded','missed','unlogged'].includes(e.status)).length;
+export const weeklyDone=(data:Data,uid:string,rule:string,w:{start:string;end:string})=>data.entries.filter(e=>e.user_id===uid&&e.rule_id===rule&&e.day>=w.start&&e.day<=w.end&&e.done&&!['conceded','missed','unlogged'].includes(e.status)).length;
 
-/** Every habit-day of the challenge plus the weekly gym targets, bucketed by colour. Gym visits count as done when logged and otherwise stay ahead until their week closes. */
+/** Every habit-day of the challenge plus the weekly targets (gym, Kazzy's steps), bucketed by colour. Weekly days count as done when logged and otherwise stay ahead until their week closes. */
 export function personBar(data:Data,p:Profile,now:number,ix=index(data)):Counts{
  const c=emptyCounts(),maxDate=maxLoggable(now);
  for(const d of days())for(const r of dailyRules(p.name,d))c[tone(ix.get(key(p.id,r.id,d)),d,now,maxDate)]++;
- for(const w of weeks){const t=w.target,v=Math.min(t,gymVisits(data,p.id,w));c.done+=v;
+ for(const r of weeklyRules(p.name))for(const w of data.weeks){const t=targetFor(w,r.id);if(!t)continue;const v=Math.min(t,weeklyDone(data,p.id,r.id,w));c.done+=v;
   if(w.start>maxDate)c.future+=t;
-  else if(closed(w.end,now)){const short=t-v,forgiven=data.points.filter(q=>q.user_id===p.id&&q.rule_id==='gym'&&q.day===w.end&&!q.voided&&q.forgiven).length,ex=Math.min(short,forgiven);c.excused+=ex;c.missed+=short-ex}
-  else c.future+=t-v} // A week in progress is not 'open': the remaining visits only resolve when the week is assessed.
+  else if(closed(w.end,now)){const short=t-v,forgiven=data.points.filter(q=>q.user_id===p.id&&q.rule_id===r.id&&q.day===w.end&&!q.voided&&q.forgiven).length,ex=Math.min(short,forgiven);c.excused+=ex;c.missed+=short-ex}
+  else c.future+=t-v} // A week in progress is not 'open': the remaining days only resolve when the week is assessed.
  return c}
 
 export type HabitStat={rule:Rule;counts:Counts;done:number;missed:number;rate:number|null;streak:number;best:number;reached:Record<number,string>;dollars:number};
@@ -84,13 +84,13 @@ export function badges(data:Data,p:Profile,now:number,ix=index(data)):Badge[]{
  const stats=habitStats(data,p,now,ix),perfect=perfectDays(data,p,now,ix),over=closed(END,now),partner=data.profiles.find(o=>o.id!==p.id);
  let cleanWeek:string|undefined;{let run=0,prev='';for(const d of perfect.list){run=prev===shift(d,-1)?run+1:1;prev=d;if(run===7){cleanWeek=d;break}}}
  const streakDate=(n:number)=>stats.map(s=>s.reached[n]).filter(Boolean).sort()[0];
- const half='2026-09-29',halfPoints=data.points.filter(q=>q.user_id===p.id&&!q.forgiven&&!q.voided&&q.day<=half).length;
- const gymShort=weeks.filter(w=>closed(w.end,now)).some(w=>gymVisits(data,p.id,w)<w.target);
+ const half=shift(START,14),halfPoints=data.points.filter(q=>q.user_id===p.id&&!q.forgiven&&!q.voided&&q.day<=half).length;
+ const gymWeeks=data.weeks.filter(w=>targetFor(w,'gym')>0&&closed(w.end,now)),gymShort=gymWeeks.some(w=>weeklyDone(data,p.id,'gym',w)<targetFor(w,'gym'));
  const b=(id:string,title:string,how:string,date:string|undefined|false,earned=!!date):Badge=>({id,title,how,earned,date:date||undefined});
  // Three days won in a row (ties break the run).
  let hatTrick:string|undefined;{let run=0;for(const r of daysWon(data,now,ix).all){run=r.winner===p.id?run+1:0;if(run===3){hatTrick=r.day;break}}}
  // First closed week where the gym target was met.
- const ironWeek=weeks.find(w=>closed(w.end,now)&&gymVisits(data,p.id,w)>=w.target)?.end;
+ const ironWeek=gymWeeks.find(w=>weeklyDone(data,p.id,'gym',w)>=targetFor(w,'gym'))?.end;
  // The last seven days all clean.
  const finish=days(shift(END,-6),END),strongFinish=over&&finish.every(d=>perfect.list.includes(d))&&END;
  return [
