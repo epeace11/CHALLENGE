@@ -56,7 +56,7 @@ await assert.rejects(()=>db.exec(`update challenge_entries set done=true`),/perm
 await db.exec(`reset role`);
 // Forgiveness: partner can forgive directly and undo it; owner cannot; re-asking after a denial works.
 await actor(erin);await db.exec(`select challenge_log('food',(now() at time zone 'America/Toronto')::date,false)`);
-const foodPt=(await db.query(`select p.id from challenge_points p join challenge_entries e on e.id=p.entry_id where e.user_id='${erin}' and e.rule_id='food' and not p.voided and not p.forgiven`)).rows[0];
+const foodPt=(await db.query(`select p.id from challenge_points p join challenge_entries e on e.id=p.entry_id where e.user_id='${erin}' and e.rule_id='food' and e.day=(now() at time zone 'America/Toronto')::date and not p.voided and not p.forgiven`)).rows[0];
 await assert.rejects(()=>db.exec(`select challenge_partner_forgive('${foodPt.id}',true)`),/partner/);
 await actor(kazzy);await db.exec(`select challenge_partner_forgive('${foodPt.id}',true)`);
 assert.equal((await db.query(`select forgiven from challenge_points where id='${foodPt.id}'`)).rows[0].forgiven,true);
@@ -123,5 +123,20 @@ assert.ok((await db.query(`select updated_at from challenge_points limit 1`)).ro
 await assert.rejects(()=>db.exec(`set role authenticated;insert into challenge_history(table_name,op,source) values('x','x','x')`));
 await db.exec(`reset role`);
 console.log('PASS: weekly steps for Kazzy only, target-less weeks rejected, closed week assessed; change history records members and system changes, skips no-op rewrites, is read-only to clients.');
+// Settled answers lock after their deadline: no edits, no forgiveness requests. Unlogged misses stay open; partners can still forgive directly.
+await actor(erin);
+await db.exec(`update challenge_config set finalized=false,start_date=${T}-10,end_date=${T}+2 where id=1;update challenge_rules set weeknights=false,weekends=false where id='screens'`);
+await db.exec(`insert into challenge_entries(user_id,rule_id,day,done,status) values('${erin}','screens',${T}-4,false,'missed'),('${erin}','entertainment',${T}-4,true,'confirmed'),('${erin}','food',${T}-4,false,'unlogged') on conflict(user_id,rule_id,day) do update set done=excluded.done,status=excluded.status,proposed_done=null`);
+await db.exec(`insert into challenge_points(user_id,rule_id,day,reason,entry_id) select user_id,rule_id,day,'missed',id from challenge_entries where user_id='${erin}' and day=${T}-4 and not done on conflict do nothing`);
+await assert.rejects(()=>db.exec(`select challenge_log('screens',${T}-4,true)`),/locked in/);
+await assert.rejects(()=>db.exec(`select challenge_log('entertainment',${T}-4,false)`),/locked in/);
+const lockedPt=(await db.query(`select id from challenge_points where user_id='${erin}' and rule_id='screens' and day=${T}-4`)).rows[0];
+await assert.rejects(()=>db.exec(`select challenge_forgive('${lockedPt.id}','too late')`),/locked in/);
+await db.exec(`select challenge_log('food',${T}-4,true)`); // unlogged: still a late correction
+const openPt=(await db.query(`select id from challenge_points where user_id='${erin}' and rule_id='food' and day=${T}-4`)).rows[0];
+await db.exec(`select challenge_forgive('${openPt.id}','never reviewed')`);
+await actor(kazzy);await db.exec(`select challenge_partner_forgive('${lockedPt.id}',true)`);
+assert.equal((await db.query(`select forgiven from challenge_points where id='${lockedPt.id}'`)).rows[0].forgiven,true);
+console.log('PASS: settled answers lock after the deadline (no edits or forgiveness requests); unlogged misses and partner forgiveness stay open.');
 console.log('PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.');
 await db.close();

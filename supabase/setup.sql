@@ -42,6 +42,8 @@ create function public.challenge_tick() returns void language plpgsql security d
  update challenge_entries set status='confirmed' where status='pending' and proposed_done is null and updated_at<=now()-interval '48 hours';
  perform challenge_rescore();end $$;
 create function public.challenge_sync() returns void language plpgsql security definer set search_path=public as $$ begin if not challenge_member() then raise exception 'Unauthorized'; end if; perform challenge_tick(); end $$;
+-- An answer is locked in once its 11:59 pm deadline has passed and nothing is waiting on it: approved, auto-confirmed, forgiven, conceded, or a settled No. Unlogged misses stay open to late corrections.
+create function public.challenge_locked(e public.challenge_entries) returns boolean language sql stable set search_path=public as $$ select e.id is not null and now()>((e.day+1)+time '23:59') at time zone 'America/Toronto' and e.status in ('confirmed','missed','excused','conceded') and e.proposed_done is null $$;
 create function public.challenge_log(p_rule text,p_day date,p_done boolean,p_note text default '',p_proof text default null) returns void language plpgsql security definer set search_path=public as $$ declare r challenge_rules;e challenge_entries;late boolean; begin
  perform challenge_assert(); perform challenge_tick(); select * into r from challenge_rules where id=p_rule;
  if r.id is null or p_day not between (select start_date from challenge_config) and (select least(end_date,(now() at time zone 'America/Toronto')::date-case when allow_same_day then 0 else 1 end) from challenge_config) or (r.person is not null and r.person<>(select name from challenge_profiles where id=auth.uid())) or (r.weekly and coalesce((select t.target from challenge_weekly_targets t join challenge_weeks k using(start_date) where t.rule_id=r.id and p_day between k.start_date and k.end_date),0)=0) or (r.weeknights and extract(dow from p_day)>4) or (r.weekends and extract(dow from p_day)<=4) then raise exception 'This habit is not available for that date.'; end if;
@@ -50,6 +52,7 @@ create function public.challenge_log(p_rule text,p_day date,p_done boolean,p_not
  if p_proof is not null and exists(select 1 from unnest(string_to_array(p_proof,E'\n')) as f(path) where not exists(select 1 from storage.objects where bucket_id='challenge-proof' and name=f.path and (storage.foldername(f.path))[1]=auth.uid()::text)) then raise exception 'Invalid proof attachment.'; end if;
  select * into e from challenge_entries where user_id=auth.uid() and rule_id=p_rule and day=p_day;
  if e.status='disputed' then raise exception 'Resolve the dispute before editing.'; end if;
+ if challenge_locked(e) then raise exception 'This answer is locked in.'; end if;
  late:=now()>((p_day+1)+time '23:59') at time zone 'America/Toronto';
  if late and e.id is null then
  insert into challenge_entries(user_id,rule_id,day,done,status) values(auth.uid(),p_rule,p_day,false,'unlogged') returning * into e;
@@ -86,6 +89,7 @@ create function public.challenge_review(p_entry uuid,p_action text,p_comment tex
  insert into challenge_audit(entry_id,actor,action,details) values(e.id,auth.uid(),p_action,jsonb_build_object('comment',p_comment));delete from challenge_finalizations where true;perform challenge_rescore();end $$;
 create function public.challenge_forgive(p_point uuid,p_reason text) returns void language plpgsql security definer set search_path=public as $$ begin
  perform challenge_assert();if length(trim(p_reason))=0 or not exists(select 1 from challenge_points where id=p_point and user_id=auth.uid() and not forgiven and not voided) then raise exception 'An active point and reason are required.';end if;
+ if exists(select 1 from challenge_points p join challenge_entries e on e.id=p.entry_id where p.id=p_point and challenge_locked(e)) then raise exception 'This answer is locked in.';end if;
  insert into challenge_requests(point_id,requester_id,reason) values(p_point,auth.uid(),left(p_reason,2000))
  on conflict(point_id) do update set reason=excluded.reason,status='pending',decided_by=null,decided_at=null where challenge_requests.status<>'approved';
  delete from challenge_finalizations where true;end $$;
@@ -111,7 +115,7 @@ create function public.challenge_finalize() returns void language plpgsql securi
  if (select count(*) from challenge_finalizations)=2 then update challenge_config set finalized=true where id=1;end if;end $$;
 -- Client reads are member-only; writes are exclusively validated functions.
 do $$ declare t text;begin foreach t in array array['challenge_profiles','challenge_config','challenge_rules','challenge_weeks','challenge_weekly_targets','challenge_entries','challenge_points','challenge_requests','challenge_disputes','challenge_finalizations','challenge_audit'] loop execute format('alter table public.%I enable row level security',t);execute format('create policy member_read on public.%I for select to authenticated using(public.challenge_member())',t);execute format('grant select on public.%I to authenticated',t);execute format('revoke insert,update,delete on public.%I from anon,authenticated',t);end loop;end $$;
-revoke all on function public.challenge_assert(),public.challenge_tick(),public.challenge_rescore() from public,anon,authenticated;
+revoke all on function public.challenge_locked(public.challenge_entries),public.challenge_assert(),public.challenge_tick(),public.challenge_rescore() from public,anon,authenticated;
 grant execute on function public.challenge_member() to authenticated;
 revoke all on function public.challenge_sync(),public.challenge_log(text,date,boolean,text,text),public.challenge_review(uuid,text,text),public.challenge_forgive(uuid,text),public.challenge_decide(uuid,boolean),public.challenge_finalize() from public,anon;
 grant execute on function public.challenge_sync(),public.challenge_log(text,date,boolean,text,text),public.challenge_review(uuid,text,text),public.challenge_forgive(uuid,text),public.challenge_partner_forgive(uuid,boolean),public.challenge_decide(uuid,boolean),public.challenge_finalize() to authenticated;

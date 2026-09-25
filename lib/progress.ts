@@ -10,6 +10,8 @@ export const total=(c:Counts)=>tones.reduce((s,t)=>s+c[t],0);
 
 export function days(from=START,to=END){const out:string[]=[];for(let d=from;d<=to;d=shift(d,1))out.push(d);return out}
 export const closed=(day:string,now:number)=>now>lockTime(day);
+/** Settled after its deadline (approved, auto-confirmed, forgiven, conceded or a No): no more edits or forgiveness requests. Mirrors challenge_locked in the database; unlogged misses stay open. */
+export const locked=(e:Entry|undefined,now:number)=>!!e&&closed(e.day,now)&&['confirmed','missed','excused','conceded'].includes(e.status)&&e.proposed_done===null;
 /** Latest day whose logging window has opened: yesterday, but never before the start or after the end. */
 export const maxLoggable=(now:number)=>{const y=shift(toronto(new Date(now)),-1);return y<START?shift(START,-1):y>END?END:y};
 export const dayNumber=(now:number)=>Math.min(30,Math.max(0,Math.round((Date.parse(toronto(new Date(now))+'T00:00Z')-Date.parse(START+'T00:00Z'))/864e5)+1));
