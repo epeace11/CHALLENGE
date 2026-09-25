@@ -62,7 +62,7 @@ export function RulesPage() {
                   .filter((r) => r.weekly && targetFor(x, r.id) > 0)
                   .map(
                     (r) =>
-                      `${weeklyLabel[r.id] ?? r.title} ${targetFor(x, r.id)}`,
+                      `${r.person ? `${r.person}’s ` : ''}${weeklyLabel[r.id] ?? r.title} ${targetFor(x, r.id)}`,
                   )
                   .join(' · ')}
               </span>

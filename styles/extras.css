@@ -15,11 +15,8 @@
   right: 8px;
   font-size: 9.5px;
   letter-spacing: 0.3px;
-  color: #5b47a8;
+  color: var(--accent-text);
   opacity: 0.75;
-}
-[data-theme='dark'] .badge-date {
-  color: #c9bcff;
 }
 .locked-note {
   display: flex;

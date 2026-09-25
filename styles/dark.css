@@ -2,7 +2,12 @@
 /* ── Dark mode ──────────────────────────────────────────────────────────────
    <html data-theme="dark"> is set before paint by the script in app/layout.tsx:
    the saved choice from the top-bar toggle, otherwise the system setting.
-   Near-black plum with violet and rose glows; frosted glass stays frosted. */
+   Near-black plum with violet and rose glows; frosted glass stays frosted.
+
+   Almost all of dark mode is this one block: it gives every token from the
+   :root block in base.css its dark value, so a light rule written with
+   var(--token) is dark-ready by itself. The few rules after it are the
+   structural overrides a token cannot express (each says why). */
 [data-theme='dark'] {
   color-scheme: dark;
   --background: #0d0b14;
@@ -17,379 +22,173 @@
   --accent: #2a2245;
   --popover: #17131f;
   --popover-foreground: #ece9f5;
-}
-[data-theme='dark'] body {
-  background:
+
+  --page-bg:
     radial-gradient(ellipse at 12% 78%, #2a1f4acc 0, transparent 50%),
     radial-gradient(ellipse at 86% 18%, #3b173599 0, transparent 45%),
     radial-gradient(ellipse at 50% 120%, #1b1636 0, transparent 60%), #0d0b14;
+  --selection: #5b47a8;
+
+  /* Text. */
+  --text-strong: #ece9f5;
+  --text-muted: #9a97ad;
+  --text-soft: #9a97ad;
+  --text-deadline: #9a97ad;
+  --text-note: #9a97ad;
+  --text-proof: #9a97ad;
+  --text-rule: #9a97ad;
+  --text-rule-strong: #ece9f5;
+  --text-gift: #9a97ad;
+  --text-mark: #9a97ad;
+  --text-dim: #77738c;
+  --text-heading-soft: #77738c;
+  --text-caption: #77738c;
+  --text-faint: #6f6b84;
+  --text-disabled: #6f6b84;
+  --text-detail-note: #ece9f5;
+  --text-journal: #ece9f5;
+  --text-journal-hover: #fff;
+  --text-warn: #f2c46a;
+  --link: #c3b5ff;
+  --accent-text: #c9bcff;
+  --icon-accent: #d4c8ff;
+  --nav-active: #d4c8ff;
+  --nav-mobile-text: #8f8ba3;
+  --avatar-text: #f3eefc;
+  --detail-meta-text: #c9c5d8;
+  --dialog-close-text-hover: #fff;
+  --error-text: #ffb3b3;
+
+  /* Lines and rings. */
+  --line: #ffffff14;
+  --line-footer: #ffffff14;
+  --line-rule: #ffffff14;
+  --line-finalize: #ffffff14;
+  --line-ledger: #ffffff14;
+  --line-dialog: #ffffff14;
+  --line-note: #ffffff14;
+  --glass-border: #ffffff1a;
+  --dialog-border: #ffffff1a;
+  --button-border: #ffffff1f;
+  --field-border: #ffffff24;
+  --field-border-strong: #ffffff1f;
+  --choice-border: #ffffff24;
+  --primary-border: #a47af0;
+  --proof-border: #ffffff1f;
+  --dialog-close-border: #ffffff1f;
+  --filter-border: #ffffff1a;
+  --error-border: #6b2433;
+  --winner-border: #5fbf8c80;
+  --attention-border: #f2c46a66;
+  --badge-earned-border: #5b47a8;
+  --orbit-ring: #2c2350;
+  --focus-ring: #b8a5ff;
+  --focus-border: #a18cf5;
+  --focus-halo: #8b6cf033;
+  --cal-today-ring: #c3b5ff;
+  --nav-mobile-line: #ffffff14;
+
+  /* Fills, gradients and shadows. */
+  --button-bg: #ffffff0a;
+  --button-bg-hover: #ffffff17;
+  --glass-bg: linear-gradient(125deg, #ffffff12, #ffffff05);
+  --glass-bg-hover: linear-gradient(125deg, #ffffff1a, #ffffff08);
+  --glass-shadow: 0 10px 40px #00000073, inset 0 1px 0 #ffffff12;
+  --winner-bg: linear-gradient(110deg, #1d3a2d99, #ffffff06);
+  --winner-shadow: 0 10px 40px #00000073, 0 0 40px #5fbf8c1f;
+  --primary-gradient: linear-gradient(130deg, #8b6cf0, #c25aa6);
+  --primary-gradient-hover: linear-gradient(130deg, #9a7ff5, #d068b4);
+  --primary-glow: 0 6px 24px #8b6cf040;
+  --fill-disabled: #ffffff0f;
+  --fill-accent: #2c2350;
+  --field-bg: #ffffff0a;
+  --field-bg-strong: #ffffff0a;
+  --filter-bg: #ffffff0a;
+  --track-bg: #ffffff14;
+  --bar-bg: #ffffff14;
+  --dot-ring: 0 0 0 1.5px #16121f, 0 0 0 2.5px #ffffff59;
+  --error-bg: #3a1620;
+  --badge-bg: #ffffff06;
+  --badge-earned-bg: linear-gradient(140deg, #2c2350, #1c3a2c);
+  --badge-earned-glow: 0 0 24px #8b6cf026;
+  --badge-icon-bg: #ffffff14;
+  --attention-bg: linear-gradient(120deg, #3d2e1299, #ffffff06);
+  --lightbox-bg: #ffffff08;
+  --detail-meta-bg: #ffffff0a;
+  --note-bg: #ffffff0a;
+  --dialog-overlay: #05030acc;
+  --dialog-bg: linear-gradient(140deg, #1d1829f7, #141019f7);
+  --dialog-shadow:
+    0 30px 80px #000000b3, 0 0 0 1px #ffffff0a, 0 0 60px #8b6cf01a;
+  --dialog-close-bg: #ffffff0d;
+  --dialog-close-bg-hover: #ffffff1f;
+  --orbit-glow: radial-gradient(circle, #5a2a5566 0, transparent 70%);
+  --avatar-bg: linear-gradient(135deg, #3a2c6b, #5a2a55);
+  --nav-mobile-bg: #15111ed9;
+  --nav-dot: #c3b5ff;
+  --nav-underline: linear-gradient(90deg, #b8a5ff, #ff8fc4);
+  --nav-underline-mobile: linear-gradient(90deg, #b8a5ff, #ff8fc4);
+  --nav-underline-glow: 0 0 12px #b8a5ffaa;
+  --cal-today-glow: 0 0 14px #b8a5ff66;
+  --pill-none-bg: #ffffff10;
+  --cal-future-bg: #ffffff06;
+  --cal-future-text: #55516a;
+
+  /* Tones. (--tone-review is the same amber in both themes.) */
+  --tone-done: #5fd49a;
+  --tone-excused: #3f7a5b;
+  --tone-missed: #ff7a8a;
+  --tone-open: #a18cf5;
+  --tone-done-bg: #1c3a2c;
+  --tone-done-text: #7fe0ad;
+  --tone-missed-bg: #43192a;
+  --tone-missed-text: #ff9aa8;
+  --tone-wait-bg: #3d2e12;
+  --tone-wait-text: #f5cd7a;
+  --tone-open-bg: #ffffff14;
+  --tone-open-text: #ece9f5;
+}
+
+/* ── Structural overrides ───────────────────────────────────────────────────
+   Light mode scrolls its page glow with the content; dark pins it. */
+[data-theme='dark'] body {
   background-attachment: fixed;
 }
-[data-theme='dark'] ::selection {
-  background: #5b47a8;
-}
-[data-theme='dark'] button {
-  border-color: #ffffff1f;
-  background: #ffffff0a;
+/* Light buttons keep the browser's own text colour (black); dark ones take the
+   surrounding text colour instead, which a token can't say. :where() keeps this
+   at element specificity so any class that sets a button colour still wins. */
+:where([data-theme='dark']) button {
   color: inherit;
 }
-[data-theme='dark'] button:hover:not(:disabled) {
-  background: #ffffff17;
+/* The old dark rule for every button outranked these two single-class resets,
+   so in dark they show the faint button fill. Kept, at the same specificity as
+   the resets, so nothing changes. */
+:where([data-theme='dark']) .filters button,
+:where([data-theme='dark']) .error-bar button {
+  background: var(--button-bg);
 }
-[data-theme='dark'] button:focus-visible,
-[data-theme='dark'] a:focus-visible,
-[data-theme='dark'] input:focus-visible {
-  outline-color: #b8a5ff;
+/* Inside a dialog, the old dark rule for dialog textareas outranked the journal
+   composer's transparent textarea, so there it shows the field fill. Kept. */
+[data-theme='dark'] [data-slot='dialog-content'] .journal-composer textarea {
+  background: var(--field-bg);
 }
-[data-theme='dark'] .glass {
-  background: linear-gradient(125deg, #ffffff12, #ffffff05);
-  border-color: #ffffff1a;
-  box-shadow:
-    0 10px 40px #00000073,
-    inset 0 1px 0 #ffffff12;
+/* Likewise the old dark focus rule for dialog textareas outranked the composer's
+   "no shadow" on focus, so a focused composer textarea in a dialog shows the halo. */
+[data-theme='dark']
+  [data-slot='dialog-content']
+  .journal-composer
+  textarea:focus {
+  box-shadow: 0 0 0 4px var(--focus-halo);
 }
-[data-theme='dark'] .winner {
-  border-color: #5fbf8c80;
-  background: linear-gradient(110deg, #1d3a2d99, #ffffff06);
-  box-shadow:
-    0 10px 40px #00000073,
-    0 0 40px #5fbf8c1f;
-}
+/* The gift amount is plain text in light and gradient-filled text in dark. */
 [data-theme='dark'] .gift-sentence strong {
   background: linear-gradient(120deg, #fff 20%, #d9ccff 60%, #ffb3d6);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-[data-theme='dark'] .topbar nav,
-[data-theme='dark'] .eyebrow,
-[data-theme='dark'] .muted,
-[data-theme='dark'] .deadline,
-[data-theme='dark'] .legend,
-[data-theme='dark'] .bar-legend,
-[data-theme='dark'] .missed-total,
-[data-theme='dark'] .next-miss,
-[data-theme='dark'] .habit-facts,
-[data-theme='dark'] .stat,
-[data-theme='dark'] .stat small,
-[data-theme='dark'] .badge small,
-[data-theme='dark'] .score span,
-[data-theme='dark'] .mini-name,
-[data-theme='dark'] .history-row .who,
-[data-theme='dark'] .habit-title .who,
-[data-theme='dark'] .cost-row .who,
-[data-theme='dark'] .link-body small,
-[data-theme='dark'] .note,
-[data-theme='dark'] .proof,
-[data-theme='dark'] .rule-row p,
-[data-theme='dark'] .rules-process p,
-[data-theme='dark'] .week-targets,
-[data-theme='dark'] .gift-sentence > span,
-[data-theme='dark'] .status-mark,
-[data-theme='dark'] [data-slot='dialog-description'] {
-  color: #9a97ad;
-}
-[data-theme='dark'] h1 span,
-[data-theme='dark'] .cal .dow,
-[data-theme='dark'] .journal-time,
-[data-theme='dark'] .mini-streak small,
-[data-theme='dark'] .photo-date,
-[data-theme='dark'] .loading-text {
-  color: #77738c;
-}
-[data-theme='dark'] .deadline b,
-[data-theme='dark'] .next-miss b,
-[data-theme='dark'] .login .muted b,
-[data-theme='dark'] .stat b,
-[data-theme='dark'] .rule-row p span,
-[data-theme='dark'] .week-targets li span:first-child {
-  color: #ece9f5;
-}
-[data-theme='dark'] .deadline.late,
-[data-theme='dark'] .mini-streak {
-  color: #f2c46a;
-}
-[data-theme='dark'] .text-link,
-[data-theme='dark'] .strip-link,
-[data-theme='dark'] .login .forgot,
-[data-theme='dark'] .link-card > svg,
-[data-theme='dark'] .detail-meta b {
-  color: #c3b5ff;
-}
-[data-theme='dark'] .active {
-  color: #d4c8ff !important;
-}
-[data-theme='dark'] .desktop-nav button {
-  background: none;
-  border: 0;
-}
-[data-theme='dark'] .desktop-nav button.active:after,
-[data-theme='dark'] .mobile-nav button.active:after {
-  background: linear-gradient(90deg, #b8a5ff, #ff8fc4);
-  box-shadow: 0 0 12px #b8a5ffaa;
-}
-[data-theme='dark'] .nav-dot {
-  background: #c3b5ff;
-}
-[data-theme='dark'] .account button,
-[data-theme='dark'] .mobile-nav button {
-  background: none;
-  border: 0;
-}
-[data-theme='dark'] .avatar {
-  background: linear-gradient(135deg, #3a2c6b, #5a2a55);
-  color: #f3eefc;
-}
-[data-theme='dark'] .mobile-nav {
-  background: #15111ed9;
-  border-top: 1px solid #ffffff14;
-}
-[data-theme='dark'] .mobile-nav button {
-  color: #8f8ba3;
-}
-[data-theme='dark'] input,
-[data-theme='dark'] textarea {
-  border-color: #ffffff24;
-  background: #ffffff0a;
-}
+/* Light keeps the browser's default placeholder colour. */
 [data-theme='dark'] input::placeholder,
 [data-theme='dark'] textarea::placeholder {
   color: #6f6b84;
-}
-[data-theme='dark'] .choice {
-  border-color: #ffffff24;
-}
-[data-theme='dark'] .choice.selected,
-[data-theme='dark'] .primary,
-[data-theme='dark'] .journal-add {
-  background: linear-gradient(130deg, #8b6cf0, #c25aa6);
-  border-color: #a47af0;
-  color: #fff;
-  box-shadow: 0 6px 24px #8b6cf040;
-}
-[data-theme='dark'] .primary:hover:not(:disabled),
-[data-theme='dark'] .journal-add:hover:not(:disabled) {
-  background: linear-gradient(130deg, #9a7ff5, #d068b4);
-}
-[data-theme='dark'] .journal-add:disabled {
-  background: #ffffff0f;
-  color: #6f6b84;
-  box-shadow: none;
-}
-[data-theme='dark'] .question-footer,
-[data-theme='dark'] .history-row,
-[data-theme='dark'] .habit-row,
-[data-theme='dark'] .cost-row,
-[data-theme='dark'] .stat,
-[data-theme='dark'] .attachment,
-[data-theme='dark'] .rule-row,
-[data-theme='dark'] .finalize,
-[data-theme='dark'] .ledger-row,
-[data-theme='dark'] .entries .history-group,
-[data-theme='dark'] .journal-label,
-[data-theme='dark'] .dialog-actions,
-[data-theme='dark'] .week-targets li {
-  border-color: #ffffff14;
-}
-[data-theme='dark'] .track,
-[data-theme='dark'] .bar,
-[data-theme='dark'] .seg.future,
-[data-theme='dark'] .dot,
-[data-theme='dark'] .dots button.dot {
-  background: #ffffff14;
-}
-[data-theme='dark'] .dots button.dot {
-  box-shadow:
-    0 0 0 1.5px #16121f,
-    0 0 0 2.5px #ffffff59;
-}
-[data-theme='dark'] .dots button.dot.done,
-[data-theme='dark'] .dot.done,
-[data-theme='dark'] .seg.done {
-  background: #5fd49a;
-}
-[data-theme='dark'] .dots button.dot.excused,
-[data-theme='dark'] .dot.excused,
-[data-theme='dark'] .seg.excused {
-  background: #3f7a5b;
-}
-[data-theme='dark'] .dots button.dot.missed,
-[data-theme='dark'] .dot.missed,
-[data-theme='dark'] .seg.missed {
-  background: #ff7a8a;
-}
-[data-theme='dark'] .dots button.dot.review,
-[data-theme='dark'] .dot.review,
-[data-theme='dark'] .seg.review {
-  background: #f2c46a;
-}
-[data-theme='dark'] .dots button.dot.open,
-[data-theme='dark'] .dot.open,
-[data-theme='dark'] .seg.open,
-[data-theme='dark'] .track i {
-  background: #a18cf5;
-}
-[data-theme='dark'] .cal .cell {
-  background: #ffffff0d;
-  color: #ece9f5;
-}
-[data-theme='dark'] .pill-done,
-[data-theme='dark'] .good,
-[data-theme='dark'] .cal .good {
-  background: #1c3a2c;
-  color: #7fe0ad;
-}
-[data-theme='dark'] .pill-missed,
-[data-theme='dark'] .pill-disputed,
-[data-theme='dark'] .bad,
-[data-theme='dark'] .cal .bad {
-  background: #43192a;
-  color: #ff9aa8;
-}
-[data-theme='dark'] .pill-pending,
-[data-theme='dark'] .wait,
-[data-theme='dark'] .cal .wait {
-  background: #3d2e12;
-  color: #f5cd7a;
-}
-[data-theme='dark'] .pill-excused {
-  background: #2c2350;
-  color: #c9bcff;
-}
-[data-theme='dark'] .open,
-[data-theme='dark'] .cal .open {
-  background: #ffffff14;
-  color: #ece9f5;
-}
-[data-theme='dark'] .pill-none {
-  background: #ffffff10;
-  color: #9a97ad;
-}
-[data-theme='dark'] .cal .blank {
-  background: transparent;
-}
-[data-theme='dark'] .cal .future {
-  background: #ffffff06;
-  color: #55516a;
-}
-[data-theme='dark'] .cal .today {
-  outline-color: #c3b5ff;
-  box-shadow: 0 0 14px #b8a5ff66;
-}
-[data-theme='dark'] .filters {
-  background: #ffffff0a !important;
-  border-color: #ffffff1a !important;
-}
-[data-theme='dark'] .filters button {
-  color: #9a97ad;
-}
-[data-theme='dark'] .filters [data-active] {
-  background: #2c2350 !important;
-  color: #ece9f5 !important;
-}
-[data-theme='dark'] .error,
-[data-theme='dark'] .error-bar {
-  color: #ffb3b3;
-  background: #3a1620;
-  border-color: #6b2433;
-}
-[data-theme='dark'] .badge {
-  border-color: #ffffff14;
-  background: #ffffff06;
-}
-[data-theme='dark'] .badge.earned {
-  background: linear-gradient(140deg, #2c2350, #1c3a2c);
-  border-color: #5b47a8;
-  box-shadow: 0 0 24px #8b6cf026;
-}
-[data-theme='dark'] .badge-icon {
-  background: #ffffff14;
-  color: #d4c8ff;
-}
-[data-theme='dark'] .link-icon {
-  background: #2c2350;
-  color: #d4c8ff;
-}
-[data-theme='dark'] .link-card.attention {
-  border-color: #f2c46a66;
-  background: linear-gradient(120deg, #3d2e1299, #ffffff06);
-}
-[data-theme='dark'] .link-card.attention .link-icon {
-  background: #3d2e12;
-  color: #f5cd7a;
-}
-[data-theme='dark'] .progress-strip:hover:not(:disabled),
-[data-theme='dark'] .link-card:hover:not(:disabled) {
-  background: linear-gradient(125deg, #ffffff1a, #ffffff08);
-}
-[data-theme='dark'] .proof img {
-  border-color: #ffffff1f;
-}
-[data-theme='dark'] .lightbox img {
-  background: #ffffff08;
-}
-[data-theme='dark'] .proof-remove,
-[data-theme='dark'] .journal-remove {
-  color: #6f6b84;
-}
-[data-theme='dark'] .detail-note,
-[data-theme='dark'] .journal-text {
-  color: #ece9f5;
-}
-[data-theme='dark'] .journal-text.editable:hover:not(:disabled) {
-  color: #fff;
-}
-[data-theme='dark'] .detail-meta {
-  background: #ffffff0a;
-  color: #c9c5d8;
-}
-[data-theme='dark'] .journal-notes li {
-  background: #ffffff0a;
-  border-color: #ffffff14;
-}
-[data-theme='dark'] .journal-composer {
-  background: #ffffff0a;
-  border-color: #ffffff1f;
-}
-[data-theme='dark'] .journal-composer textarea,
-[data-theme='dark'] .journal-notes li.editing textarea {
-  background: none;
-  border: 0;
-}
-[data-theme='dark'] .journal-composer:focus-within,
-[data-theme='dark'] .journal-notes li.editing,
-[data-theme='dark'] [data-slot='dialog-content'] textarea:focus {
-  border-color: #a18cf5;
-  box-shadow: 0 0 0 4px #8b6cf033;
-}
-[data-theme='dark'] [data-slot='dialog-overlay'] {
-  background: #05030acc !important;
-}
-[data-theme='dark'] [data-slot='dialog-content'] {
-  border-color: #ffffff1a;
-  background: linear-gradient(140deg, #1d1829f7, #141019f7) !important;
-  box-shadow:
-    0 30px 80px #000000b3,
-    0 0 0 1px #ffffff0a,
-    0 0 60px #8b6cf01a !important;
-  color: #ece9f5;
-}
-[data-theme='dark'] [data-slot='dialog-content'] textarea {
-  background: #ffffff0a;
-  border-color: #ffffff1f;
-}
-[data-theme='dark'] [data-slot='dialog-close'] {
-  border-color: #ffffff1f;
-  background: #ffffff0d !important;
-  color: #9a97ad;
-}
-[data-theme='dark'] [data-slot='dialog-close']:hover {
-  background: #ffffff1f !important;
-  color: #fff;
-}
-[data-theme='dark'] .orbit {
-  border-color: #2c2350;
-}
-[data-theme='dark'] .orbit::after {
-  background: radial-gradient(circle, #5a2a5566 0, transparent 70%);
 }

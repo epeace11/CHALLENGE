@@ -43,10 +43,16 @@ export function days(from = START, to = END) {
   return out;
 }
 
+/** How many days the challenge has. */
+export const TOTAL_DAYS =
+  Math.round(
+    (Date.parse(END + 'T00:00Z') - Date.parse(START + 'T00:00Z')) / 864e5,
+  ) + 1;
+
 /** Days left in the challenge, today included (0 once it is over). */
 export const daysLeft = (today: string) =>
   Math.min(
-    30,
+    TOTAL_DAYS,
     Math.max(
       0,
       Math.round(

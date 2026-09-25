@@ -15,6 +15,7 @@ import { MoneyBlock } from './ledger';
 import { MonthCalendar } from './month-calendar';
 import { ProgressStrip } from './progress-strip';
 import { RecentEntries } from './recent-entries';
+import { ReminderCard } from './reminder-card';
 import { TodayCards } from './today-cards';
 
 export function OverviewPage() {
@@ -33,6 +34,7 @@ export function OverviewPage() {
       <GiftCards />
       {finalized ? <SummaryCard /> : <ProgressStrip />}
       <TodayCards />
+      <ReminderCard />
       <section className="glass journal today-journal">
         <div className="row">
           <h3>

@@ -12,6 +12,7 @@ import {
   dayNumber,
   total,
   maxLoggable,
+  locked,
 } from '../lib/progress.ts';
 import { days, START, END } from '../lib/dates.ts';
 import { toWeeks } from '../lib/weeks.ts';
@@ -124,10 +125,36 @@ const data = {
   disputes: [],
   finalizations: [],
   journals: [],
+  photos: [],
   weeks,
 };
 
 assert.equal(maxLoggable(now), '2026-09-19');
+// locked mirrors challenge_locked in supabase/setup.sql: settled once its deadline has passed. Sep 16 locked at Sep 17, 11:59 pm; Sep 19 locks tonight.
+for (const status of ['confirmed', 'missed', 'excused', 'conceded'])
+  assert.equal(
+    locked(entry('e', 'bed', '2026-09-16', { status }), now),
+    true,
+    status,
+  );
+for (const status of ['pending', 'disputed', 'unlogged'])
+  assert.equal(
+    locked(entry('e', 'bed', '2026-09-16', { status }), now),
+    false,
+    status,
+  );
+assert.equal(
+  locked(
+    entry('e', 'bed', '2026-09-16', { status: 'missed', proposed_done: true }),
+    now,
+  ),
+  false,
+); // a correction is waiting
+assert.equal(
+  locked(entry('e', 'bed', '2026-09-19', { status: 'confirmed' }), now),
+  false,
+); // deadline not passed
+assert.equal(locked(undefined, now), false); // nothing logged is a late correction, not a lock
 assert.equal(maxLoggable(Date.parse('2026-09-13T16:00:00Z')), '2026-09-14'); // before the start nothing is loggable
 assert.equal(
   tone(undefined, '2026-09-15', Date.parse('2026-09-13T16:00:00Z')),

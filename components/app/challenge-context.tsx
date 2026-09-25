@@ -40,7 +40,7 @@ type Store = {
   finalized: boolean;
   loading: boolean;
   error: string;
-  refresh: () => Promise<void>;
+  refresh: (sync?: boolean) => Promise<void>;
   setError: (e: string) => void;
 };
 
@@ -57,17 +57,19 @@ function useChallengeState(
     maxDate = clampDate(shift(today, -1));
 
   const [busy, setBusy] = useState(false);
-  /** Runs one change, then reloads; any failure shows in the error bar. */
+  /** Runs one change, then reloads (the write already ran the deadline checks, so the reload skips them). Any failure shows in the error bar; returns whether it succeeded. */
   const run = async (fn: () => Promise<unknown>) => {
     setError('');
     setBusy(true);
     try {
       await fn();
-      await refresh();
+      await refresh(false);
+      return true;
     } catch (e) {
       setError(
         e instanceof Error ? e.message : 'Something went wrong. Please retry.',
       );
+      return false;
     } finally {
       setBusy(false);
     }

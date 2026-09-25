@@ -17,14 +17,15 @@ const TABLES = [
   'challenge_config',
   'challenge_weeks',
   'challenge_weekly_targets',
+  'challenge_photos',
 ] as const;
 
-/** Runs the scheduled checks, then loads every challenge table. */
-export async function loadChallenge(): Promise<{
+/** Loads every challenge table, first running the scheduled deadline checks unless `sync` is false (a reload right after a write, which already ran them). */
+export async function loadChallenge(sync = true): Promise<{
   data: Data;
   finalized: boolean;
 }> {
-  await action('challenge_sync');
+  if (sync) await action('challenge_sync');
   const [results, journals] = await Promise.all([
     Promise.all(TABLES.map((t) => supabase.from(t).select('*'))),
     supabase.from('challenge_journal_notes').select('*').order('created_at'),
@@ -40,6 +41,7 @@ export async function loadChallenge(): Promise<{
     config,
     weeks,
     targets,
+    photos,
   ] = results.map((r) => r.data ?? []);
   return {
     // Journals arrived after launch; until supabase/add-journal-notes.sql has run, the table is missing and the rest of the app still works.
@@ -51,6 +53,7 @@ export async function loadChallenge(): Promise<{
       disputes,
       finalizations,
       journals: journals.error ? [] : (journals.data ?? []),
+      photos,
       weeks: toWeeks(weeks, targets),
     } as Data,
     finalized: config[0]?.finalized ?? false,
@@ -107,4 +110,13 @@ export const api = {
   editNote: (id: string, text: string) =>
     action('challenge_journal_edit', { p_id: id, p_text: text }),
   deleteNote: (id: string) => action('challenge_journal_delete', { p_id: id }),
+  /** Registers this device for the evening push reminders (or refreshes its keys). */
+  pushSubscribe: (endpoint: string, p256dh: string, auth: string) =>
+    action('challenge_push_subscribe', {
+      p_endpoint: endpoint,
+      p_p256dh: p256dh,
+      p_auth: auth,
+    }),
+  pushUnsubscribe: (endpoint: string) =>
+    action('challenge_push_unsubscribe', { p_endpoint: endpoint }),
 };

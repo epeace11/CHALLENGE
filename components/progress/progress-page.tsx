@@ -1,6 +1,7 @@
 'use client';
 import { useChallenge } from '@/components/app/challenge-context';
 import { ToneBar, ToneLegend } from '@/components/shared/tone-bar';
+import { TOTAL_DAYS } from '@/lib/dates';
 import { costByHabit, dayNumber, total } from '@/lib/progress';
 import { titleFor } from '@/lib/rules';
 import { BadgeGrid } from './badge-grid';
@@ -15,12 +16,16 @@ export function ProgressPage() {
     <>
       <div className="page-heading">
         <h1>Progress.</h1>
-        <span className="eyebrow">Day {dayNumber(now)} of 30</span>
+        <span className="eyebrow">
+          Day {dayNumber(now)} of {TOTAL_DAYS}
+        </span>
       </div>
       <section className="glass progress-block">
         <div className="row">
           <h3>The whole challenge</h3>
-          <span className="muted small">Every habit, all 30 days</span>
+          <span className="muted small">
+            Every habit, all {TOTAL_DAYS} days
+          </span>
         </div>
         <ToneLegend />
         {data.profiles.map((p) => {

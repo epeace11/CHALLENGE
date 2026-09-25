@@ -7,6 +7,7 @@ import {
 } from './rules.ts';
 import type { Week } from './weeks.ts';
 import type { Data, Entry, Point } from './types.ts';
+import { pointCosts, weeklyDone } from './progress.ts';
 
 /** Small read-only queries over the loaded data, shared by the pages and dialogs. */
 
@@ -84,16 +85,9 @@ export const ledgerPoints = (data: Data) =>
     .filter((p) => !p.voided || p.forgiven)
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
-/** Dollars a point added to its owner's gift: the n-th active point costs $n. */
+/** Dollars a point added to its owner's gift: the n-th active point costs $n; forgiven and voided points cost nothing. */
 export const pointDollars = (data: Data, p: Point) =>
-  data.points.filter(
-    (q) =>
-      q.user_id === p.user_id &&
-      !q.forgiven &&
-      !q.voided &&
-      (q.created_at < p.created_at ||
-        (q.created_at === p.created_at && q.id <= p.id)),
-  ).length;
+  pointCosts(data, p.user_id).get(p.id) ?? 0;
 
 /** Both people, fewest active points first. */
 export const standings = (data: Data) =>
@@ -192,21 +186,10 @@ export function dayTone(
   return 'good';
 }
 
-/** Days `uid` logged a Yes for a weekly rule in week `w` (conceded ones excluded). */
+/** Days `uid` logged a Yes for a weekly rule in week `w`, as the database counts them (conceded ones excluded). */
 export const weekCount = (
   data: Data,
   w: Week | undefined,
   uid: string,
   rule = 'gym',
-) =>
-  w
-    ? data.entries.filter(
-        (e) =>
-          e.user_id === uid &&
-          e.rule_id === rule &&
-          e.day >= w.start &&
-          e.day <= w.end &&
-          e.done &&
-          e.status !== 'conceded',
-      ).length
-    : 0;
+) => (w ? weeklyDone(data, uid, rule, w) : 0);

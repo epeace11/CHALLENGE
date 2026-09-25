@@ -7,42 +7,27 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { useChallenge } from '@/components/app/challenge-context';
 import { supabase } from '@/lib/supabase';
 import { PROOF_BUCKET, proofPaths } from '@/lib/proof';
 
+/** Signed links last an hour; the list re-signs a little before that, so a dialog left open keeps its images. */
+const SIGNED_FOR = 3600,
+  RESIGN_AFTER = 50 * 60 * 1000;
+
 /** One screenshot: a thumbnail that opens a lightbox, with its photo date, and a remove control while editing. */
 function Proof({
-  path,
+  url,
+  taken,
   onRemove,
   removeDisabled = false,
 }: {
-  path: string;
+  url: string | undefined;
+  taken: string | null;
   onRemove?: () => void;
   removeDisabled?: boolean;
 }) {
-  const [url, setUrl] = useState(''),
-    [taken, setTaken] = useState<string | null>(null),
-    [open, setOpen] = useState(false);
-  useEffect(() => {
-    let live = true;
-    void supabase
-      .from('challenge_photos')
-      .select('taken_at')
-      .eq('path', path)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (live) setTaken(data?.taken_at ?? null);
-      });
-    void supabase.storage
-      .from(PROOF_BUCKET)
-      .createSignedUrl(path, 600)
-      .then(({ data }) => {
-        if (live) setUrl(data?.signedUrl ?? '');
-      });
-    return () => {
-      live = false;
-    };
-  }, [path]);
+  const [open, setOpen] = useState(false);
   const date = taken ? `Photo date: ${taken}` : 'No photo date available';
   if (!url) return <p className="muted">Loading screenshot…</p>;
   return (
@@ -83,7 +68,7 @@ function Proof({
   );
 }
 
-/** Every screenshot attached to an answer (newline-separated paths), each with its own lightbox and, while editing, a remove control. */
+/** Every screenshot attached to an answer (newline-separated paths), signed in one request, each with its own lightbox and, while editing, a remove control. */
 export function Proofs({
   proof,
   onRemove,
@@ -95,14 +80,42 @@ export function Proofs({
   /** Disallow removing the last screenshot. */
   keepOne?: boolean;
 }) {
-  const paths = proofPaths(proof);
+  const { data } = useChallenge();
+  const paths = proofPaths(proof),
+    key = paths.join('\n');
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!key) return;
+    let live = true,
+      timer: ReturnType<typeof setTimeout> | undefined;
+    const sign = async () => {
+      const { data: signed } = await supabase.storage
+        .from(PROOF_BUCKET)
+        .createSignedUrls(key.split('\n'), SIGNED_FOR);
+      if (!live) return;
+      setUrls(
+        Object.fromEntries(
+          (signed ?? [])
+            .filter((s) => s.path && s.signedUrl)
+            .map((s) => [s.path, s.signedUrl]),
+        ),
+      );
+      timer = setTimeout(() => void sign(), RESIGN_AFTER);
+    };
+    void sign();
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [key]);
   if (!paths.length) return null;
   return (
     <div className="proof-list">
       {paths.map((p) => (
         <Proof
           key={p}
-          path={p}
+          url={urls[p]}
+          taken={data.photos.find((x) => x.path === p)?.taken_at ?? null}
           onRemove={
             onRemove ? () => onRemove(paths.filter((x) => x !== p)) : undefined
           }

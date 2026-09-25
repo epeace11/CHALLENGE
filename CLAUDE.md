@@ -5,4 +5,6 @@
 - Pages and dialogs read shared state with `useChallenge()` from `components/app/challenge-context.tsx`; database writes go through `api.*` in `lib/api.ts`, wrapped in `run(...)` so busy/error/refresh are handled.
 - Stylesheets in `styles/` are imported in order from `app/globals.css`; later files override earlier ones.
 - Before finishing: `npm run check`, `npm run format`, and `npm run build`.
-- Database changes are hand-run SQL scripts in `supabase/`; see the Database section of README.md.
+- Database changes are hand-run SQL scripts in `supabase/`; see the Database section of README.md. Each new script also goes into `supabase/setup.sql` (the fresh-install script the tests run) and ends with the `challenge_scripts` insert.
+- `supabase/functions/` is a Deno Edge Function, excluded from `tsc` and `oxlint`; `public/sw.js` is plain JavaScript. Neither uses `@/`.
+- `lib/dates.ts` owns the day count (`TOTAL_DAYS`); never hardcode 30.

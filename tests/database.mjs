@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 const db = new PGlite();
 await db.exec(
-  `create role anon;create role authenticated;create schema auth;create schema storage;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create table storage.objects(bucket_id text,name text);create table storage.buckets(id text,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;insert into auth.users values('00000000-0000-0000-0000-000000000001','erin@example.com','{}'),('00000000-0000-0000-0000-000000000002','kazzy@example.com','{}');`,
+  `create role anon;create role authenticated;create role service_role;create schema auth;create schema storage;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create table storage.objects(bucket_id text,name text);create table storage.buckets(id text,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;insert into auth.users values('00000000-0000-0000-0000-000000000001','erin@example.com','{}'),('00000000-0000-0000-0000-000000000002','kazzy@example.com','{}');`,
 );
 const sql = readFileSync(
   new URL('../supabase/setup.sql', import.meta.url),
@@ -438,6 +438,18 @@ assert.equal(
   (await db.query(`select count(*)::int n from challenge_history`)).rows[0].n,
   before,
 );
+// A sync that changes nothing must not write anything either: Postgres publishes every write to Realtime, and each one makes every open app reload and sync again.
+const rowVersions = async () =>
+  (
+    await db.query(
+      `select 'p' t,id::text id,xmin::text v from challenge_points union all select 'e',id::text,xmin::text from challenge_entries order by 1,2`,
+    )
+  ).rows;
+await db.exec(`select challenge_tick()`);
+const versionsBefore = await rowVersions();
+await db.exec(`select challenge_tick()`);
+assert.deepEqual(await rowVersions(), versionsBefore);
+assert.ok(versionsBefore.some((r) => r.t === 'p')); // the closed week's slot rows were there to rewrite
 await db.exec(
   `update challenge_weekly_targets set target=3 where rule_id='steps_weekly'`,
 );
@@ -510,6 +522,109 @@ assert.equal(
 );
 console.log(
   'PASS: settled answers lock after the deadline (no edits or forgiveness requests); unlogged misses and partner forgiveness stay open.',
+);
+// Push reminders: the reminder query lists who still has unlogged daily habits for the day that locks tonight; devices register per member; only the service role may read the list.
+await actor(erin);
+await db.exec(
+  `update challenge_config set finalized=false,start_date=${T}-10,end_date=${T}+2,allow_same_day=false where id=1;update challenge_rules set weeknights=(id in ('bed','screens','weed')),weekends=(id='bed_1am') where true`,
+);
+const dailyCount = async (name) =>
+  (
+    await db.query(
+      `select count(*)::int n from challenge_rules where not weekly and (person is null or person='${name}') and (not weeknights or extract(dow from ${T}-1)<=4) and (not weekends or extract(dow from ${T}-1)>4)`,
+    )
+  ).rows[0].n;
+const due = async () =>
+  (
+    await db.query(
+      `select name,day::text as d,missing,titles from challenge_reminders() order by name`,
+    )
+  ).rows;
+let d = await due();
+assert.deepEqual(
+  d.map((r) => [r.name, r.missing]),
+  [
+    ['Erin', await dailyCount('Erin')],
+    ['Kazzy', await dailyCount('Kazzy')],
+  ],
+);
+assert.equal(d[0].d, (await db.query(`select (${T}-1)::text d`)).rows[0].d);
+assert.ok(d[0].titles.includes('Pray daily'));
+await db.exec(`select challenge_log('prayer',${T}-1,true)`);
+d = await due();
+assert.equal(d[0].missing, (await dailyCount('Erin')) - 1);
+assert.ok(!d[0].titles.includes('Pray daily'));
+await db.exec(`update challenge_config set finalized=true where id=1`);
+assert.equal((await due()).length, 0); // nothing to remind once finalized
+await db.exec(`update challenge_config set finalized=false where id=1`);
+await db.exec(
+  `select challenge_push_subscribe('https://push.example/device-1','p256dh-key','auth-key')`,
+);
+await assert.rejects(
+  () =>
+    db.exec(
+      `select challenge_push_subscribe('http://push.example/plain','k','a')`,
+    ),
+  /Invalid push/,
+);
+await assert.rejects(
+  () =>
+    db.exec(`select challenge_push_subscribe('https://push.example/x','','a')`),
+  /Invalid push/,
+);
+const subs = async () =>
+  (
+    await db.query(
+      `select endpoint,user_id from challenge_push_subscriptions order by endpoint`,
+    )
+  ).rows;
+assert.deepEqual(await subs(), [
+  { endpoint: 'https://push.example/device-1', user_id: erin },
+]);
+// The same device registered by the other member follows them; someone else cannot remove it.
+await actor(kazzy);
+await db.exec(
+  `select challenge_push_subscribe('https://push.example/device-1','p256dh-key-2','auth-key-2')`,
+);
+assert.deepEqual(await subs(), [
+  { endpoint: 'https://push.example/device-1', user_id: kazzy },
+]);
+await actor(erin);
+await db.exec(
+  `select challenge_push_unsubscribe('https://push.example/device-1')`,
+);
+assert.equal((await subs()).length, 1);
+await actor(kazzy);
+await db.exec(
+  `select challenge_push_unsubscribe('https://push.example/device-1')`,
+);
+assert.equal((await subs()).length, 0);
+await actor('00000000-0000-0000-0000-000000000099');
+await assert.rejects(
+  () =>
+    db.exec(
+      `select challenge_push_subscribe('https://push.example/y','k','a')`,
+    ),
+  /only for/,
+);
+await actor(erin);
+await db.exec(`set role authenticated`);
+await assert.rejects(
+  () => db.exec(`select * from challenge_reminders()`),
+  /permission denied/,
+);
+await assert.rejects(
+  () =>
+    db.exec(
+      `insert into challenge_push_subscriptions(endpoint,user_id,p256dh,auth) values('https://push.example/z','${erin}','k','a')`,
+    ),
+  /permission denied/,
+);
+await db.exec(`reset role;set role service_role`);
+assert.equal((await due()).length, 2);
+await db.exec(`reset role`);
+console.log(
+  'PASS: push reminders — who is due and for how many habits, per-device registration that follows the signed-in member, service-role-only reminder list.',
 );
 console.log(
   'PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.',

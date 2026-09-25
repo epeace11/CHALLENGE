@@ -3,8 +3,9 @@ import { ChevronLeft, NotebookPen } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
 import { DayJournal } from '@/components/shared/journal';
 import { formatDate, formatShortDate, shift, untilLock } from '@/lib/dates';
+import { locked } from '@/lib/progress';
 import { activeRules } from '@/lib/rules';
-import { entriesOn } from '@/lib/selectors';
+import { entriesOn, findEntry } from '@/lib/selectors';
 import { DateControl } from './date-control';
 import { DaySummary } from './day-summary';
 import { QuestionCard } from './question-card';
@@ -14,7 +15,10 @@ export function LogPage() {
   const { data, me, partner, now, log } = useChallenge();
   const { date, step, editing, setEditing } = log;
   const active = activeRules(me.name, date, data.weeks),
-    recorded = entriesOn(data, me.id, date).length;
+    recorded = entriesOn(data, me.id, date).length,
+    settled = active.every((r) =>
+      locked(findEntry(data, me.id, r.id, date), now),
+    );
   return (
     <>
       <div className="page-heading">
@@ -60,26 +64,40 @@ export function LogPage() {
           </div>
           <DayJournal uid={me.id} day={date} />
         </section>
-        <DeadlineNote date={date} now={now} partnerName={partner?.name} />
+        <DeadlineNote
+          date={date}
+          now={now}
+          settled={settled}
+          partnerName={partner?.name}
+        />
       </div>
     </>
   );
 }
 
+/** How long until the day locks; afterwards, whether it is settled or still open to late corrections. */
 function DeadlineNote({
   date,
   now,
+  settled,
   partnerName,
 }: {
   date: string;
   now: number;
+  settled: boolean;
   partnerName?: string;
 }) {
   const remaining = untilLock(date, now);
-  return remaining ? (
-    <p className="deadline">
-      Locks in <b>{remaining}</b> · {formatDate(shift(date, 1))} at 11:59 pm,
-      Toronto time
+  if (remaining)
+    return (
+      <p className="deadline">
+        Locks in <b>{remaining}</b> · {formatDate(shift(date, 1))} at 11:59 pm,
+        Toronto time
+      </p>
+    );
+  return settled ? (
+    <p className="deadline late">
+      Past the 11:59 pm deadline · these answers are locked in
     </p>
   ) : (
     <p className="deadline late">

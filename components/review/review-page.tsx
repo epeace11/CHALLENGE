@@ -1,7 +1,11 @@
 'use client';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
+import {
+  ConfirmDialog,
+  type ConfirmRequest,
+} from '@/components/dialogs/confirm-dialog';
 import { Proofs } from '@/components/shared/proofs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
@@ -21,8 +25,11 @@ export function ReviewPage() {
   const { data, me, partner, busy, loading, refresh, run, ui, dialogs } =
     useChallenge();
   const { plain, requests, disputes, entryOfAsk } = reviewQueue(data, me.id);
+  // Denying forgiveness and conceding a miss cannot be taken back, so each asks once.
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   return (
     <>
+      <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <div className="page-heading">
         <h1>Review together.</h1>
         <button
@@ -118,7 +125,7 @@ export function ReviewPage() {
               e = entryOfAsk(r);
             // Deciding also settles the answer the ask came with.
             const decide = (approve: boolean) =>
-              void run(async () => {
+              run(async () => {
                 if (e) await api.review(e.id, 'approve');
                 await api.decide(r.id, approve);
               });
@@ -143,11 +150,21 @@ export function ReviewPage() {
                   <button
                     className="primary"
                     disabled={busy}
-                    onClick={() => decide(true)}
+                    onClick={() => void decide(true)}
                   >
                     Approve forgiveness
                   </button>
-                  <button disabled={busy} onClick={() => decide(false)}>
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      setConfirm({
+                        title: 'Deny forgiveness?',
+                        description: `${partner?.name}’s miss on ${titleFor(p?.rule_id ?? '')}${p?.day ? ` for ${formatDate(p.day)}` : ''} stays a point. Once its deadline has passed they can’t ask again, though you can still forgive it later from the penalty history.`,
+                        label: 'Deny',
+                        action: () => decide(false),
+                      })
+                    }
+                  >
                     Deny
                   </button>
                 </div>
@@ -175,9 +192,15 @@ export function ReviewPage() {
                 <button
                   disabled={busy}
                   onClick={() =>
-                    void run(() =>
-                      api.review(d.entry_id, mine ? 'withdraw' : 'concede'),
-                    )
+                    mine
+                      ? void run(() => api.review(d.entry_id, 'withdraw'))
+                      : setConfirm({
+                          title: 'Concede this miss?',
+                          description: `${titleFor(e?.rule_id ?? '')}${e?.day ? ` for ${formatDate(e.day)}` : ''} becomes a miss and adds a penalty point. This can’t be undone, though ${partner?.name ?? 'your partner'} can forgive the point.`,
+                          label: 'Concede',
+                          action: () =>
+                            run(() => api.review(d.entry_id, 'concede')),
+                        })
                   }
                 >
                   {mine ? 'Withdraw dispute' : 'Concede miss'}

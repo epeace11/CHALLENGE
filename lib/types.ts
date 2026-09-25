@@ -53,6 +53,9 @@ export type Dispute = {
   status: string;
 };
 
+/** A screenshot's photo date, recorded when it was uploaded (challenge_photos). */
+export type Photo = { path: string; taken_at: string | null };
+
 export type Journal = {
   id: string;
   user_id: string;
@@ -70,6 +73,7 @@ export type Data = {
   disputes: Dispute[];
   finalizations: { user_id: string }[];
   journals: Journal[];
+  photos: Photo[];
   weeks: Week[];
 };
 
@@ -81,5 +85,6 @@ export const emptyData: Data = {
   disputes: [],
   finalizations: [],
   journals: [],
+  photos: [],
   weeks: [],
 };

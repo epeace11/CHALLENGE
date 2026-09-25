@@ -1,4 +1,12 @@
-import { START, END, shift, toronto, days, closed } from './dates.ts';
+import {
+  START,
+  END,
+  TOTAL_DAYS,
+  shift,
+  toronto,
+  days,
+  closed,
+} from './dates.ts';
 import { rules, dailyRules, weeklyRules, type Rule } from './rules.ts';
 import { targetFor } from './weeks.ts';
 import type { Data, Entry, Profile } from './types.ts';
@@ -51,7 +59,7 @@ export const maxLoggable = (now: number) => {
 };
 export const dayNumber = (now: number) =>
   Math.min(
-    30,
+    TOTAL_DAYS,
     Math.max(
       0,
       Math.round(

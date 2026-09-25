@@ -19,17 +19,20 @@ export function QuestionCard({ active }: { active: Rule[] }) {
   const rule = active[Math.min(step, active.length - 1)];
   const entry = findEntry(data, me.id, rule?.id, date),
     entryLocked = locked(entry, now);
-  const answer = entry?.proposed_done ?? entry?.done,
-    savedNote = entry?.proposed_note ?? entry?.note ?? '',
+  const savedNote = entry?.proposed_note ?? entry?.note ?? '',
     proof = entry?.proposed_proof ?? entry?.proof ?? null;
-  // The note box follows the saved note whenever the answer, day or question changes.
+  // The note box and the just-chosen answer follow the saved entry whenever the answer, day or question changes.
   const [note, setNote] = useState(savedNote),
+    [chosen, setChosen] = useState<boolean | undefined>(undefined),
     noteKey = `${entry?.id}|${entry?.updated_at}|${date}|${step}`,
     [noteFor, setNoteFor] = useState(noteKey);
   if (noteFor !== noteKey) {
     setNoteFor(noteKey);
     setNote(savedNote);
+    setChosen(undefined);
   }
+  // A tap shows at once; the saved answer takes over when the reload lands, or the tap is dropped if saving failed.
+  const answer = chosen ?? entry?.proposed_done ?? entry?.done;
 
   // The first answer on a day with nothing recorded starts a full pass; otherwise the Log page would flip to the day summary as soon as it saved.
   const keepLogging = () => {
@@ -37,14 +40,17 @@ export function QuestionCard({ active }: { active: Rule[] }) {
   };
   const save = async (done: boolean, withProof = proof) => {
     keepLogging();
-    await run(() =>
+    setChosen(done);
+    const ok = await run(() =>
       api.log({ rule: rule.id, day: date, done, note, proof: withProof }),
     );
+    if (!ok) setChosen(undefined);
   };
   /** Uploads each chosen screenshot, adds it to the answer's existing ones and saves the answer as done. */
   const upload = async (files: File[]) => {
     keepLogging();
-    await run(async () => {
+    setChosen(true);
+    const ok = await run(async () => {
       const paths = proofPaths(proof);
       if (paths.length + files.length > MAX_PROOFS)
         throw Error('Attach at most six screenshots.');
@@ -57,6 +63,7 @@ export function QuestionCard({ active }: { active: Rule[] }) {
         proof: joinProofs(paths),
       });
     });
+    if (!ok) setChosen(undefined);
   };
   const frozen = busy || finalized || entryLocked;
   const w = weekOf(data.weeks, date);
@@ -167,14 +174,14 @@ export function QuestionCard({ active }: { active: Rule[] }) {
         </p>
       )}
       {finalized && <p className="muted">This challenge is finalized.</p>}
+      {/* The footer stays enabled while a save is in flight: tapping a button blurs the note box, whose save would otherwise disable the button before the tap lands. Moving between questions is local, and the save finishes on its own. */}
       {editing === 'single' ? (
         <div className="question-footer single">
           <button
             className="primary"
-            disabled={busy}
             onClick={() =>
               void (async () => {
-                if (answer !== undefined && note !== savedNote)
+                if (!busy && answer !== undefined && note !== savedNote)
                   await save(answer);
                 setEditing(false);
               })()
@@ -186,15 +193,11 @@ export function QuestionCard({ active }: { active: Rule[] }) {
         </div>
       ) : (
         <div className="question-footer">
-          <button
-            disabled={step === 0 || busy}
-            onClick={() => setStep(step - 1)}
-          >
+          <button disabled={step === 0} onClick={() => setStep(step - 1)}>
             <ChevronLeft size={16} /> Back
           </button>
           <button
             className="primary"
-            disabled={busy}
             onClick={() => {
               if (step < active.length - 1) setStep(step + 1);
               else {

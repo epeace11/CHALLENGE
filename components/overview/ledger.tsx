@@ -2,7 +2,7 @@
 import { ArrowRight } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
 import { api } from '@/lib/api';
-import { END } from '@/lib/dates';
+import { END, closed } from '@/lib/dates';
 import { locked } from '@/lib/progress';
 import { titleFor } from '@/lib/rules';
 import {
@@ -44,7 +44,7 @@ function PointAction({ p }: { p: Point }) {
 
 /** Penalty history (toggled) and the finalize card. */
 export function MoneyBlock() {
-  const { data, me, today, busy, finalized, run, ui } = useChallenge();
+  const { data, me, now, busy, finalized, run, ui } = useChallenge();
   const confirmed = data.finalizations.some((f) => f.user_id === me.id);
   return (
     <div className="money-block">
@@ -88,7 +88,7 @@ export function MoneyBlock() {
         </div>
         <button
           className="primary"
-          disabled={busy || finalized || today <= END || confirmed}
+          disabled={busy || finalized || !closed(END, now) || confirmed}
           onClick={() => void run(() => api.finalize())}
         >
           {finalized ? 'Finalized' : 'Finalize challenge'}

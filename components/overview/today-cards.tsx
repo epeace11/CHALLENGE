@@ -1,19 +1,20 @@
 'use client';
 import { ArrowRight } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
-import { formatDate, untilLock } from '@/lib/dates';
-import { activeRules } from '@/lib/rules';
+import { clampDate, formatDate, formatShortDate, untilLock } from '@/lib/dates';
+import { activeRules, weeklyLabel, weeklyRules } from '@/lib/rules';
 import { entriesOn, firstUnanswered, weekCount } from '@/lib/selectors';
 import { targetFor, weekOf } from '@/lib/weeks';
 
 /** The day being logged (with a shortcut into Log) and this week's weekly targets. */
 export function TodayCards() {
-  const { data, me, partner, now, go, log } = useChallenge();
+  const { data, me, partner, now, today, go, log } = useChallenge();
   const { date, startEditing, setEditing } = log;
   const active = activeRules(me.name, date, data.weeks),
     recorded = entriesOn(data, me.id, date).length,
     remaining = untilLock(date, now),
-    w = weekOf(data.weeks, date);
+    // The current week, whatever day the Log page is showing.
+    w = weekOf(data.weeks, clampDate(today));
   return (
     <div className="overview-grid">
       <section className="glass compact">
@@ -52,32 +53,24 @@ export function TodayCards() {
         {w ? (
           <>
             <p className="muted">
-              {w.start.slice(5)} – {w.end.slice(5)} · gym {targetFor(w, 'gym')}{' '}
-              visits each
+              {formatShortDate(w.start)} – {formatShortDate(w.end)} · Monday to
+              Sunday
             </p>
             <div className="gym-counts">
               {data.profiles.map((p) => (
                 <span key={p.id}>
-                  {p.name}{' '}
-                  <b>
-                    {weekCount(data, w, p.id)} / {targetFor(w, 'gym')}
-                  </b>
+                  {p.name}
+                  {weeklyRules(p.name)
+                    .filter((r) => targetFor(w, r.id) > 0)
+                    .map((r) => (
+                      <b key={r.id}>
+                        {weeklyLabel[r.id] ?? r.title}{' '}
+                        {weekCount(data, w, p.id, r.id)} / {targetFor(w, r.id)}
+                      </b>
+                    ))}
                 </span>
               ))}
             </div>
-            {data.profiles
-              .filter(
-                (p) => p.name === 'Kazzy' && targetFor(w, 'steps_weekly') > 0,
-              )
-              .map((p) => (
-                <p key={p.id} className="muted small">
-                  {p.name}’s 10,000-step days{' '}
-                  <b>
-                    {weekCount(data, w, p.id, 'steps_weekly')} /{' '}
-                    {targetFor(w, 'steps_weekly')}
-                  </b>
-                </p>
-              ))}
           </>
         ) : (
           <p className="muted">Loading…</p>

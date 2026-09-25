@@ -17,10 +17,10 @@
   cursor: pointer;
 }
 .link-card:hover:not(:disabled) {
-  background: linear-gradient(120deg, #ffffffd8, #ffffff80);
+  background: var(--glass-bg-hover);
 }
 .link-card > svg {
-  color: #7863a7;
+  color: var(--link);
   flex-shrink: 0;
 }
 .link-icon {
@@ -29,8 +29,8 @@
   width: 38px;
   height: 38px;
   border-radius: 12px;
-  background: #ece8f8;
-  color: #5b47a8;
+  background: var(--fill-accent);
+  color: var(--icon-accent);
   flex-shrink: 0;
 }
 .link-body {
@@ -49,15 +49,15 @@
 }
 .link-body small {
   font-size: 13px;
-  color: #69758c;
+  color: var(--text-soft);
 }
 .link-card.attention {
-  border-color: #f2c46a;
-  background: linear-gradient(120deg, #fff8e8d8, #ffffff80);
+  border-color: var(--attention-border);
+  background: var(--attention-bg);
 }
 .link-card.attention .link-icon {
-  background: #fff1d6;
-  color: #9a6408;
+  background: var(--tone-wait-bg);
+  color: var(--tone-wait-text);
 }
 @media (max-width: 720px) {
   .link-row {
@@ -96,7 +96,7 @@
   border: 0;
   background: none !important;
   padding: 6px;
-  color: #b3bac7;
+  color: var(--text-faint);
   border-radius: 8px;
   flex-shrink: 0;
 }
@@ -112,19 +112,41 @@
   padding: 0;
   max-width: 750px;
   font-size: 14px;
-  color: #66728a;
+  color: var(--text-rule);
 }
 .week-targets li {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   padding: 7px 0;
-  border-top: 1px solid #e0e4ee;
+  border-top: 1px solid var(--line);
 }
 .week-targets li:first-child {
   border-top: 0;
 }
 .week-targets li span:first-child {
   font-variant-numeric: tabular-nums;
-  color: #252234;
+  color: var(--text-strong);
+}
+
+/* Reminders card on the Overview: the text on the left, the on/off button on the right. */
+.reminders {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+}
+.reminders h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.reminders button {
+  margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.reminders .error {
+  margin: 8px 0 0;
 }

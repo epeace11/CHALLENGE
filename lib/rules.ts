@@ -136,7 +136,7 @@ export const rules: Rule[] = [
     title: 'Go to gym',
     question: 'Did you go to the gym today?',
     description:
-      'Condo or regular gym. One visit per day. Weeks run Monday to Sunday. Four visits per full week; the first week (Sep 15–20) needs three and the last (Oct 12–14) needs one.',
+      'Condo or regular gym. One visit per day, counted per Monday–Sunday week; each week’s target is listed under Weekly habits below.',
     days: 'Weekly',
     group: 'Movement',
     weekly: true,
@@ -146,7 +146,7 @@ export const rules: Rule[] = [
     title: '10,000 steps, 3 days a week',
     question: 'Did you walk at least 10,000 steps today?',
     description:
-      'Reach 10,000 steps on three days each Monday–Sunday week and attach a step-count screenshot. Sep 21–27 needs one day, and so does the final Oct 12–14.',
+      'Reach 10,000 steps and attach a step-count screenshot. The days needed in each Monday–Sunday week are listed under Weekly habits below.',
     days: 'Weekly',
     group: 'Movement',
     person: 'Kazzy',
@@ -155,10 +155,10 @@ export const rules: Rule[] = [
   },
 ];
 
-/** Short label for a weekly rule in the weekly-targets list. */
+/** Short label for a weekly rule next to a person's count. */
 export const weeklyLabel: Record<string, string> = {
   gym: 'Gym',
-  steps_weekly: 'Steps (Kazzy)',
+  steps_weekly: 'Steps',
 };
 
 export const ruleById = (id: string) => rules.find((r) => r.id === id);

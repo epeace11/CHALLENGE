@@ -25,6 +25,9 @@ import {
 } from './challenge-context';
 import { Shell } from './shell';
 
+/** Pages the WebMCP navigation tool may open: the navigation bar's plus Rules. */
+const TOOL_PAGES = [...NAV_PAGES, 'Rules'] as const;
+
 const PAGE_COMPONENTS: Record<Page, () => React.JSX.Element> = {
   Overview: OverviewPage,
   Log: LogPage,
@@ -39,7 +42,7 @@ export function App() {
   const uid = auth.session?.user.id;
   const store = useChallengeData(uid);
   const [page, setPage] = useState<Page>('Overview');
-  usePageTool(NAV_PAGES, setPage);
+  usePageTool(TOOL_PAGES, setPage);
 
   if (!auth.ready) return <Loading />;
   if (!auth.session) return <SignInScreen />;
