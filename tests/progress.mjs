@@ -83,7 +83,7 @@ assert.equal(get(eb,'strong_finish').earned,false);
 assert.equal(eb.length,12);
 // Iron week: three visits in the first partial week, checked after that week closes.
 const gymData={...data,entries:[...entries,...['2026-09-15','2026-09-16','2026-09-17'].map(d=>entry('e','gym',d))]};
-assert.equal(badges(gymData,erin,Date.parse('2026-09-21T16:00:00Z')).find(b=>b.id==='iron_week').date,'2026-09-19');
+assert.equal(badges(gymData,erin,Date.parse('2026-09-22T16:00:00Z')).find(b=>b.id==='iron_week').date,'2026-09-20');
 // The bar's denominator is every habit-day of the challenge, so Erin's 8 daily rules over 30 days plus 16 gym visits.
 assert.equal(total(bar),5*30+3*days().filter(d=>new Date(d+'T12:00Z').getUTCDay()<=4).length+16);
 console.log('PASS: progress stats — tones, bars, streaks (excused keeps them), worst-first order, days won, perfect days, costs, badges.');

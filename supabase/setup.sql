@@ -13,7 +13,7 @@ insert into public.challenge_config(id) values(1);
 create table public.challenge_rules(id text primary key,title text not null,person text,weeknights boolean not null default false,proof_required boolean not null default false,weekly boolean not null default false,weekends boolean not null default false);
 insert into public.challenge_rules(id,title,person,weeknights,proof_required,weekly,weekends) values ('bed','In bed by 11 pm, then read until you sleep',null,true,false,false,false),('bed_1am','Weekends: in bed by 1 am, then read until you sleep','Kazzy',false,false,false,true),('screens','No screens in the bedroom',null,true,false,false,false),('weed','No smoking weed','Erin',true,false,false,false),('weed_daily','No smoking weed, all week','Kazzy',false,false,false,false),('prayer','Pray daily',null,false,false,false,false),('food','No eating out',null,false,false,false,false),('time','Screen time: 1 hour or less',null,false,true,false,false),('entertainment','No entertainment before 6 pm',null,false,false,false,false),('steps','10,000 steps','Erin',false,true,false,false),('calories','2,300 calories or less + macros tracked','Kazzy',false,true,false,false),('gym','Go to gym',null,false,false,true,false);
 create table public.challenge_weeks(start_date date primary key,end_date date not null,target integer not null);
-insert into public.challenge_weeks values('2026-09-15','2026-09-19',3),('2026-09-20','2026-09-26',4),('2026-09-27','2026-10-03',4),('2026-10-04','2026-10-10',4),('2026-10-11','2026-10-14',1);
+insert into public.challenge_weeks values('2026-09-15','2026-09-20',3),('2026-09-21','2026-09-27',4),('2026-09-28','2026-10-04',4),('2026-10-05','2026-10-11',4),('2026-10-12','2026-10-14',1);
 create table public.challenge_entries(id uuid primary key default gen_random_uuid(),user_id uuid not null references public.challenge_profiles,rule_id text not null references public.challenge_rules,day date not null,done boolean not null,status text not null check(status in ('pending','confirmed','missed','disputed','conceded','excused','unlogged')),note text not null default '',proof text,proposed_done boolean,proposed_note text,proposed_proof text,updated_at timestamptz not null default now(),unique(user_id,rule_id,day));
 create table public.challenge_points(id uuid primary key default gen_random_uuid(),user_id uuid not null references public.challenge_profiles,rule_id text not null references public.challenge_rules,day date not null,reason text not null,forgiven boolean not null default false,voided boolean not null default false,entry_id uuid references public.challenge_entries,slot integer not null default 0,created_at timestamptz not null default now(),unique(user_id,rule_id,day,slot));
 create table public.challenge_requests(id uuid primary key default gen_random_uuid(),point_id uuid unique not null references public.challenge_points,requester_id uuid not null references public.challenge_profiles,reason text not null,status text not null default 'pending',decided_by uuid references public.challenge_profiles,decided_at timestamptz);
@@ -23,7 +23,7 @@ create table public.challenge_audit(id bigint generated always as identity prima
 create function public.challenge_member() returns boolean language sql stable security definer set search_path=public as $$ select exists(select 1 from challenge_profiles where id=auth.uid()) $$;
 create function public.challenge_assert() returns void language plpgsql security definer set search_path=public as $$ begin if not challenge_member() then raise exception 'This challenge is only for Erin and Kazzy.'; end if; perform pg_advisory_xact_lock(8092026); if (select finalized from challenge_config where id=1) then raise exception 'This challenge is finalized.'; end if; end $$;
 create function public.challenge_rescore() returns void language plpgsql security definer set search_path=public as $$ declare w record;p record;n integer;i integer;begin
- for w in select * from challenge_weeks where ((end_date+1)+time '18:00') at time zone 'America/Toronto'<=now() loop
+ for w in select * from challenge_weeks where ((end_date+1)+time '23:59') at time zone 'America/Toronto'<=now() loop
  for p in select * from challenge_profiles loop
  select greatest(0,w.target-count(*)::integer) into n from challenge_entries where user_id=p.id and rule_id='gym' and day between w.start_date and w.end_date and done and status not in ('conceded','missed','unlogged');
  for i in 1..w.target loop
@@ -33,7 +33,7 @@ create function public.challenge_tick() returns void language plpgsql security d
  perform pg_advisory_xact_lock(8092026);
  if (select finalized from challenge_config where id=1) then return; end if;
  insert into challenge_entries(user_id,rule_id,day,done,status)
- select p.id,r.id,d::date,false,'unlogged' from challenge_config c cross join challenge_profiles p cross join challenge_rules r cross join lateral generate_series(c.start_date::timestamp,least(c.end_date,((now() at time zone 'America/Toronto')-interval '18 hours')::date-1)::timestamp,interval '1 day') d
+ select p.id,r.id,d::date,false,'unlogged' from challenge_config c cross join challenge_profiles p cross join challenge_rules r cross join lateral generate_series(c.start_date::timestamp,least(c.end_date,((now() at time zone 'America/Toronto')-interval '23 hours 59 minutes')::date-1)::timestamp,interval '1 day') d
  where not r.weekly and (r.person is null or r.person=p.name) and (not r.weeknights or extract(dow from d)<=4) and (not r.weekends or extract(dow from d)>4) on conflict do nothing;
  insert into challenge_points(user_id,rule_id,day,reason,entry_id) select user_id,rule_id,day,'unlogged',id from challenge_entries where status='unlogged' and rule_id<>'gym' on conflict do nothing;
  update challenge_entries set status='confirmed' where status='pending' and proposed_done is null and updated_at<=now()-interval '48 hours';
@@ -47,7 +47,7 @@ create function public.challenge_log(p_rule text,p_day date,p_done boolean,p_not
  if p_proof is not null and exists(select 1 from unnest(string_to_array(p_proof,E'\n')) as f(path) where not exists(select 1 from storage.objects where bucket_id='challenge-proof' and name=f.path and (storage.foldername(f.path))[1]=auth.uid()::text)) then raise exception 'Invalid proof attachment.'; end if;
  select * into e from challenge_entries where user_id=auth.uid() and rule_id=p_rule and day=p_day;
  if e.status='disputed' then raise exception 'Resolve the dispute before editing.'; end if;
- late:=now()>((p_day+1)+time '18:00') at time zone 'America/Toronto';
+ late:=now()>((p_day+1)+time '23:59') at time zone 'America/Toronto';
  if late and e.id is null then
  insert into challenge_entries(user_id,rule_id,day,done,status) values(auth.uid(),p_rule,p_day,false,'unlogged') returning * into e;
  end if;
@@ -102,7 +102,7 @@ create function public.challenge_decide(p_request uuid,p_approve boolean) return
  if p_approve then update challenge_points set forgiven=true where id=r.point_id returning * into p;update challenge_entries set status='excused' where id=p.entry_id;end if;delete from challenge_finalizations where true;end $$;
 create function public.challenge_finalize() returns void language plpgsql security definer set search_path=public as $$ begin
  perform challenge_assert();perform challenge_tick();
- if now()<((select end_date+1 from challenge_config)+time '18:00') at time zone 'America/Toronto' then raise exception 'Finalize after % at 6 pm.',to_char((select end_date+1 from challenge_config),'FMMonth FMDD');end if;
+ if now()<((select end_date+1 from challenge_config)+time '23:59') at time zone 'America/Toronto' then raise exception 'Finalize after % at 11:59 pm.',to_char((select end_date+1 from challenge_config),'FMMonth FMDD');end if;
  if exists(select 1 from challenge_entries where status in ('pending','disputed') or proposed_done is not null) or exists(select 1 from challenge_requests where status='pending') then raise exception 'Resolve all reviews, corrections and forgiveness requests first.';end if;
  insert into challenge_finalizations(user_id) values(auth.uid()) on conflict do nothing;
  if (select count(*) from challenge_finalizations)=2 then update challenge_config set finalized=true where id=1;end if;end $$;
