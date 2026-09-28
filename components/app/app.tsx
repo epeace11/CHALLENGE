@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { RecoveryScreen, SignInScreen } from '@/components/auth/auth-screens';
+import { BadgeCelebration } from '@/components/dialogs/badge-celebration';
 import { DetailDialog } from '@/components/dialogs/detail-dialog';
 import {
   DisputeDialog,
@@ -14,7 +15,6 @@ import { RulesPage } from '@/components/rules/rules-page';
 import { Loading } from '@/components/shared/loading';
 import { useAuth } from '@/hooks/use-auth';
 import { useChallengeData } from '@/hooks/use-challenge-data';
-import { useNewBadges } from '@/hooks/use-new-badges';
 import { usePageTool } from '@/hooks/use-page-tool';
 import { reviewQueue } from '@/lib/selectors';
 import {
@@ -87,14 +87,9 @@ export function App() {
 }
 
 function ChallengeApp() {
-  const { data, me, page, go, error, refresh, setError, stats } =
+  const { data, me, page, go, error, refresh, setError, newBadges } =
     useChallenge();
   const queue = reviewQueue(data, me.id);
-  const newBadges = useNewBadges(
-    me.id,
-    stats.earned[me.id] ?? [],
-    page === 'Progress',
-  );
   const Current = PAGE_COMPONENTS[page];
   return (
     <>
@@ -104,7 +99,7 @@ function ChallengeApp() {
         name={me.name}
         reviewDot={queue.any}
         reviewCount={queue.count}
-        newBadges={newBadges}
+        newBadges={newBadges.fresh.length}
         error={error}
         setError={setError}
         refresh={refresh}
@@ -114,6 +109,7 @@ function ChallengeApp() {
       <DetailDialog />
       <DisputeDialog />
       <ForgivenessDialog />
+      <BadgeCelebration />
     </>
   );
 }

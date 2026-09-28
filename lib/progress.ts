@@ -8,7 +8,7 @@ import {
   closed,
 } from './dates.ts';
 import { rules, dailyRules, weeklyRules, type Rule } from './rules.ts';
-import { targetFor } from './weeks.ts';
+import { targetFor, weekOf } from './weeks.ts';
 import type { Data, Entry, Profile } from './types.ts';
 
 /** Scoring and statistics derived from the loaded data. Pure functions, covered by tests/progress.mjs. */
@@ -290,7 +290,7 @@ export function daysWon(data: Data, now: number, ix = index(data)) {
   return { wins, ties, recent: recent.slice(-7), all: recent };
 }
 
-/** Days with every daily habit done or excused, and the longest run of them. */
+/** Days with every daily habit done or excused, the longest run of them, and the run ending on the latest closed day. */
 export function perfectDays(
   data: Data,
   p: Profile,
@@ -300,6 +300,7 @@ export function perfectDays(
   const list: string[] = [];
   let run = 0,
     longest = 0,
+    current = 0,
     prev = '';
   for (const d of days()) {
     if (!closed(d, now)) break;
@@ -314,9 +315,10 @@ export function perfectDays(
       run = prev === shift(d, -1) ? run + 1 : 1;
       longest = Math.max(longest, run);
       prev = d;
-    }
+      current++;
+    } else current = 0;
   }
-  return { count: list.length, longest, first: list[0], list };
+  return { count: list.length, longest, current, first: list[0], list };
 }
 
 export type Badge = {
@@ -325,6 +327,8 @@ export type Badge = {
   how: string;
   earned: boolean;
   date?: string;
+  /** How close a badge not yet earned is, for the ones that build up one day or visit at a time. */
+  progress?: { have: number; need: number; unit: string; note?: string };
 };
 export function badges(
   data: Data,
@@ -370,23 +374,36 @@ export function badges(
     how: string,
     date: string | undefined | false,
     earned = !!date,
-  ): Badge => ({ id, title, how, earned, date: date || undefined });
-  // Three days won in a row (ties break the run).
-  let hatTrick: string | undefined;
-  {
-    let run = 0;
-    for (const r of daysWon(data, now, ix).all) {
-      run = r.winner === p.id ? run + 1 : 0;
-      if (run === 3) {
-        hatTrick = r.day;
-        break;
-      }
-    }
+    progress?: Badge['progress'],
+  ): Badge => ({
+    id,
+    title,
+    how,
+    earned,
+    date: date || undefined,
+    ...(earned || !progress ? {} : { progress }),
+  });
+  // Three days won in a row (ties break the run); `winRun` is the run still going.
+  let hatTrick: string | undefined,
+    winRun = 0;
+  for (const r of daysWon(data, now, ix).all) {
+    winRun = r.winner === p.id ? winRun + 1 : 0;
+    if (winRun === 3) hatTrick ??= r.day;
   }
   // First closed week where the gym target was met.
   const ironWeek = gymWeeks.find(
     (w) => weeklyDone(data, p.id, 'gym', w) >= targetFor(w, 'gym'),
   )?.end;
+  // Progress toward the badges that build up: the longest streak still going, and this week's gym visits.
+  const streakNow = Math.max(0, ...stats.map((s) => s.streak)),
+    streak = (need: number) => ({
+      have: Math.min(streakNow, need),
+      need,
+      unit: 'days in a row',
+    });
+  const thisWeek = weekOf(data.weeks, toronto(new Date(now))),
+    gymTarget = targetFor(thisWeek, 'gym'),
+    gymNow = thisWeek ? weeklyDone(data, p.id, 'gym', thisWeek) : 0;
   // The last seven days all clean.
   const finish = days(shift(END, -6), END),
     strongFinish = over && finish.every((d) => perfect.list.includes(d)) && END;
@@ -397,10 +414,42 @@ export function badges(
       'A day with nothing missed',
       perfect.first,
     ),
-    b('clean_week', 'Clean week', 'Seven clean days in a row', cleanWeek),
-    b('streak7', 'On a roll', 'Any habit, 7 days straight', streakDate(7)),
-    b('streak14', 'Locked in', 'Any habit, 14 days straight', streakDate(14)),
-    b('streak30', 'Unbroken', 'Any habit, all 30 days', streakDate(30)),
+    b(
+      'clean_week',
+      'Clean week',
+      'Seven clean days in a row',
+      cleanWeek,
+      !!cleanWeek,
+      {
+        have: Math.min(perfect.current, 7),
+        need: 7,
+        unit: 'clean days in a row',
+      },
+    ),
+    b(
+      'streak7',
+      'On a roll',
+      'Any habit, 7 days straight',
+      streakDate(7),
+      !!streakDate(7),
+      streak(7),
+    ),
+    b(
+      'streak14',
+      'Locked in',
+      'Any habit, 14 days straight',
+      streakDate(14),
+      !!streakDate(14),
+      streak(14),
+    ),
+    b(
+      'streak30',
+      'Unbroken',
+      'Any habit, all 30 days',
+      streakDate(30),
+      !!streakDate(30),
+      streak(30),
+    ),
     b(
       'untouchable',
       'Untouchable',
@@ -427,8 +476,31 @@ export function badges(
       !!partner &&
         data.points.some((q) => q.user_id === partner.id && q.forgiven),
     ),
-    b('hat_trick', 'Hat trick', 'Win three days in a row', hatTrick),
-    b('iron_week', 'Iron week', 'Every gym visit in a week', ironWeek),
+    b(
+      'hat_trick',
+      'Hat trick',
+      'Win three days in a row',
+      hatTrick,
+      !!hatTrick,
+      { have: Math.min(winRun, 3), need: 3, unit: 'days won in a row' },
+    ),
+    b(
+      'iron_week',
+      'Iron week',
+      'Every gym visit in a week',
+      ironWeek,
+      !!ironWeek,
+      gymTarget > 0
+        ? {
+            have: Math.min(gymNow, gymTarget),
+            need: gymTarget,
+            unit: 'visits this week',
+            ...(gymNow >= gymTarget
+              ? { note: 'Counts once the week is over' }
+              : {}),
+          }
+        : undefined,
+    ),
     b(
       'strong_finish',
       'Strong finish',

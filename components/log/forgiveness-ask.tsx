@@ -1,58 +1,58 @@
 'use client';
-import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useChallenge } from '@/components/app/challenge-context';
-import { api } from '@/lib/api';
-import { activePointOf, requestFor } from '@/lib/selectors';
-import type { Entry } from '@/lib/types';
+import type { AskOption } from '@/lib/checkin';
 
-/** Under a "No": the forgiveness request's status, or a way to ask (again, after a denial). Keyed by the answer, so a changed answer starts closed. */
-export function ForgivenessAsk({ entry }: { entry: Entry | undefined }) {
-  const { data, busy, run } = useChallenge();
-  const [open, setOpen] = useState(false),
-    [reason, setReason] = useState('');
-  const point = activePointOf(data, entry?.id);
-  const request = requestFor(data, point?.id);
-  if (request && request.status !== 'denied')
+/** Under a No: a forgiveness request that goes with the check-in's Save, or the status of the one already sent. */
+export function ForgivenessField({
+  option,
+  checked,
+  reason,
+  partnerName,
+  disabled,
+  onCheck,
+  onReason,
+}: {
+  option: AskOption;
+  checked: boolean;
+  reason: string;
+  partnerName: string;
+  disabled: boolean;
+  onCheck: (on: boolean) => void;
+  onReason: (reason: string) => void;
+}) {
+  if (option.kind === 'none') return null;
+  if (option.kind === 'sent')
     return (
-      <p className="muted">
-        Forgiveness{' '}
-        {request.status === 'pending'
-          ? 'awaiting partner approval'
-          : request.status}
-        .
+      <p className="muted forgiveness-status">
+        {option.status === 'pending'
+          ? `Forgiveness requested · waiting for ${partnerName}.`
+          : `Forgiven by ${partnerName}.`}
       </p>
     );
-  if (!point) return null;
   return (
-    <div className="forgiveness">
-      {request?.status === 'denied' && (
+    <div className={`forgiveness${checked ? ' on' : ''}`}>
+      {option.again && (
         <p className="muted">
-          Forgiveness was denied. You can ask again with a new reason.
+          {partnerName} said no last time. You can ask again with a new reason.
         </p>
       )}
-      <label>
-        <Checkbox checked={open} onCheckedChange={(v) => setOpen(Boolean(v))} />
-        {request?.status === 'denied' ? 'Ask again' : 'Request forgiveness'}
+      <label className="forgiveness-toggle">
+        <Checkbox
+          checked={checked}
+          disabled={disabled}
+          onCheckedChange={(v) => onCheck(Boolean(v))}
+        />
+        {option.again ? 'Ask again for forgiveness' : 'Request forgiveness'}
       </label>
-      {open && (
-        <>
-          <textarea
-            placeholder="Why should this be forgiven?"
-            aria-label="Forgiveness reason (required)"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            maxLength={2000}
-          />
-          <button
-            disabled={!reason.trim() || busy}
-            onClick={() =>
-              void run(() => api.requestForgiveness(point.id, reason))
-            }
-          >
-            Send request
-          </button>
-        </>
+      {checked && (
+        <textarea
+          aria-label="Why should this be forgiven? (required)"
+          placeholder={`Why should ${partnerName} forgive this?`}
+          value={reason}
+          maxLength={2000}
+          disabled={disabled}
+          onChange={(e) => onReason(e.target.value)}
+        />
       )}
     </div>
   );

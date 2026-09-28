@@ -13,7 +13,7 @@ export type Entry = {
   /** 'pending' | 'confirmed' | 'disputed' | 'missed' | 'excused' | 'conceded' | 'unlogged' */
   status: string;
   note: string;
-  /** Newline-separated storage paths; see proofPaths. */
+  /** Newline-separated storage paths; see proofPaths in lib/checkin.ts. */
   proof: string | null;
   /** A late correction waiting for the partner; null when there is none. */
   proposed_done: boolean | null;

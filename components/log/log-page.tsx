@@ -1,16 +1,17 @@
 'use client';
-import { ChevronLeft, NotebookPen } from 'lucide-react';
+import { useState } from 'react';
+import { Check, ChevronLeft, NotebookPen } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
 import { DayJournal } from '@/components/shared/journal';
 import { formatDate, formatShortDate, shift, untilLock } from '@/lib/dates';
 import { locked } from '@/lib/progress';
-import { activeRules } from '@/lib/rules';
+import { activeRules, type Rule } from '@/lib/rules';
 import { entriesOn, findEntry } from '@/lib/selectors';
 import { DateControl } from './date-control';
 import { DaySummary } from './day-summary';
 import { QuestionCard } from './question-card';
 
-/** Record one day: its summary once anything is answered, otherwise (or while editing) one question at a time. */
+/** Record one day: its summary once anything is answered, otherwise (or while editing) one check-in at a time. */
 export function LogPage() {
   const { data, me, partner, now, log } = useChallenge();
   const { date, step, editing, setEditing } = log;
@@ -19,6 +20,17 @@ export function LogPage() {
     settled = active.every((r) =>
       locked(findEntry(data, me.id, r.id, date), now),
     );
+  // The last check-in saved, confirmed briefly above the next one; the count restarts the fade.
+  const [saved, setSaved] = useState<{ rule: Rule; n: number } | null>(null);
+  const onSaved = (rule: Rule) => {
+    setSaved((s) => ({ rule, n: (s?.n ?? 0) + 1 }));
+    // Bring the next check-in's top into view when Save was tapped far down a long one.
+    requestAnimationFrame(() => {
+      const top = document.querySelector('.log-wrap');
+      if (top && top.getBoundingClientRect().top < 0)
+        top.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  };
   return (
     <>
       <div className="page-heading">
@@ -30,6 +42,11 @@ export function LogPage() {
         <DateControl />
       </div>
       <div className="log-wrap">
+        {saved && (
+          <output className="saved-flash" key={saved.n}>
+            <Check size={14} strokeWidth={2.6} /> Saved · {saved.rule.title}
+          </output>
+        )}
         {recorded > 0 && !editing ? (
           <DaySummary active={active} recorded={recorded} />
         ) : (
@@ -51,7 +68,11 @@ export function LogPage() {
                 </div>
               </div>
             )}
-            <QuestionCard active={active} />
+            <QuestionCard
+              key={`${date}|${step}`}
+              active={active}
+              onSaved={onSaved}
+            />
           </>
         )}
         <section className="glass journal">

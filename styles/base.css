@@ -28,7 +28,6 @@
   --text-soft: #69758c;
   --text-deadline: #63718a;
   --text-note: #67758a;
-  --text-proof: #5f6c84;
   --text-rule: #66728a;
   --text-rule-strong: #454f64;
   --text-gift: #647087;
@@ -73,7 +72,6 @@
   --error-border: #f2d4ce;
   --winner-border: #93caa7;
   --attention-border: #f2c46a;
-  --badge-earned-border: #d4c8f0;
   --orbit-ring: #e9e4f6;
   --focus-ring: #8a7db7;
   --focus-border: #a691de;
@@ -101,12 +99,17 @@
   --bar-bg: #e6e8ef;
   --dot-ring: 0 0 0 1.5px #fff, 0 0 0 2.5px #25223440;
   --error-bg: #fff3f0;
-  --badge-bg: #ffffff60;
-  --badge-earned-bg: linear-gradient(140deg, #f3eefc, #e6f7ee);
-  --badge-earned-glow: none;
-  --badge-icon-bg: #ffffffc0;
   --attention-bg: linear-gradient(120deg, #fff8e8d8, #ffffff80);
-  --lightbox-bg: #f2f3f7;
+  --thumb-bg: #eef0f6;
+  /* Badge medals: each badge brings its own hue (badge-medal.tsx); these keep every medal equally soft. */
+  --medal-sat: 28%;
+  --medal-bg-l: 95%;
+  --medal-rim-l: 88%;
+  --medal-ring-l: 83%;
+  --medal-ink-l: 40%;
+  --medal-locked-bg: #f4f5f9;
+  --medal-locked-icon: #b3bac7;
+  --medal-locked-ring: #dfe3ec;
   --detail-meta-bg: #f2f1f8;
   --note-bg: #ffffffa8;
   --dialog-overlay: #2a2f4a33;
@@ -771,31 +774,6 @@ p {
   gap: 10px;
   flex-wrap: wrap;
 }
-.proof {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  margin: 15px 0;
-  font-size: 13px;
-  color: var(--text-proof);
-  background: none !important;
-  border: 0;
-  padding: 0;
-  text-align: left;
-  border-radius: 0;
-}
-.lightbox {
-  max-width: min(96vw, 720px) !important;
-}
-.lightbox img {
-  display: block;
-  width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: 12px;
-  background: var(--lightbox-bg);
-  margin: 10px 0 4px;
-}
 .nav-badge {
   position: absolute;
   top: 0;
@@ -905,14 +883,6 @@ p {
   background: var(--cal-future-bg);
   color: var(--cal-future-text);
 }
-.proof img {
-  width: 72px;
-  height: 78px;
-  object-fit: cover;
-  object-position: top;
-  border-radius: 7px;
-  border: 1px solid var(--proof-border);
-}
 .attachment {
   border-top: 1px solid var(--line);
   padding-top: 12px;
@@ -931,15 +901,6 @@ p {
   width: 1px;
   height: 1px;
 }
-.note {
-  font-size: 14px;
-  color: var(--text-note);
-  margin: 16px 0;
-}
-.note summary {
-  cursor: pointer;
-}
-.note textarea,
 textarea {
   width: 100%;
   min-height: 90px;
@@ -947,18 +908,6 @@ textarea {
   margin-top: 10px;
   display: block;
   font-size: 14px;
-}
-.forgiveness {
-  font-size: 14px;
-  margin-top: 15px;
-}
-.forgiveness > label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.forgiveness button {
-  margin-top: 10px;
 }
 .rule-list {
   padding: 8px 30px;

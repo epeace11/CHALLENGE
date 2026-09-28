@@ -16,7 +16,7 @@ create table public.challenge_weeks(start_date date primary key,end_date date no
 insert into public.challenge_weeks values('2026-09-15','2026-09-20'),('2026-09-21','2026-09-27'),('2026-09-28','2026-10-04'),('2026-10-05','2026-10-11'),('2026-10-12','2026-10-14');
 -- Each weekly rule's target per week; the app reads this table too, so it is the one place targets live. A rule with no row (or 0) that week does not apply.
 create table public.challenge_weekly_targets(rule_id text not null references public.challenge_rules,start_date date not null references public.challenge_weeks,target integer not null check(target>=0),primary key(rule_id,start_date));
-insert into public.challenge_weekly_targets values('gym','2026-09-15',3),('gym','2026-09-21',4),('gym','2026-09-28',4),('gym','2026-10-05',4),('gym','2026-10-12',1),('steps_weekly','2026-09-21',1),('steps_weekly','2026-09-28',3),('steps_weekly','2026-10-05',3),('steps_weekly','2026-10-12',1);
+insert into public.challenge_weekly_targets values('gym','2026-09-15',3),('gym','2026-09-21',4),('gym','2026-09-28',4),('gym','2026-10-05',4),('gym','2026-10-12',1),('steps_weekly','2026-09-28',3),('steps_weekly','2026-10-05',3),('steps_weekly','2026-10-12',1);
 create table public.challenge_entries(id uuid primary key default gen_random_uuid(),user_id uuid not null references public.challenge_profiles,rule_id text not null references public.challenge_rules,day date not null,done boolean not null,status text not null check(status in ('pending','confirmed','missed','disputed','conceded','excused','unlogged')),note text not null default '',proof text,proposed_done boolean,proposed_note text,proposed_proof text,updated_at timestamptz not null default now(),unique(user_id,rule_id,day));
 create table public.challenge_points(id uuid primary key default gen_random_uuid(),user_id uuid not null references public.challenge_profiles,rule_id text not null references public.challenge_rules,day date not null,reason text not null,forgiven boolean not null default false,voided boolean not null default false,entry_id uuid references public.challenge_entries,slot integer not null default 0,created_at timestamptz not null default now(),unique(user_id,rule_id,day,slot));
 create table public.challenge_requests(id uuid primary key default gen_random_uuid(),point_id uuid unique not null references public.challenge_points,requester_id uuid not null references public.challenge_profiles,reason text not null,status text not null default 'pending',decided_by uuid references public.challenge_profiles,decided_at timestamptz);
@@ -252,6 +252,20 @@ create or replace function public.challenge_reminders() returns table(user_id uu
  group by p.id,p.name,c.day $$;
 revoke all on function public.challenge_reminders() from public,anon,authenticated;
 grant execute on function public.challenge_reminders() to service_role;
+
+-- One Save per check-in: see supabase/checkin-save.sql.
+create or replace function public.challenge_checkin(p_rule text,p_day date,p_done boolean,p_note text default '',p_proof text default null,p_forgive text default null) returns void language plpgsql security definer set search_path=public as $$ declare pt challenge_points;ask text:=nullif(trim(coalesce(p_forgive,'')),'');begin
+ if p_done and ask is not null then raise exception 'Forgiveness can only be requested with a No.';end if;
+ perform challenge_log(p_rule,p_day,p_done,p_note,p_proof);
+ select * into pt from challenge_points where user_id=auth.uid() and rule_id=p_rule and day=p_day and slot=0;
+ if pt.voided then delete from challenge_requests where point_id=pt.id and status='pending';end if;
+ if ask is not null then
+  if pt.id is null or pt.voided or pt.forgiven then raise exception 'This answer has no miss to forgive yet.';end if;
+  perform challenge_forgive(pt.id,ask);
+ end if;
+end $$;
+revoke all on function public.challenge_checkin(text,date,boolean,text,text,text) from public,anon;
+grant execute on function public.challenge_checkin(text,date,boolean,text,text,text) to authenticated;
 
 commit;
 -- Optional but recommended: enable pg_cron in Database > Extensions, then run:

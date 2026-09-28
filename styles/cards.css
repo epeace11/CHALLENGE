@@ -1,4 +1,4 @@
-/* Overview link cards, the month calendar, screenshot lists, and weekly targets. */
+/* Overview link cards, the month calendar, and weekly targets. */
 .link-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -78,33 +78,6 @@
     grid-template-columns: 1fr;
     gap: 0;
   }
-}
-.proof-list {
-  display: flex;
-  flex-direction: column;
-}
-.proof-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.proof-item .proof {
-  flex: 1;
-  min-width: 0;
-}
-.proof-remove {
-  border: 0;
-  background: none !important;
-  padding: 6px;
-  color: var(--text-faint);
-  border-radius: 8px;
-  flex-shrink: 0;
-}
-.proof-remove:hover:not(:disabled) {
-  color: #b23b3b;
-}
-.proof-remove:disabled {
-  opacity: 0.35;
 }
 .week-targets {
   list-style: none;

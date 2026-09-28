@@ -6,12 +6,6 @@ export const PROOF_BUCKET = 'challenge-proof';
 /** The database refuses more than this many screenshots on one answer. */
 export const MAX_PROOFS = 6;
 
-/** Storage paths of every screenshot on an entry: the proof column holds them newline-separated. */
-export const proofPaths = (proof: string | null | undefined) =>
-  proof ? proof.split('\n').filter(Boolean) : [];
-export const joinProofs = (paths: string[]) =>
-  paths.length ? paths.join('\n') : null;
-
 /** Scales a screenshot down to 1600 px on its long side and re-encodes it as JPEG. */
 async function compress(file: File) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))

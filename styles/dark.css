@@ -35,7 +35,6 @@
   --text-soft: #9a97ad;
   --text-deadline: #9a97ad;
   --text-note: #9a97ad;
-  --text-proof: #9a97ad;
   --text-rule: #9a97ad;
   --text-rule-strong: #ece9f5;
   --text-gift: #9a97ad;
@@ -80,7 +79,6 @@
   --error-border: #6b2433;
   --winner-border: #5fbf8c80;
   --attention-border: #f2c46a66;
-  --badge-earned-border: #5b47a8;
   --orbit-ring: #2c2350;
   --focus-ring: #b8a5ff;
   --focus-border: #a18cf5;
@@ -108,12 +106,16 @@
   --bar-bg: #ffffff14;
   --dot-ring: 0 0 0 1.5px #16121f, 0 0 0 2.5px #ffffff59;
   --error-bg: #3a1620;
-  --badge-bg: #ffffff06;
-  --badge-earned-bg: linear-gradient(140deg, #2c2350, #1c3a2c);
-  --badge-earned-glow: 0 0 24px #8b6cf026;
-  --badge-icon-bg: #ffffff14;
   --attention-bg: linear-gradient(120deg, #3d2e1299, #ffffff06);
-  --lightbox-bg: #ffffff08;
+  --thumb-bg: #ffffff0d;
+  --medal-sat: 22%;
+  --medal-bg-l: 18%;
+  --medal-rim-l: 25%;
+  --medal-ring-l: 32%;
+  --medal-ink-l: 80%;
+  --medal-locked-bg: #ffffff06;
+  --medal-locked-icon: #5f5b73;
+  --medal-locked-ring: #ffffff17;
   --detail-meta-bg: #ffffff0a;
   --note-bg: #ffffff0a;
   --dialog-overlay: #05030acc;

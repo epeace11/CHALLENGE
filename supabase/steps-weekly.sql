@@ -24,7 +24,8 @@ do $$ begin
   alter table public.challenge_weeks drop column target;
  end if;
 end $$;
-insert into public.challenge_weekly_targets values('steps_weekly','2026-09-21',1),('steps_weekly','2026-09-28',3),('steps_weekly','2026-10-05',3),('steps_weekly','2026-10-12',1) on conflict(rule_id,start_date) do update set target=excluded.target;
+-- The Sep 21–27 target (1 day) was dropped by steps-from-sep-28.sql; it is left out here so a rerun cannot bring it back.
+insert into public.challenge_weekly_targets values('steps_weekly','2026-09-28',3),('steps_weekly','2026-10-05',3),('steps_weekly','2026-10-12',1) on conflict(rule_id,start_date) do update set target=excluded.target;
 
 create or replace function public.challenge_rescore() returns void language plpgsql security definer set search_path=public as $$ declare w record;p record;n integer;i integer;begin
  for w in select k.start_date,k.end_date,t.rule_id,t.target from challenge_weeks k join challenge_weekly_targets t using(start_date) join challenge_rules r on r.id=t.rule_id where r.weekly and ((k.end_date+1)+time '23:59') at time zone 'America/Toronto'<=now() loop

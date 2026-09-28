@@ -68,20 +68,22 @@ export type ReviewAction =
   | 'concede';
 
 export const api = {
-  /** Saves (or late-corrects) one answer. */
-  log: (a: {
+  /** Saves (or late-corrects) one whole check-in: the answer, its note and screenshots, and with a No an optional forgiveness request, in one transaction. */
+  checkin: (a: {
     rule: string;
     day: string;
     done: boolean;
     note: string;
     proof: string | null;
+    forgive: string | null;
   }) =>
-    action('challenge_log', {
+    action('challenge_checkin', {
       p_rule: a.rule,
       p_day: a.day,
       p_done: a.done,
       p_note: a.note,
       p_proof: a.proof,
+      p_forgive: a.forgive,
     }),
   addPhoto: (path: string, takenAt: string | null) =>
     action('challenge_add_photo', { p_path: path, p_taken_at: takenAt }),

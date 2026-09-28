@@ -20,6 +20,52 @@ assert.equal(
   (await db.query(`select count(*)::int n from challenge_profiles`)).rows[0].n,
   2,
 );
+// Kazzy's steps start with the Sep 28 week. A fresh install has no Sep 21–27 steps target; on the live project,
+// supabase/steps-from-sep-28.sql removes it along with anything already recorded against that week.
+const stepsTargets = async () =>
+  (
+    await db.query(
+      `select start_date::text d,target from challenge_weekly_targets where rule_id='steps_weekly' order by start_date`,
+    )
+  ).rows.map((r) => [r.d, r.target]);
+assert.deepEqual(await stepsTargets(), [
+  ['2026-09-28', 3],
+  ['2026-10-05', 3],
+  ['2026-10-12', 1],
+]);
+await db.exec(
+  `insert into challenge_weekly_targets values('steps_weekly','2026-09-21',1);insert into challenge_entries(user_id,rule_id,day,done,status) values('${kazzy}','steps_weekly','2026-09-23',false,'missed');insert into challenge_disputes(entry_id,raised_by,comment) select id,'${erin}','x' from challenge_entries where rule_id='steps_weekly';insert into challenge_points(user_id,rule_id,day,reason,slot) values('${kazzy}','steps_weekly','2026-09-27','weekly_shortfall',1);insert into challenge_requests(point_id,requester_id,reason) select id,'${kazzy}','Rained all week' from challenge_points where rule_id='steps_weekly'`,
+);
+await db.exec(
+  readFileSync(
+    new URL('../supabase/steps-from-sep-28.sql', import.meta.url),
+    'utf8',
+  ),
+);
+await db.exec(`select challenge_rescore()`); // the week is never assessed again
+assert.deepEqual(
+  (
+    await db.query(
+      `select (select count(*) from challenge_entries where rule_id='steps_weekly' and day<'2026-09-28')::int e,(select count(*) from challenge_points where rule_id='steps_weekly' and day<'2026-09-28')::int p,(select count(*) from challenge_requests)::int r,(select count(*) from challenge_disputes)::int d`,
+    )
+  ).rows[0],
+  { e: 0, p: 0, r: 0, d: 0 },
+);
+assert.deepEqual(await stepsTargets(), [
+  ['2026-09-28', 3],
+  ['2026-10-05', 3],
+  ['2026-10-12', 1],
+]);
+assert.ok(
+  (
+    await db.query(
+      `select count(*)::int n from challenge_history where table_name='challenge_entries' and op='delete'`,
+    )
+  ).rows[0].n === 1,
+); // removed rows stay in the change history
+console.log(
+  'PASS: steps start Sep 28 — no Sep 21–27 target on a fresh install; the live cleanup removes that week and keeps Sep 28–Oct 4 at three days;',
+);
 // Use actual Toronto date in the configured interval for a deterministic present-time edit.
 await db.exec(
   `update challenge_config set start_date=(now() at time zone 'America/Toronto')::date,end_date=(now() at time zone 'America/Toronto')::date+2,allow_same_day=true`,
@@ -625,6 +671,89 @@ assert.equal((await due()).length, 2);
 await db.exec(`reset role`);
 console.log(
   'PASS: push reminders — who is due and for how many habits, per-device registration that follows the signed-in member, service-role-only reminder list.',
+);
+// One Save per check-in: challenge_checkin sends the answer, its note and screenshots and (with a No) a forgiveness request in one transaction.
+await actor(kazzy);
+await db.exec(
+  `update challenge_config set finalized=false,start_date=${T}-10,end_date=${T}+2,allow_same_day=true where id=1`,
+);
+const checkinOf = async (rule, day) =>
+  (
+    await db.query(
+      `select e.status,e.done,e.note,e.proposed_done,e.proposed_note,p.id point,p.voided,r.status ask,r.reason from challenge_entries e left join challenge_points p on p.entry_id=e.id and p.slot=0 left join challenge_requests r on r.point_id=p.id where e.user_id='${kazzy}' and e.rule_id='${rule}' and e.day=${day}`,
+    )
+  ).rows[0];
+await db.exec(
+  `select challenge_checkin('food',${T},false,'Birthday dinner',null,'  It was my birthday ')`,
+);
+assert.deepEqual(
+  (({ status, done, note, voided, ask, reason }) => ({
+    status,
+    done,
+    note,
+    voided,
+    ask,
+    reason,
+  }))(await checkinOf('food', T)),
+  {
+    status: 'missed',
+    done: false,
+    note: 'Birthday dinner',
+    voided: false,
+    ask: 'pending',
+    reason: 'It was my birthday',
+  },
+);
+// A Yes cannot carry a request, and nothing is saved when it tries.
+await assert.rejects(
+  () =>
+    db.exec(
+      `select challenge_checkin('entertainment',${T},true,'',null,'why not')`,
+    ),
+  /only be requested with a No/,
+);
+assert.equal(await checkinOf('entertainment', T), undefined);
+// Changing that No to a Yes clears the miss and withdraws the request still waiting on it.
+await db.exec(`select challenge_checkin('food',${T},true,'',null,null)`);
+const cleared = await checkinOf('food', T);
+assert.deepEqual(
+  [cleared.status, cleared.voided, cleared.ask],
+  ['pending', true, null],
+);
+// After the deadline: a late No with a request on a miss that was never logged goes to Erin as one correction plus one ask.
+await db.exec(
+  `select challenge_checkin('prayer',${T}-3,false,'Forgot',null,'Was travelling')`,
+);
+const lateAsk = await checkinOf('prayer', `${T}-3`);
+assert.deepEqual(
+  [
+    lateAsk.status,
+    lateAsk.proposed_done,
+    lateAsk.proposed_note,
+    lateAsk.ask,
+    lateAsk.reason,
+  ],
+  ['unlogged', false, 'Forgot', 'pending', 'Was travelling'],
+);
+// A late No on an answer with no miss yet (a Yes still awaiting review) cannot carry a request; the whole Save is refused and the correction is not kept.
+await db.exec(
+  `update challenge_entries set done=true,status='pending' where user_id='${kazzy}' and rule_id='weed_daily' and day=${T}-3;update challenge_points set voided=true where user_id='${kazzy}' and rule_id='weed_daily' and day=${T}-3`,
+);
+await assert.rejects(
+  () =>
+    db.exec(
+      `select challenge_checkin('weed_daily',${T}-3,false,'',null,'please')`,
+    ),
+  /no miss to forgive/,
+);
+assert.equal((await checkinOf('weed_daily', `${T}-3`)).proposed_done, null);
+await actor('00000000-0000-0000-0000-000000000099');
+await assert.rejects(
+  () => db.exec(`select challenge_checkin('food',${T},false)`),
+  /only for/,
+);
+console.log(
+  'PASS: one Save per check-in — answer, note and forgiveness request in one transaction; a Yes cannot ask and withdraws a pending ask; a failed ask saves nothing.',
 );
 console.log(
   'PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.',

@@ -1,4 +1,4 @@
-/* Theme toggle, badge dates, locked answers. */
+/* Theme toggle, locked answers. */
 .theme-toggle svg {
   transition: transform 0.4s;
 }
@@ -6,18 +6,6 @@
   transform: rotate(-20deg);
 }
 
-.badge {
-  position: relative;
-}
-.badge-date {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 9.5px;
-  letter-spacing: 0.3px;
-  color: var(--accent-text);
-  opacity: 0.75;
-}
 .locked-note {
   display: flex;
   align-items: center;

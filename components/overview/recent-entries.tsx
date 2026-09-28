@@ -17,7 +17,7 @@ export function RecentEntries() {
           className="text-link"
           onClick={() => {
             ui.setShowEntries(true);
-            go('Progress');
+            go('Progress', 'entries');
           }}
         >
           View all

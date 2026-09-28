@@ -1,0 +1,252 @@
+/* Screenshots: the thumbnail strip on an answer, and the full-screen viewer (dark in both themes). */
+.proof-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 14px 0 8px;
+}
+.proof-thumb {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 78px;
+  margin: 0;
+}
+.proof-open {
+  position: relative;
+  display: block;
+  width: 78px;
+  height: 98px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 11px;
+  border: 1px solid var(--proof-border);
+  background: var(--thumb-bg) !important;
+}
+.proof-open img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+.proof-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+      100deg,
+      transparent 30%,
+      #ffffff55 50%,
+      transparent 70%
+    )
+    0 0 / 200% 100% var(--thumb-bg);
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.proof-expand {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  padding: 4px;
+  box-sizing: content-box;
+  border-radius: 7px;
+  background: #0000008c;
+  color: #fff;
+}
+.proof-thumb figcaption {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-caption);
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.proof-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--background);
+  background: var(--text-strong) !important;
+  color: var(--background);
+}
+/* A bigger target than the dot it draws. */
+.proof-remove::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  outline: none;
+  /* Every touch in here is the viewer's: no page scroll, pinch-zoom or double-tap zoom. */
+  touch-action: none;
+  overscroll-behavior: contain;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  transition: opacity 0.2s;
+}
+.viewer[data-starting-style],
+.viewer[data-ending-style] {
+  opacity: 0;
+}
+/* The backdrop; pulling the screenshot down (--pull) lets the app show through. */
+.viewer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: #07060b;
+  opacity: calc(0.96 - var(--pull, 0));
+}
+.viewer-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: max(10px, env(safe-area-inset-top)) 10px 8px 18px;
+  font-size: 13px;
+}
+.viewer-count {
+  min-width: 36px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.viewer-date {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #ffffffb3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.viewer-button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff17 !important;
+  color: #fff;
+}
+.viewer-button:hover {
+  background: #ffffff2e !important;
+}
+.viewer-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+/* The screenshot's box: centred above the dots. Zoom and pan are measured from its centre. */
+.viewer-frame {
+  position: absolute;
+  inset: 0 0 max(30px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewer-stage.zoomed {
+  cursor: grab;
+}
+.viewer-stage img {
+  max-width: 100%;
+  max-height: 100%;
+  transform-origin: center;
+  opacity: 0;
+  -webkit-user-drag: none;
+}
+.viewer-stage img.ready {
+  opacity: 1;
+  animation: viewer-in 0.2s ease;
+}
+@keyframes viewer-in {
+  from {
+    opacity: 0;
+  }
+}
+.viewer-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -14px 0 0 -14px;
+  color: #ffffffb3;
+}
+.viewer-note {
+  color: #ffffffb3;
+  font-size: 14px;
+}
+.viewer-arrow {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  margin-top: -25px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #1d1a26b8 !important;
+  color: #fff;
+  box-shadow: 0 4px 16px #00000066;
+  backdrop-filter: blur(8px);
+}
+.viewer-arrow:hover:not(:disabled) {
+  background: #2b2738e0 !important;
+}
+.viewer-arrow:disabled {
+  opacity: 0.22;
+}
+.viewer-arrow.prev {
+  left: max(10px, env(safe-area-inset-left));
+}
+.viewer-arrow.next {
+  right: max(10px, env(safe-area-inset-right));
+}
+.viewer-dots {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.viewer-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffffff59;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+.viewer-dots i.on {
+  background: #fff;
+  transform: scale(1.3);
+}

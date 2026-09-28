@@ -1,0 +1,348 @@
+/* Badges: the medals, the badge shelf on Progress, and the celebration when one is earned.
+   Quiet on purpose: flat tints and fine rims, colour only on what has been earned. */
+.medal {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: var(--medal-size);
+  height: var(--medal-size);
+  border-radius: 50%;
+  color: hsl(var(--medal-hue) var(--medal-sat) var(--medal-ink-l));
+  background: hsl(var(--medal-hue) var(--medal-sat) var(--medal-bg-l));
+  /* A fine outer ring and an inner rim, like a struck coin. */
+  box-shadow:
+    inset 0 0 0 1px hsl(var(--medal-hue) var(--medal-sat) var(--medal-ring-l)),
+    inset 0 0 0 calc(var(--medal-size) * 0.08)
+      hsl(var(--medal-hue) var(--medal-sat) var(--medal-bg-l)),
+    inset 0 0 0 calc(var(--medal-size) * 0.08 + 1px)
+      hsl(var(--medal-hue) var(--medal-sat) var(--medal-rim-l));
+}
+.medal.locked {
+  color: var(--medal-locked-icon);
+  background: var(--medal-locked-bg);
+  box-shadow: inset 0 0 0 1px var(--medal-locked-ring);
+}
+
+/* The shelf on Progress. */
+.badges-block {
+  scroll-margin-top: 16px;
+}
+.badges-block h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.badges-block h3 svg {
+  color: var(--icon-accent);
+}
+.badge-tabs {
+  display: none !important;
+}
+.badge-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 16px;
+}
+.badge-col-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.badge-col-head h4 {
+  margin: 0;
+  font:
+    21px Georgia,
+    serif;
+  letter-spacing: -0.5px;
+}
+.badge-count {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.badge-meter {
+  height: 3px;
+  margin: 10px 0 20px;
+  border-radius: 2px;
+  background: var(--bar-bg);
+  overflow: hidden;
+}
+.badge-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--tone-open);
+}
+.badge-shelf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 18px 8px;
+}
+.badge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 12px;
+  background: none !important;
+  color: inherit;
+  text-align: center;
+}
+.badge-card .medal {
+  margin-bottom: 9px;
+  transition: transform 0.2s;
+}
+.badge-card:hover .medal {
+  transform: translateY(-1px);
+}
+.badge-card b {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-strong);
+}
+.badge-how {
+  max-width: 18ch;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+.badge-when {
+  font-size: 11.5px;
+  color: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.badge-new {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--accent-text);
+}
+.badge-empty {
+  margin: 0;
+}
+.badge-sub {
+  margin: 28px 0 2px;
+}
+.badge-locked {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.badge-locked li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.badge-locked li:first-child {
+  border-top: 0;
+}
+.badge-locked-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.badge-locked-text b {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+.badge-locked-text small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.badge-locked-text em {
+  margin-top: 1px;
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--text-caption);
+}
+.badge-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.badge-progress-bar {
+  width: 48px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--bar-bg);
+  overflow: hidden;
+}
+.badge-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--tone-open);
+}
+@media (max-width: 720px) {
+  .badge-tabs {
+    display: inline-flex !important;
+    margin-top: 12px;
+  }
+  .badge-cols {
+    grid-template-columns: 1fr;
+  }
+  .badge-col:not(.shown) {
+    display: none;
+  }
+  .badge-shelf {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px 6px;
+  }
+}
+
+/* The celebration: the medal settles in, a fine ring widens from it twice, and a few specks drift
+   out once. Without motion (prefers-reduced-motion) it is the same card, standing still. */
+.celebrate {
+  align-items: center;
+  text-align: center;
+  width: min(92vw, 380px) !important;
+  padding-top: 18px !important;
+}
+.celebrate [data-slot='dialog-title'] {
+  padding: 0 28px;
+  font-size: 30px;
+}
+.celebrate .eyebrow {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.celebrate-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 180px;
+  height: 150px;
+  margin: 2px auto -6px;
+}
+.celebrate-halo,
+.speck {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+}
+.celebrate-halo {
+  width: 88px;
+  height: 88px;
+  margin: -44px 0 0 -44px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px
+    hsl(var(--medal-hue) var(--medal-sat) var(--medal-ring-l));
+  animation: halo 2.4s ease-out 0.45s 2;
+}
+.celebrate-halo + .celebrate-halo {
+  animation-delay: 1.25s;
+}
+.speck {
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: hsl(var(--medal-hue) var(--medal-sat) var(--medal-ink-l));
+  animation: speck 1.5s ease-out var(--delay) forwards;
+}
+.celebrate-medal {
+  position: relative;
+  animation: medal-in 0.6s cubic-bezier(0.2, 1.25, 0.4, 1) both;
+}
+.celebrate-more {
+  position: absolute;
+  right: -12px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--fill-accent);
+  color: var(--accent-text);
+  font-size: 12px;
+}
+@keyframes halo {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+@keyframes speck {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--turn)) translateY(-42px) scale(0.6);
+  }
+  30% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--turn)) translateY(calc(var(--reach) * -1));
+  }
+}
+@keyframes medal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+.celebrate-list {
+  list-style: none;
+  width: calc(100% + 6px);
+  max-height: 38vh;
+  margin: 2px -2px 0 -4px;
+  padding: 0 8px 0 4px;
+  overflow-y: auto;
+  text-align: left;
+}
+.celebrate-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.celebrate-list li:first-child {
+  border-top: 0;
+}
+.celebrate-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.celebrate-list b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.celebrate-list small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.celebrate-list time {
+  font-size: 12px;
+  color: var(--text-caption);
+  white-space: nowrap;
+}
+.celebrate .dialog-actions {
+  width: 100%;
+}

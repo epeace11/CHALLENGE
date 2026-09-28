@@ -11,7 +11,7 @@ import { historyOf } from '@/lib/selectors';
 export function EntryHistory() {
   const { data, ui, dialogs } = useChallenge();
   return (
-    <section className="glass progress-block entries">
+    <section className="glass progress-block entries" id="entries">
       <div className="row">
         <h3>
           <History size={18} />
@@ -46,7 +46,7 @@ export function EntryHistory() {
               return (
                 <div
                   key={p.id}
-                  className={`col${ui.historyPerson === p.id ? ' active' : ''}`}
+                  className={`col${ui.historyPerson === p.id ? ' shown' : ''}`}
                 >
                   <h2 className="col-name">{p.name}</h2>
                   {Object.entries(Object.groupBy(h, (e) => e.day)).map(

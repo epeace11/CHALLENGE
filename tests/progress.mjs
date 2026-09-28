@@ -167,9 +167,10 @@ assert.deepEqual(
   weeks.map((w) => w.targets.gym),
   [3, 4, 4, 4, 1],
 );
+// Kazzy's steps start with the Sep 28 week (supabase/steps-from-sep-28.sql): Sep 21–27 has no steps target, so it is never assessed or counted.
 assert.deepEqual(
   weeks.map((w) => w.targets.steps_weekly ?? 0),
-  [0, 1, 3, 3, 1],
+  [0, 0, 3, 3, 1],
 );
 assert.equal(weeks[0].start, START);
 assert.equal(weeks.at(-1).end, END);
@@ -214,9 +215,9 @@ const weekendDays = days().filter(
   (d) => new Date(d + 'T12:00Z').getUTCDay() > 4,
 ).length;
 assert.equal(
-  total(bar) + 2 * weekendDays + 8,
+  total(bar) + 2 * weekendDays + 7,
   total(personBar(data, kazzy, now)),
-); // plus his weekly steps targets, 1+3+3+1
+); // plus his weekly steps targets, 3+3+1 (none before Sep 28)
 const kbar = personBar(data, kazzy, now);
 assert.equal(kbar.done, 0);
 assert.equal(kbar.review, 0);
@@ -261,9 +262,14 @@ assert.deepEqual(
 );
 const perfect = perfectDays(data, erin, now);
 assert.deepEqual(
-  { count: perfect.count, longest: perfect.longest, first: perfect.first },
-  { count: 3, longest: 2, first: '2026-09-15' },
-);
+  {
+    count: perfect.count,
+    longest: perfect.longest,
+    current: perfect.current,
+    first: perfect.first,
+  },
+  { count: 3, longest: 2, current: 2, first: '2026-09-15' },
+); // Sep 17 (excused) and 18 are clean and 18 is the latest closed day, so the run is still going
 
 // Money: position-based, forgiven excluded
 assert.equal(nextMissCost(data, erin.id), 2);
@@ -296,6 +302,32 @@ assert.equal(get(kb, 'hat_trick').earned, false);
 assert.equal(get(eb, 'iron_week').earned, false);
 assert.equal(get(eb, 'strong_finish').earned, false);
 assert.equal(eb.length, 12);
+// Progress toward the badges that build up, shown only while they are not yet earned.
+assert.equal(get(eb, 'first_clean').progress, undefined);
+assert.equal(get(eb, 'hat_trick').progress, undefined);
+assert.deepEqual(get(eb, 'clean_week').progress, {
+  have: 2,
+  need: 7,
+  unit: 'clean days in a row',
+});
+// Erin's longest streak still going is five (food and screen time: Sep 15–18 done, Sep 19 under review).
+assert.deepEqual(get(eb, 'streak7').progress, {
+  have: 5,
+  need: 7,
+  unit: 'days in a row',
+});
+assert.equal(get(eb, 'streak30').progress.have, 5);
+assert.deepEqual(get(kb, 'hat_trick').progress, {
+  have: 0,
+  need: 3,
+  unit: 'days won in a row',
+});
+assert.deepEqual(get(eb, 'iron_week').progress, {
+  have: 0,
+  need: 3,
+  unit: 'visits this week',
+});
+assert.equal(get(eb, 'gracious').progress, undefined); // not a count
 // Iron week: three visits in the first partial week, checked after that week closes.
 const gymData = {
   ...data,
@@ -312,6 +344,20 @@ assert.equal(
   ).date,
   '2026-09-20',
 );
+// Before that week closes the visits are all there, but the badge waits for the week to end.
+assert.deepEqual(get(badges(gymData, erin, now), 'iron_week'), {
+  id: 'iron_week',
+  title: 'Iron week',
+  how: 'Every gym visit in a week',
+  earned: false,
+  date: undefined,
+  progress: {
+    have: 3,
+    need: 3,
+    unit: 'visits this week',
+    note: 'Counts once the week is over',
+  },
+});
 // The bar's denominator is every habit-day of the challenge, so Erin's 8 daily rules over 30 days plus 16 gym visits.
 assert.equal(
   total(bar),

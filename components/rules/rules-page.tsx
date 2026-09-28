@@ -40,16 +40,17 @@ export function RulesPage() {
         </p>
         <h3>Forgiveness</h3>
         <p>
-          Missed a habit for a reason? Request forgiveness while logging, or
-          from its history. Your partner decides. Approved points stay in
-          history but do not count.
+          Missed a habit for a reason? Tick Request forgiveness under a No
+          before you save it, or ask later from its history. Your partner
+          decides. Approved points stay in history but do not count.
         </p>
         <h3>Weekly habits</h3>
         <p>
-          Gym and Kazzy’s 10,000-step days are counted per Monday–Sunday week.
-          Sunday is the last day, so you can log it until Monday at 11:59 pm,
-          when the week is assessed; the last week is assessed the day after the
-          challenge ends.
+          Gym and Kazzy’s 10,000-step days are counted per Monday–Sunday week;
+          any days count, they don’t need to be in a row. Kazzy’s steps start
+          with the week of Sep 28. Sunday is the last day, so you can log it
+          until Monday at 11:59 pm, when the week is assessed; the last week is
+          assessed the day after the challenge ends.
         </p>
         <ul className="week-targets">
           {data.weeks.map((x) => (

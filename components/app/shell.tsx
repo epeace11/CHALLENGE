@@ -23,6 +23,7 @@ export type ShellProps = {
   reviewDot: boolean;
   /** Items across the Review tabs (mobile badge). */
   reviewCount: number;
+  /** Badges earned but not yet celebrated on this device (Progress count). */
   newBadges: number;
   error: string;
   setError: (e: string) => void;
@@ -65,9 +66,17 @@ export function Shell({
               onClick={() => go(p)}
             >
               {p}
-              {p === 'Review' && reviewDot && <span className="nav-dot" />}
+              {p === 'Review' && reviewDot && (
+                <span
+                  className="nav-dot"
+                  title="Something is waiting for you"
+                />
+              )}
               {p === 'Progress' && newBadges > 0 && (
-                <span className="nav-dot" />
+                <span
+                  className="nav-dot"
+                  title={`${newBadges} new badge${newBadges === 1 ? '' : 's'}`}
+                />
               )}
             </button>
           ))}
@@ -117,15 +126,30 @@ export function Shell({
               <Icon size={19} strokeWidth={1.45} />
               <span>{p}</span>
               {p === 'Review' && reviewCount > 0 && (
-                <b className="nav-badge">{reviewCount}</b>
+                <NavCount n={reviewCount} what="waiting in Review" />
               )}
               {p === 'Progress' && newBadges > 0 && (
-                <b className="nav-badge">{newBadges}</b>
+                <NavCount
+                  n={newBadges}
+                  what={`new badge${newBadges === 1 ? '' : 's'}`}
+                />
               )}
             </button>
           );
         })}
       </nav>
     </div>
+  );
+}
+
+/** The number on a mobile tab, read out with what it counts. */
+function NavCount({ n, what }: { n: number; what: string }) {
+  return (
+    <b className="nav-badge" title={`${n} ${what}`}>
+      <span aria-hidden="true">{n}</span>
+      <span className="sr-only">
+        {n} {what}
+      </span>
+    </b>
   );
 }

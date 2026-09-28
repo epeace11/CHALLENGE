@@ -1,11 +1,4 @@
 /* Entry history columns, dialogs, and the sign-in form. */
-.photo-date {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--text-caption);
-}
-
 .history-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -25,7 +18,7 @@
   .history-cols {
     grid-template-columns: 1fr;
   }
-  .history-cols .col:not(.active) {
+  .history-cols .col:not(.shown) {
     display: none;
   }
   .history-cols .col-name {
@@ -138,9 +131,6 @@
   text-transform: uppercase;
   color: var(--link);
   margin-bottom: 3px;
-}
-[data-slot='dialog-content'] .proof {
-  margin: 2px 0;
 }
 .dialog-actions {
   display: flex;

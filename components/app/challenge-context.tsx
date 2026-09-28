@@ -6,7 +6,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useNewBadges } from '@/hooks/use-new-badges';
 import { useNow } from '@/hooks/use-now';
+import type { Draft } from '@/lib/checkin';
 import { START, clampDate, defaultDate, shift, toronto } from '@/lib/dates';
 import {
   badges,
@@ -75,9 +77,16 @@ function useChallengeState(
     }
   };
 
-  const go = (target: Page) => {
+  /** Opens a page at its top, or scrolled to the element with id `anchor`. */
+  const go = (target: Page, anchor?: string) => {
     setPage(target);
     setError('');
+    // Pages share one scroll position, so without this a page would open wherever the last one was scrolled to.
+    requestAnimationFrame(() => {
+      const el = anchor ? document.getElementById(anchor) : null;
+      if (el) el.scrollIntoView({ block: 'start' });
+      else window.scrollTo(0, 0);
+    });
   };
 
   // The Log page: which day, which question, and how it is shown.
@@ -94,10 +103,35 @@ function useChallengeState(
     setStep(Math.max(at, 0));
     setEditing(mode);
   };
+  // Unsaved check-ins by `${day}|${rule}`. Each remembers the saved entry version it started from
+  // (`base`) and is ignored once that changes. Moving between questions keeps them; only Save sends one.
+  const [drafts, setDrafts] = useState<
+    Record<string, { base: string; draft: Draft }>
+  >({});
+  const editDraft = (
+    key: string,
+    base: string,
+    from: Draft,
+    change: (d: Draft) => Draft,
+  ) =>
+    setDrafts((all) => ({
+      ...all,
+      [key]: {
+        base,
+        draft: change(all[key]?.base === base ? all[key].draft : from),
+      },
+    }));
+  const dropDraft = (key: string) =>
+    setDrafts((all) => {
+      const next = { ...all };
+      delete next[key];
+      return next;
+    });
 
   // Choices that survive switching pages.
   const [reviewTab, setReviewTab] = useState('entries'),
     [historyPerson, setHistoryPerson] = useState(''),
+    [badgePerson, setBadgePerson] = useState(''),
     [showEntries, setShowEntries] = useState(false),
     [ledgerOpen, setLedgerOpen] = useState(false);
 
@@ -144,6 +178,7 @@ function useChallengeState(
       earned: per<Badge[]>((p) => badges(data, p, now, ix)),
     };
   }, [data, now]);
+  const newBadges = useNewBadges(me.id, stats.earned[me.id] ?? [], now);
 
   return {
     ...store,
@@ -157,12 +192,26 @@ function useChallengeState(
     page,
     go,
     stats,
-    log: { date, changeDate, step, setStep, editing, setEditing, startEditing },
+    newBadges,
+    log: {
+      date,
+      changeDate,
+      step,
+      setStep,
+      editing,
+      setEditing,
+      startEditing,
+      drafts,
+      editDraft,
+      dropDraft,
+    },
     ui: {
       reviewTab,
       setReviewTab,
       historyPerson: historyPerson || me.id,
       setHistoryPerson,
+      badgePerson: badgePerson || me.id,
+      setBadgePerson,
       showEntries,
       setShowEntries,
       ledgerOpen,

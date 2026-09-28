@@ -1,0 +1,145 @@
+/* The Log page's check-in card: its saved status, note, forgiveness request, the Save footer and the saved confirmation. */
+.question-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.question-top .eyebrow {
+  margin: 0;
+}
+.upload small {
+  font-size: 12px;
+}
+.add-note {
+  margin-top: 14px;
+  padding: 6px 0;
+  font-size: 14px;
+}
+.note {
+  display: block;
+  margin: 18px 0 0;
+  font-size: 14px;
+  color: var(--text-note);
+}
+.note > span {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.note textarea {
+  margin-top: 8px;
+}
+.checkin-note {
+  margin: 16px 0 0;
+  font:
+    17px/1.45 Georgia,
+    serif;
+  color: var(--text-detail-note);
+  white-space: pre-wrap;
+}
+.forgiveness {
+  margin-top: 16px;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--note-bg);
+  font-size: 14px;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.forgiveness.on {
+  border-color: var(--attention-border);
+  background: var(--attention-bg);
+}
+.forgiveness > .muted {
+  margin: 0 0 10px;
+}
+.forgiveness-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.forgiveness textarea {
+  margin-top: 12px;
+  min-height: 84px;
+  background: var(--field-bg-strong);
+}
+.forgiveness-status {
+  margin-top: 14px;
+}
+.checkin-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 22px 0 -6px;
+  font-size: 13px;
+  color: var(--text-warn);
+}
+.checkin-hint.problem {
+  color: var(--error-text);
+  font-weight: 600;
+}
+.unsaved-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--tone-review);
+}
+.question-footer {
+  align-items: center;
+  gap: 10px;
+}
+.footer-end {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+.question-footer .skip {
+  min-width: 0;
+  padding: 10px 4px;
+}
+.saved-flash {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-height: 40px;
+  margin: 0 auto 14px;
+  padding: 7px 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--tone-done-bg);
+  color: var(--tone-done-text);
+  font-size: 13px;
+  font-weight: 600;
+  animation: saved-flash 3.2s ease forwards;
+}
+@keyframes saved-flash {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  8%,
+  78% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    max-height: 0;
+    margin-bottom: 0;
+    padding-block: 0;
+  }
+}
+.spin {
+  animation: spin 0.9s linear infinite;
+}

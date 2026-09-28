@@ -85,6 +85,14 @@ export function formatTime(iso: string) {
   });
 }
 
+/** A screenshot's photo date (the ISO instant read from its EXIF data) as "Sep 27, 5:14 PM" in Toronto time, or just "Sep 27" when `short`. Anything unreadable is returned as stored. */
+export function formatPhotoDate(taken: string, short = false) {
+  const t = new Date(taken);
+  if (Number.isNaN(t.getTime())) return taken;
+  const day = formatShortDate(toronto(t));
+  return short ? day : `${day}, ${formatTime(taken)}`;
+}
+
 const upperShort = (d: string) =>
   new Date(d + 'T12:00Z')
     .toLocaleDateString('en-US', {

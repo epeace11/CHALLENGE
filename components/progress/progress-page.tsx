@@ -45,6 +45,7 @@ export function ProgressPage() {
           );
         })}
       </section>
+      <BadgeGrid />
       <HabitList />
       <section className="glass progress-block">
         <div className="row">
@@ -94,7 +95,6 @@ export function ProgressPage() {
           })}
         </div>
       </section>
-      <BadgeGrid />
       <SummaryCard />
       <EntryHistory />
     </>

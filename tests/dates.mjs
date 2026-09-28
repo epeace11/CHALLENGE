@@ -13,6 +13,7 @@ import {
   formatDate,
   formatShortDate,
   formatTime,
+  formatPhotoDate,
   challengeRange,
   lockTime,
   untilLock,
@@ -50,6 +51,10 @@ assert.equal(daysLeft('2026-09-01'), 30);
 assert.equal(formatDate('2026-09-23'), 'Wednesday, Sep 23');
 assert.equal(formatShortDate('2026-09-23'), 'Sep 23');
 assert.equal(formatTime('2026-09-23T19:05:00Z'), '3:05 PM');
+// Photo dates are stored as UTC instants; they read in Toronto time, so a 9:14 pm UTC shot is 5:14 pm that day, and one after 8 pm Toronto time is not pushed to the next day.
+assert.equal(formatPhotoDate('2026-09-27T21:14:16.000Z'), 'Sep 27, 5:14 PM');
+assert.equal(formatPhotoDate('2026-09-28T02:30:00.000Z', true), 'Sep 27');
+assert.equal(formatPhotoDate('sometime'), 'sometime');
 
 // A day locks at 11:59 pm Toronto time the next day. During the challenge that is EDT, so Sep 24 locks at 03:59 UTC on Sep 26.
 assert.equal(lockTime('2026-09-24'), Date.parse('2026-09-26T03:59:00Z'));
