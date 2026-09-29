@@ -72,6 +72,8 @@ export default function LogV2() {
         <ClosedDay ci={ci} onDays={() => setDays(true)} />
       ) : (
         <div className="flex flex-col gap-5">
+          {/* The date lives in the day switcher; the page still has a title for screen readers. */}
+          <h1 className="sr-only">Check in for {formatDay(day)}</h1>
           <div className="nx-enter flex items-center justify-between gap-3 pt-2">
             <button
               type="button"

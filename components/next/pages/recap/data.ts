@@ -1,6 +1,5 @@
 import type { Rule, World } from '@/lib/next/model';
 import {
-  formatMoney,
   formatRange,
   formatWeekday,
   gets,
@@ -86,7 +85,10 @@ export function headline(w: World, v: RecapView) {
   return 'Last week was a tie';
 }
 
-/** How the Monday notification reads: its title and one short paragraph. */
+/**
+ * How the Monday notification reads: its title and one short paragraph, last week's points and what
+ * this week needs. No gift totals: they move during the week, and the page shows them as they are now.
+ */
 export function notification(w: World, v: RecapView) {
   const title = `${w.challenge.name}: ${lower(headline(w, v))}`;
   const needs = v.thisWeek.map(({ rule, me, partner }) =>
@@ -96,7 +98,6 @@ export function notification(w: World, v: RecapView) {
   );
   const body = [
     `You ${plural(v.mine.points, 'point')}, ${w.partner.name} ${v.theirs.points}.`,
-    `You get a ${formatMoney(v.gifts.me)} gift, ${w.partner.name} ${formatMoney(v.gifts.partner)}.`,
     needs.length ? `This week: ${needs.join(', ')}.` : '',
   ]
     .filter(Boolean)

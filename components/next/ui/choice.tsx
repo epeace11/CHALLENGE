@@ -1,7 +1,7 @@
 'use client';
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Check, X } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -70,6 +70,16 @@ export function SegmentedControl<T extends string>({
   className?: string;
 }) {
   const name = useId();
+  const still = useReducedMotion();
+  // The thumb slides only once the control has settled on screen: a value set while the page opens
+  // (a setting read from this phone) jumps, and under reduced motion it always jumps. A layout
+  // animation started in the first frames can otherwise stick halfway, on the wrong option.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setSettled(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  const slide = settled && !still;
   return (
     <fieldset className={cn('nx-seg min-w-0', className)}>
       <legend className="sr-only">{label}</legend>
@@ -82,13 +92,16 @@ export function SegmentedControl<T extends string>({
             checked={o.value === value}
             onChange={() => onChange(o.value)}
           />
-          {o.value === value && (
-            <motion.span
-              layoutId={`seg-${name}`}
-              className="nx-seg-thumb"
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            />
-          )}
+          {o.value === value &&
+            (slide ? (
+              <motion.span
+                layoutId={`seg-${name}`}
+                className="nx-seg-thumb"
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              />
+            ) : (
+              <span className="nx-seg-thumb" />
+            ))}
           <span>{o.label}</span>
         </label>
       ))}

@@ -46,9 +46,10 @@ export function ProgressBar({
     'aria-valuemax': max,
     'aria-valuenow': Math.min(value, max),
   } as const;
+  // Spans, not divs, so a bar can sit inside a button (RowButton, TapCard, StatButton).
   if (segments)
     return (
-      <div
+      <span
         {...aria}
         className={cn('nx-bar-segments', className)}
         data-size={size}
@@ -68,17 +69,17 @@ export function ProgressBar({
             <i />
           </span>
         ))}
-      </div>
+      </span>
     );
   return (
-    <div
+    <span
       {...aria}
       className={cn('nx-bar', className)}
       data-size={size}
       style={style}
     >
       <span className="nx-bar-fill" />
-    </div>
+    </span>
   );
 }
 
@@ -99,7 +100,7 @@ export function StackedBar({
 }) {
   const total = parts.reduce((s, p) => s + p.value, 0) || 1;
   return (
-    <div className={cn('nx-bar flex', className)} data-size={size}>
+    <span className={cn('nx-bar flex', className)} data-size={size}>
       <span className="sr-only">{label}</span>
       {parts.map((p, i) =>
         p.value > 0 ? (
@@ -115,6 +116,6 @@ export function StackedBar({
           />
         ) : null,
       )}
-    </div>
+    </span>
   );
 }

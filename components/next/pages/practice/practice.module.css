@@ -1,3 +1,7 @@
+/* Tailwind's layer order, stated first: if this sheet is registered before app/globals.css, the
+   components layer still sits between base (preflight) and utilities. */
+@layer properties, theme, base, components, utilities;
+
 @layer components {
   /* One step of the gift: bars rise from the bottom, one after another, as points land. */
   .step {

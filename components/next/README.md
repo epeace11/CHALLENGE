@@ -178,7 +178,7 @@ Import from `@/components/next/ui`. Every piece works in light and dark, in ever
 | `Avatar`, `PairAvatars`, `PersonChip` | People in their hue; a chip with `onClick` is a 44px button (`pressed` for toggles).                                                                                                                                                                           |
 | `StatusPill`                          | `status`: done, missed, review, forgiven, disputed, open, none; pair with `entryPill()`.                                                                                                                                                                       |
 | `Sheet`                               | Details one tap away: bottom sheet on phones, dialog from 640px; `title` (required), `description`, `footer` (main action last). Focus, Escape and the backdrop are handled. Put "How it works" explanations here.                                             |
-| `useToast()`                          | `toast('Saved')` or with one `action` (Undo). Rises above the tab bar and the action bar.                                                                                                                                                                      |
+| `useToast()`                          | `toast('Saved')` or with one `action` (Undo). Rises above the tab bar and the action bar; one at a time (a new toast replaces the last), and at the top of the screen while a sheet is open on a phone.                                                        |
 | `Menu`                                | A short list from a button: `trigger={<Button>…</Button>}`, `items` of `{ label, icon, onSelect }`.                                                                                                                                                            |
 | `YesNo`                               | Two 64px answer buttons (native radios); `label` is the question.                                                                                                                                                                                              |
 | `NumberField`                         | Big digits with `unit`, `target` (says whether it is met), `step` for − and + buttons, `decimals`.                                                                                                                                                             |
@@ -198,8 +198,10 @@ Import from `@/components/next/ui`. Every piece works in light and dark, in ever
   - type: `text-nx-min` (14px, the floor), `text-nx-2` (15px, secondary), `text-nx-body` (17px), `text-nx-lead` (19px); serif with `font-nx-serif` and `text-nx-h3` (21px), `text-nx-h2` (26px), `text-nx-h1`, and big numbers `text-nx-num` (36px), `text-nx-num-lg` (52px), `text-nx-num-xl`
   - radii `rounded-nx-sm` (12px), `rounded-nx` (18px), `rounded-nx-lg` (24px); shadows `shadow-nx-glass`, `shadow-nx-lift`; `ease-nx`, `animate-nx-enter`
   - the CSS variables behind them (`var(--nx-accent)`, `var(--nx-page)`…) are in `styles/next.css`.
-- **Page-specific CSS** goes in a CSS module inside your folder (`week.module.css`). Wrap its rules in `@layer components { … }` so they sit with the kit and Tailwind classes still win:
+- **Page-specific CSS** goes in a CSS module inside your folder (`week.module.css`). Start it with Tailwind's layer order, then wrap its rules in `@layer components { … }` so they sit with the kit and Tailwind classes still win. The first line matters: in dev a module can load before `app/globals.css`, and a bare `@layer components` would then put the kit's layer below Tailwind's reset on every page (`tests/next.mjs` checks it):
   ```css
+  @layer properties, theme, base, components, utilities;
+
   @layer components {
     .week {
       display: grid;
@@ -207,6 +209,7 @@ Import from `@/components/next/ui`. Every piece works in light and dark, in ever
     }
   }
   ```
+- `cn()` from `@/lib/utils` knows the `text-nx-*` sizes, so a size and a colour (`text-nx-2 text-nx-ink-2`) can go through it together.
 - **Never edit** `styles/`, `app/globals.css` or anything outside your folder.
 - **No plain global class names of your own.** Today's app styles many common words globally (`active`, `open`, `row`, `primary`, `muted`, `pill`, `done`, `missed`, `today`, `note`, `stat`, `summary`…), and they would leak into your page. Use Tailwind classes, kit components and CSS module class names (which are hashed). Bare elements (`button`, `input`, `textarea`, `h1`–`h3`, `p`, `main`, `a`) are reset inside the new UI, so Tailwind classes on them work as expected.
 - **Breakpoints:** phone first. `sm` 640px, `md` 768px, `lg` 1024px (where AppFrame moves its tabs to the top). Check 375px and 1280px.

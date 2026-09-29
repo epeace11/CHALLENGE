@@ -6,9 +6,10 @@
    1. Tokens: custom properties on .nx, per look ([data-look]) and per theme ([data-theme='dark'] on
       <html>, as today). Tailwind gets them as nx-* utilities through @theme inline below.
    2. Legacy resets: base.css, touch.css and dark.css style bare elements (button, input, h1, p, main…)
-      without a cascade layer, which would beat every Tailwind utility. Inside .nx each of those
-      properties is set to revert-layer, which hands it back to the layered styles: Tailwind's
-      preflight, then the kit (@layer components), then utilities. So utilities always win in .nx.
+      without a cascade layer, which would beat every Tailwind utility. base.css keeps its padding,
+      margin and border rules out of .nx; inside .nx the rest are set to revert-layer, which hands
+      them back to the layered styles: Tailwind's preflight, then the kit (@layer components), then
+      utilities. So utilities always win in .nx.
    3. The kit's own classes (.nx-btn, .nx-glass…) live in @layer components; pass Tailwind classes to
       a kit component to adjust it.
    Motion: 150 / 220 / 300 ms, ease-out, and none at all under prefers-reduced-motion. */
@@ -240,6 +241,33 @@
 }
 
 /* ── Looks: accent and page glow per theme. Any element inside .nx can carry its own data-look. ── */
+/* Classic is the default on the root; this puts it back on an element inside another look. */
+.nx [data-look='classic'] {
+  --nx-page: #f6f8fb;
+  --nx-glow-a: #e2e8f8;
+  --nx-glow-b: #ebe6fa;
+  --nx-glow-c: #f7e9f1;
+  --nx-accent: #5b47a8;
+  --nx-accent-strong: #4a3794;
+  --nx-accent-soft: #ece8f8;
+  --nx-accent-line: #cbc1ee;
+  --nx-primary: linear-gradient(135deg, #6b55c9, #5541a0);
+  --nx-primary-hover: linear-gradient(135deg, #604ac0, #4b3892);
+  --nx-primary-shadow: 0 8px 20px -8px #5b47a899;
+}
+[data-theme='dark'] .nx [data-look='classic'] {
+  --nx-page: #0d0b14;
+  --nx-glow-a: #2a1f4acc;
+  --nx-glow-b: #3b173599;
+  --nx-glow-c: #1b1636;
+  --nx-accent: #c9bcff;
+  --nx-accent-strong: #ddd3ff;
+  --nx-accent-soft: #2c2350;
+  --nx-accent-line: #5d4d9e;
+  --nx-primary: linear-gradient(135deg, #7456e0, #a8458f);
+  --nx-primary-hover: linear-gradient(135deg, #7f63ea, #b4509b);
+  --nx-primary-shadow: 0 10px 28px -10px #8b6cf0b3;
+}
 .nx[data-look='seventy-five'],
 .nx [data-look='seventy-five'] {
   --nx-page: #f8f7fa;
@@ -369,20 +397,19 @@
 }
 
 /* ── Legacy resets (unlayered on purpose; see the header) ────────────────────
-   Each selector matches the specificity of its legacy twin through :where(.nx) and wins by coming
-   later. Kit and utility styles then apply as if the legacy rules did not exist. */
+   base.css keeps its padding, margin and border rules for bare elements out of .nx with
+   :where(:not(.nx *)): Tailwind writes px-/py-/mx-/my- as logical properties with var(), and Safari
+   loses those values when an unlayered revert-layer hands the physical property back. What base.css
+   still styles inside .nx is handed back here: each selector matches the specificity of its legacy
+   twin through :where(.nx) and wins by coming later, so kit and utility styles apply as if the
+   legacy rules did not exist. `font` goes back as a whole, or `button, input, textarea { font:
+   inherit }` would keep the kit's buttons at the page's weight and drop font-semibold on buttons. */
 :where(.nx) button {
-  cursor: revert-layer;
-  border: revert-layer;
-  background: revert-layer;
-  border-radius: revert-layer;
-  padding: revert-layer;
-  transition: revert-layer;
   display: revert-layer;
   align-items: revert-layer;
   justify-content: revert-layer;
   gap: revert-layer;
-  font-size: revert-layer;
+  font: revert-layer;
   color: revert-layer;
 }
 :where(.nx) button:hover:not(:disabled) {
@@ -407,28 +434,11 @@
 }
 :where(.nx) input,
 :where(.nx) textarea {
-  border: revert-layer;
-  border-radius: revert-layer;
-  background: revert-layer;
-  padding: revert-layer;
-  color: revert-layer;
-  max-width: revert-layer;
-}
-:where(.nx) textarea {
-  width: revert-layer;
-  min-height: revert-layer;
-  resize: revert-layer;
-  margin-top: revert-layer;
-  display: revert-layer;
-  font-size: revert-layer;
+  font: revert-layer;
 }
 [data-theme='dark'] :where(.nx) input::placeholder,
 [data-theme='dark'] :where(.nx) textarea::placeholder {
   color: revert-layer;
-}
-:where(.nx) main {
-  max-width: revert-layer;
-  margin: revert-layer;
 }
 :where(.nx) h1,
 :where(.nx) h2,
@@ -437,14 +447,9 @@
   font-weight: revert-layer;
   letter-spacing: revert-layer;
   font-size: revert-layer;
-  line-height: revert-layer;
-  margin: revert-layer;
 }
 :where(.nx) h1 span {
   color: revert-layer;
-}
-:where(.nx) p {
-  margin: revert-layer;
 }
 
 /* ── Base: the root and bare elements inside it ──────────────────────────── */
@@ -462,6 +467,8 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-variant-numeric: lining-nums;
+    /* Nothing scrolls sideways (a glide or a wide chart at 320px); clip keeps sticky bars working. */
+    overflow-x: clip;
     --nx-page-bg:
       radial-gradient(ellipse at 10% 82%, var(--nx-glow-a) 0, transparent 50%),
       radial-gradient(ellipse at 88% 12%, var(--nx-glow-b) 0, transparent 46%),
@@ -794,6 +801,7 @@
   /* ── Progress bars ──────────────────────────────────────────────────────── */
   .nx-bar {
     --nx-bar-h: 10px;
+    display: block;
     position: relative;
     height: var(--nx-bar-h);
     border-radius: 999px;
@@ -1134,6 +1142,14 @@
     padding: 0 16px;
     pointer-events: none;
   }
+  /* While a bottom sheet is open on a phone, toasts show at the top so they never cover its buttons.
+     A sheet that is closing no longer counts, so "Save" in a sheet toasts at the bottom as usual. */
+  @media (max-width: 639px) {
+    .nx:has(.nx-sheet[data-open]) .nx-toasts {
+      top: calc(var(--nx-top-inset) + 12px);
+      bottom: auto;
+    }
+  }
   .nx-toast {
     display: flex;
     align-items: center;
@@ -1230,12 +1246,15 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
+    min-width: 0;
     min-height: 44px;
-    padding: 0 14px;
+    padding: 4px 12px;
     border-radius: 12px;
     color: var(--nx-ink-2);
     font: 600 15px/1.2 var(--nx-font-sans);
-    white-space: nowrap;
+    /* A long option ("Email me a link") wraps onto two lines on a small phone instead of spilling out. */
+    text-align: center;
+    text-wrap: balance;
     transition: color var(--nx-base) var(--nx-ease);
   }
   .nx-seg-option:has(input:checked) {
@@ -1254,7 +1273,7 @@
   [data-theme='dark'] .nx-seg-thumb {
     background: #ffffff1f;
   }
-  .nx-seg-option > span {
+  .nx-seg-option > span:not(.nx-seg-thumb) {
     position: relative;
     z-index: 1;
   }
@@ -1575,7 +1594,8 @@
     padding: 12px;
     border-radius: 22px;
     border: 1px solid var(--nx-glass-border);
-    background: var(--nx-glass);
+    /* Nearly opaque: where the blur does not apply, the page's text must not show through. */
+    background: color-mix(in srgb, var(--nx-surface) 92%, transparent);
     box-shadow: var(--nx-lift-shadow);
     -webkit-backdrop-filter: blur(22px) saturate(1.2);
     backdrop-filter: blur(22px) saturate(1.2);

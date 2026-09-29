@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from 'react';
 import {
   BookmarkPlus,
   Check,
+  ChevronRight,
   Crown,
   Flame,
   Gift as GiftIcon,
@@ -309,9 +310,14 @@ function ScoreColumn({
   return (
     <button
       type="button"
-      className="nx-press flex min-w-0 flex-col items-center gap-1.5 px-3 pt-6 pb-7 text-center transition-colors hover:bg-nx-accent-soft"
+      className="nx-press relative flex min-w-0 flex-col items-center gap-1.5 px-3 pt-6 pb-7 text-center transition-colors hover:bg-nx-accent-soft"
       onClick={onOpen}
     >
+      <ChevronRight
+        className="nx-row-chevron absolute top-4 right-3"
+        size={20}
+        aria-hidden="true"
+      />
       <span className="relative mb-1">
         <Avatar person={s.person} size="lg" decorative />
         {won && (

@@ -1,4 +1,4 @@
-// Say first: saying your rules leads as one big card, then saved challenges and themes as compact rows, and a plain Start blank last.
+// Say first: saying your rules leads as the one filled button, then saved challenges and themes as compact rows, and a plain Start blank last.
 'use client';
 import { ChevronRight, Mic, Plus } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
@@ -15,8 +15,6 @@ import { ChoiceSheet } from './choice-sheet';
 import { useChoiceSheet } from './use-choice-sheet';
 import { savedChoices, themeChoices } from './choices';
 import { ChoiceRow } from './parts';
-import styles from './start.module.css';
-import { cx } from './cx';
 
 /** Start a challenge, version 2. */
 export default function StartV2() {
@@ -33,34 +31,34 @@ export default function StartV2() {
           detail={`Pick how to start with ${world.partner.name}. You can change the rules, dates and stakes next.`}
         />
 
+        {/* The one main action: the whole card is the filled button. */}
         <Enter index={1}>
-          <button
-            type="button"
-            className="nx-glass nx-tappable items-center gap-4 border-nx-accent-line p-5 sm:gap-5 sm:p-6"
+          <Button
+            variant="primary"
+            size="lg"
+            full
+            className="min-h-[120px] justify-start rounded-nx-lg pt-5 pr-5 pb-5 pl-5 text-left whitespace-normal sm:pt-6 sm:pr-6 sm:pb-6 sm:pl-6 [&>.nx-btn-label]:min-w-0 [&>.nx-btn-label]:flex-1"
             onClick={() => navigate('say')}
           >
-            <span
-              className={cx(styles.swatch, 'rounded-full')}
-              data-size="lg"
-              aria-hidden="true"
-            >
-              <Mic size={28} />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="font-nx-serif text-nx-h2 text-nx-ink">
-                Say your rules
+            <span className="flex items-center gap-4 sm:gap-5">
+              <span
+                className="grid size-14 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--nx-on-accent)_18%,transparent)]"
+                aria-hidden="true"
+              >
+                <Mic size={28} />
               </span>
-              <span className="text-nx-body text-nx-ink-2">
-                Say what you both want in one sentence, then check the rules it
-                drafts.
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="font-nx-serif text-nx-h2 font-normal">
+                  Say your rules
+                </span>
+                <span className="text-nx-body font-normal">
+                  Say what you both want in one sentence, then check the rules
+                  it drafts.
+                </span>
               </span>
+              <ChevronRight size={24} className="shrink-0" aria-hidden="true" />
             </span>
-            <ChevronRight
-              className="nx-row-chevron"
-              size={24}
-              aria-hidden="true"
-            />
-          </button>
+          </Button>
         </Enter>
 
         <Section title="Saved challenges" index={2}>

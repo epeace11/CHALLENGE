@@ -273,7 +273,7 @@ export function RuleSheet({
 
 /* ── Deadline and stakes ───────────────────────────────────────────────── */
 
-/** The deadline and what each point costs; each opens where it is set or where it adds up. */
+/** The deadline (it opens Check in, what the deadline is for) and what each point costs (Gifts). */
 export function StakesRows({ glass = true }: { glass?: boolean }) {
   const world = useWorld();
   const { navigate } = useNav();
@@ -290,7 +290,7 @@ export function StakesRows({ glass = true }: { glass?: boolean }) {
         leading={lead(CalendarClock)}
         title="Deadline"
         detail={`Each day by ${formatDeadline(c.deadline)}`}
-        onClick={() => navigate('settings')}
+        onClick={() => navigate('log')}
       />
       <RowButton
         glass={glass}

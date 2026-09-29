@@ -34,8 +34,9 @@ export const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
   },
 ];
 
-/** "75 days · 6 rules". Rules a couple can switch on later (Dry Month's no weed) are not counted. */
+/** "75 days · 6 rules", or "30 days · 1 rule + 1 optional" (Dry Month's no weed), as on Start. */
 export function themeFacts(theme: Theme) {
-  const rules = theme.rules.length - theme.optionalRuleIds.length;
-  return `${plural(theme.days, 'day')} · ${plural(rules, 'rule')}`;
+  const optional = theme.optionalRuleIds.length;
+  const rules = theme.rules.length - optional;
+  return `${plural(theme.days, 'day')} · ${plural(rules, 'rule')}${optional ? ` + ${optional} optional` : ''}`;
 }

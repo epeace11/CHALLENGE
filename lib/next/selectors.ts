@@ -336,9 +336,47 @@ export const pointOfEntry = (w: World, entryId: string) =>
   w.points.find((p) => p.entryId === entryId && !p.voided && !p.forgiven);
 
 /**
+ * Open disputes the partner raised on `personId`'s answers. `replied` picks the ones this person
+ * has already answered with "Keep it open" (they wait on the partner) or the ones still unanswered.
+ */
+function openDisputesOn(w: World, personId: string, replied: boolean) {
+  const other = partnerOf(w, personId).id;
+  const out: Extract<ReviewItem, { kind: 'dispute' }>[] = [];
+  for (const dispute of w.disputes) {
+    const entry = w.entries.find((e) => e.id === dispute.entryId),
+      r = entry && ruleById(w.challenge, entry.ruleId);
+    if (
+      dispute.status !== 'open' ||
+      dispute.raisedBy !== other ||
+      !entry ||
+      entry.personId !== personId ||
+      !r ||
+      !!dispute.reply !== replied
+    )
+      continue;
+    out.push({
+      kind: 'dispute',
+      id: `dispute:${dispute.id}`,
+      at: dispute.createdAt,
+      dispute,
+      entry,
+      rule: r,
+    });
+  }
+  return out;
+}
+
+/**
+ * Disputes on `personId`'s answers that they replied to and kept open: they now wait on the partner
+ * who raised them (and the answer's owner can still concede).
+ */
+export const repliedDisputes = (w: World, personId: string) =>
+  openDisputesOn(w, personId, true);
+
+/**
  * What waits on `personId`: the partner's answers to approve, their late corrections, their
- * forgiveness requests, and disputes the partner raised on this person's answers. `items` holds all
- * of them, oldest first.
+ * forgiveness requests, and disputes the partner raised on this person's answers that this person
+ * has not replied to yet. `items` holds all of them, oldest first.
  */
 export function reviewQueue(w: World, personId: string) {
   const other = partnerOf(w, personId).id,
@@ -383,26 +421,7 @@ export function reviewQueue(w: World, personId: string) {
       entry: w.entries.find((e) => e.id === point.entryId),
     });
   }
-  for (const dispute of w.disputes) {
-    const entry = w.entries.find((e) => e.id === dispute.entryId),
-      r = entry && rule(entry.ruleId);
-    if (
-      dispute.status !== 'open' ||
-      dispute.raisedBy !== other ||
-      !entry ||
-      entry.personId !== personId ||
-      !r
-    )
-      continue;
-    disputes.push({
-      kind: 'dispute',
-      id: `dispute:${dispute.id}`,
-      at: dispute.createdAt,
-      dispute,
-      entry,
-      rule: r,
-    });
-  }
+  disputes.push(...openDisputesOn(w, personId, false));
   const items: ReviewItem[] = [
     ...answers,
     ...corrections,

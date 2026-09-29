@@ -52,7 +52,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       action: t.action,
       duration: t.duration ?? (t.action ? 6000 : 4000),
     };
-    setToasts((list) => [...list.slice(-2), toast]);
+    // One at a time: a newer toast replaces the older one, so an older Undo can never take back a
+    // later change (useDemo's undo always reverts the latest).
+    setToasts([toast]);
   }, []);
   const dismiss = useCallback(
     (id: number) => setToasts((list) => list.filter((t) => t.id !== id)),

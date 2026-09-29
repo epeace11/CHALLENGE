@@ -12,6 +12,7 @@ import {
   formatValue,
   gets,
   plural,
+  repliedDisputes,
   reviewQueue,
   waitingOnPartner,
   weekOf,
@@ -51,8 +52,8 @@ export function reviewState(w: World) {
     if (group) group.items.push(a);
     else days.push({ day: a.entry.day, items: [a] });
   }
-  const disputes = q.disputes.filter((d) => !d.dispute.reply);
-  const replied = q.disputes.filter((d) => !!d.dispute.reply);
+  const disputes = q.disputes;
+  const replied = repliedDisputes(w, w.me.id);
   const todo: ReviewItem[] = [
     ...days.flatMap((g) => g.items),
     ...q.corrections,

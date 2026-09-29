@@ -1,4 +1,8 @@
 /* Check in: pieces the kit does not have. Tokens only, so light, dark and every look work. */
+/* Tailwind's layer order, stated first: if this sheet is registered before app/globals.css, the
+   components layer still sits between base (preflight) and utilities. */
+@layer properties, theme, base, components, utilities;
+
 @layer components {
   /* A line of text that is one button (it wraps, unlike a kit Button). */
   .link {

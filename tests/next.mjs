@@ -41,6 +41,7 @@ import {
   owes,
   plural,
   pointCost,
+  repliedDisputes,
   reviewQueue,
   roundGift,
   ruleById,
@@ -65,6 +66,7 @@ import {
   dispute,
   rejectCorrection,
   removeNote,
+  replyToDispute,
   saveCheckin,
   setShareLink,
   signPact,
@@ -496,6 +498,11 @@ assert.equal(activePoints(conceded, MAYA).length, 7);
 assert.equal(entryFor(conceded, MAYA, 'bed', '2026-11-17').status, 'conceded');
 assert.equal(dayColor(conceded, MAYA, '2026-11-17'), 'missed');
 assert.equal(reviewQueue(conceded, MAYA).disputes.length, 0);
+// Keeping a dispute open with a reply moves it off Maya's queue (and the Review badge); it waits on Jordan.
+const replied = replyToDispute(w, d.id, 'I was in bed by 10:55.');
+assert.equal(reviewQueue(replied, MAYA).count, 3);
+assert.equal(repliedDisputes(replied, MAYA).length, 1);
+assert.equal(repliedDisputes(w, MAYA).length, 0);
 const withdrawn = withdrawDispute(w, d.id);
 assert.equal(
   entryFor(withdrawn, MAYA, 'bed', '2026-11-17').status,
@@ -670,6 +677,18 @@ for (const file of sources) {
   }
   for (const m of text.matchAll(/fontSize:\s*['"]?(\d+(?:\.\d+)?)(px)?\b/g))
     assert.ok(+m[1] >= 14, `${name}: fontSize ${m[1]} is under 14px`);
+}
+// A CSS module can load before app/globals.css in dev; stating Tailwind's layer order first keeps the
+// kit's components layer between Tailwind's reset and its utilities.
+const LAYER_ORDER = '@layer properties, theme, base, components, utilities;';
+for (const file of files(join(root, 'components/next'), ['.module.css'])) {
+  const text = readFileSync(file, 'utf8'),
+    first = text.search(/@layer\s+components\s*\{/);
+  if (first >= 0)
+    assert.ok(
+      text.includes(LAYER_ORDER) && text.indexOf(LAYER_ORDER) < first,
+      `${relative(root, file)}: starts with ${LAYER_ORDER}`,
+    );
 }
 for (const file of styles) {
   const text = readFileSync(file, 'utf8');
