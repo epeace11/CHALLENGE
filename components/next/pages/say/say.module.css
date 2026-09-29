@@ -1,0 +1,96 @@
+/* Say your rules: the lit sentence while drafting, placeholder cards, the question panel and the day
+   chips. Colours come from the tokens only, so light, dark and every look work. */
+@layer components {
+  /* A part of the sentence that becomes a rule: it lights up in turn while drafting. */
+  .mark {
+    border-radius: 6px;
+    padding: 1px 2px;
+    margin: -1px -2px;
+    background: transparent;
+    color: inherit;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    transition:
+      background-color var(--nx-slow) var(--nx-ease),
+      color var(--nx-slow) var(--nx-ease);
+  }
+  .mark[data-lit] {
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent-strong);
+  }
+
+  /* A card being drafted: grey bars where the rule will be. */
+  .bar {
+    display: block;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--nx-sunken);
+  }
+  .ghostDot {
+    display: block;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--nx-sunken);
+  }
+
+  /* The question a drafted rule asks back. */
+  .question {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: var(--nx-r);
+    border: 1px solid var(--nx-line);
+    background: var(--nx-surface-2);
+    transition:
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease);
+  }
+  .question[data-open] {
+    border-color: color-mix(in srgb, var(--nx-wait-bar) 55%, transparent);
+    background: var(--nx-wait-soft);
+  }
+
+  /* Radio choices that wrap (days in the editor). */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    font-size: 15px;
+    font-weight: 600;
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease);
+  }
+  .chip:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .chip:active {
+    transform: scale(0.97);
+  }
+  .chip:has(input:checked) {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent-strong);
+  }
+  .chip:has(input:focus-visible) {
+    outline: 2px solid var(--nx-accent);
+    outline-offset: 3px;
+  }
+}

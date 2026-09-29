@@ -1,0 +1,87 @@
+/* Start a challenge: the look-coloured parts of the choice cards. Colours come from the look's
+   tokens (--nx-primary, --nx-accent…), set by data-look on each card, so light, dark and every look
+   work without colours of their own. */
+@layer components {
+  /* The coloured band at the top of a theme card. */
+  .band {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 64px;
+    padding: 14px 12px 12px 16px;
+    background: var(--nx-primary);
+    color: var(--nx-on-accent);
+  }
+  @media (min-width: 640px) {
+    .band {
+      min-height: 80px;
+      padding: 18px 16px 14px 20px;
+    }
+  }
+  .bandIcon {
+    transition: transform var(--nx-base) var(--nx-ease);
+  }
+  .card:hover .bandIcon {
+    transform: translateY(-2px) scale(1.06);
+  }
+  .card:hover .bandChevron {
+    transform: translateX(2px);
+  }
+  .bandChevron {
+    flex-shrink: 0;
+    transition: transform var(--nx-base) var(--nx-ease);
+  }
+
+  /* A card that is one button, laid out as a column (the kit's .nx-tappable is a row). */
+  .card {
+    flex-direction: column;
+    align-items: stretch;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* A small square in the look's colour, with the choice's icon. */
+  .swatch {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--nx-primary);
+    color: var(--nx-on-accent);
+    box-shadow: var(--nx-primary-shadow);
+  }
+  .swatch[data-size='lg'] {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+  }
+
+  /* A round icon on the accent's soft fill. */
+  .dot {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent-strong);
+  }
+
+  /* The four themes' colours, overlapping, on the "A theme" tile. */
+  .stackDot {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--nx-primary);
+    box-shadow: 0 0 0 2.5px var(--nx-surface);
+  }
+  .stackDot + .stackDot {
+    margin-left: -8px;
+  }
+}
