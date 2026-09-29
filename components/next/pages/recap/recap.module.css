@@ -1,0 +1,35 @@
+/* Monday recap: the notification drops in from above once, and the winner's mark pops. Both stay
+   within 300 ms and stop under prefers-reduced-motion (styles/next.css switches .nx animations off). */
+
+/* Tailwind's layer order, stated here too: if this file loads before app/globals.css, the kit's
+   components layer still sits above base and below utilities. */
+@layer properties, theme, base, components, utilities;
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@layer components {
+  .drop {
+    animation: drop-in var(--nx-slow) var(--nx-ease) backwards;
+    animation-delay: 80ms;
+  }
+  .pop {
+    animation: pop-in var(--nx-slow) var(--nx-ease) backwards;
+    animation-delay: 160ms;
+  }
+}

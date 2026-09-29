@@ -1,0 +1,114 @@
+/* Progress: the month grid, a habit's days and the badge medals. Motion stays within 150–300 ms and
+   stops under prefers-reduced-motion (styles/next.css switches every .nx animation off). */
+
+/* Tailwind's layer order, stated here too: if this file loads before app/globals.css, the kit's
+   components layer still sits above base and below utilities. */
+@layer properties, theme, base, components, utilities;
+
+@keyframes cell-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes glow-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@layer components {
+  /* The kit's SegmentedControl thumb also matches `.nx-seg-option > span`, which makes it relative
+     and 0 by 0, so the selection never shows. Put it back behind the chosen option, here only. */
+  .seg :global(.nx-seg-option) > :global(.nx-seg-thumb) {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+  @media (min-width: 640px) {
+    .grid {
+      gap: 6px;
+    }
+  }
+
+  /* One day. At least 48px tall, so every day is an easy tap on a phone. */
+  .cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 50px;
+    border-radius: 12px;
+    font: 600 15px/1 var(--nx-font-sans);
+    font-variant-numeric: tabular-nums;
+    animation: cell-in var(--nx-base) var(--nx-ease) backwards;
+    animation-delay: calc(var(--row, 0) * 40ms);
+  }
+  @media (min-width: 640px) {
+    .cell {
+      min-height: 58px;
+      font-size: 17px;
+    }
+  }
+  button.cell {
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease),
+      filter var(--nx-base) var(--nx-ease);
+  }
+  button.cell:hover {
+    filter: brightness(0.97);
+    box-shadow: 0 0 0 2px var(--nx-accent-line);
+  }
+  button.cell:active {
+    transform: scale(0.93);
+  }
+  button.cell[data-marked] {
+    box-shadow:
+      0 0 0 2px var(--nx-page),
+      0 0 0 4px var(--nx-accent);
+  }
+
+  .weekday {
+    display: grid;
+    place-items: center;
+    min-height: 28px;
+    font: 600 14px/1 var(--nx-font-sans);
+    color: var(--nx-ink-2);
+  }
+
+  /* A badge medal: accent once earned, a dashed ring until then. */
+  .medal {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: var(--medal, 48px);
+    height: var(--medal, 48px);
+    border-radius: 50%;
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+    box-shadow: inset 0 0 0 1.5px var(--nx-accent-line);
+  }
+  .medal[data-earned='false'] {
+    background: transparent;
+    color: var(--nx-ink-2);
+    box-shadow: none;
+    border: 1.5px dashed var(--nx-line-strong);
+  }
+
+  /* The big streak number rises in once. */
+  .rise {
+    animation: glow-in var(--nx-slow) var(--nx-ease) backwards;
+  }
+}
