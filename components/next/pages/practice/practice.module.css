@@ -1,0 +1,51 @@
+@layer components {
+  /* One step of the gift: bars rise from the bottom, one after another, as points land. */
+  .step {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--nx-sunken);
+  }
+  .fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--nx-primary);
+    transform-origin: bottom;
+    transform: scaleY(0);
+    transition: transform var(--nx-slow) var(--nx-ease);
+    transition-delay: calc(150ms + var(--nx-i, 0) * 90ms);
+  }
+  .fill[data-on] {
+    transform: scaleY(1);
+  }
+  @starting-style {
+    .fill[data-on] {
+      transform: scaleY(0);
+    }
+  }
+
+  /* The practice marker stays in view while the page scrolls (below the preview's bar). */
+  .sticky {
+    position: sticky;
+    top: calc(var(--nx-top-inset) + 8px);
+    z-index: 20;
+  }
+
+  /* The timeline's line between steps. */
+  .rail {
+    position: absolute;
+    top: 40px;
+    bottom: -28px;
+    left: 15px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--nx-line-strong);
+    transform-origin: top;
+    transition: background var(--nx-slow) var(--nx-ease);
+  }
+  .rail[data-done] {
+    background: var(--nx-accent-line);
+  }
+}
