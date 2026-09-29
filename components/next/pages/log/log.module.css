@@ -1,0 +1,201 @@
+/* Check in: pieces the kit does not have. Tokens only, so light, dark and every look work. */
+@layer components {
+  /* A line of text that is one button (it wraps, unlike a kit Button). */
+  .link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--nx-accent);
+  }
+  .link[data-tone='missed'] {
+    color: var(--nx-missed);
+  }
+  .link[data-tone='done'] {
+    color: var(--nx-done);
+  }
+  .link:hover {
+    background: var(--nx-accent-soft);
+  }
+  .link[data-tone='missed']:hover {
+    background: var(--nx-missed-soft);
+  }
+  .link[data-tone='done']:hover {
+    background: var(--nx-done-soft);
+  }
+
+  /* A card that is one button: a weekly rule's week so far, or the day's progress. */
+  .week,
+  .cardButton {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 14px 16px 16px;
+    border-radius: var(--nx-r);
+    border: 1px solid var(--nx-line);
+    background: var(--nx-surface-2);
+    color: inherit;
+    text-align: left;
+  }
+  .week:hover,
+  .cardButton:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .cardButton {
+    gap: 10px;
+    padding: 12px 16px 14px;
+  }
+
+  /* Where the page scrolls back to after a Save far down a long card. */
+  .anchor {
+    scroll-margin-top: calc(var(--nx-top-inset) + 12px);
+  }
+  @media (min-width: 1024px) {
+    .anchor {
+      scroll-margin-top: calc(var(--nx-top-inset) + 88px);
+    }
+  }
+
+  /* A round mark for a finished day. */
+  @keyframes pop {
+    0% {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+    70% {
+      transform: scale(1.08);
+      opacity: 1;
+    }
+  }
+  .doneMark {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--nx-done-soft);
+    color: var(--nx-done);
+    animation: pop var(--nx-slow) var(--nx-ease) both;
+  }
+  .doneMark[data-size='lg'] {
+    width: 88px;
+    height: 88px;
+  }
+
+  /* Day chips: the days still open, side by side (they wrap on narrow phones). */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1px;
+    min-height: 56px;
+    padding: 8px 16px;
+    border-radius: 16px;
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    text-align: left;
+  }
+  .chip:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .chip[aria-pressed='true'] {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+    box-shadow: 0 0 0 1px var(--nx-accent) inset;
+  }
+  .chipTitle {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .chip[aria-pressed='true'] .chipTitle {
+    color: var(--nx-accent);
+  }
+  .chipDetail {
+    font-size: 15px;
+    line-height: 1.3;
+    color: var(--nx-ink-2);
+  }
+  .chipRow {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* One check-in in the day's list (version 3): a header row, and the question when open. */
+  .item {
+    overflow: clip;
+  }
+  .itemHead {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 64px;
+    padding: 12px 16px 12px 18px;
+    color: inherit;
+    text-align: left;
+    transition: background var(--nx-base) var(--nx-ease);
+  }
+  button.itemHead:hover {
+    background: var(--nx-glass-hover);
+  }
+  button.itemHead:hover :global(.nx-row-chevron) {
+    transform: translateX(2px);
+  }
+  /* The card clips its corners, so the focus ring sits inside. */
+  button.itemHead:focus-visible {
+    outline-offset: -3px;
+    border-radius: var(--nx-r-lg);
+  }
+  .itemIcon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+  }
+  .itemIcon[data-tone='done'] {
+    background: var(--nx-done-soft);
+    color: var(--nx-done);
+  }
+  .itemIcon[data-tone='missed'] {
+    background: var(--nx-missed-soft);
+    color: var(--nx-missed);
+  }
+  .itemIcon[data-tone='review'] {
+    background: var(--nx-wait-soft);
+    color: var(--nx-wait);
+  }
+  .itemIcon[data-tone='none'] {
+    background: var(--nx-sunken);
+    color: var(--nx-ink-2);
+  }
+
+  /* Around a Glide: the slide never widens the page. Reaches into the gutters so shadows stay. */
+  .clipX {
+    margin-inline: calc(-1 * var(--nx-gutter));
+    padding-inline: var(--nx-gutter);
+    overflow-x: clip;
+  }
+}
