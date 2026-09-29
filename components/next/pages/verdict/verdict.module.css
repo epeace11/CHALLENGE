@@ -1,0 +1,87 @@
+/* The verdict: cards reveal one after another, amounts flip in, and marking a gift as given sets off a
+   small burst. Every animation is 300 ms or less, never holds a tap, and stops under
+   prefers-reduced-motion (styles/next.css switches .nx animations off; the burst then never shows). */
+
+/* Tailwind's layer order, stated here too: if this file loads before app/globals.css, the kit's
+   components layer still sits above base and below utilities. */
+@layer properties, theme, base, components, utilities;
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+
+@keyframes flip-in {
+  from {
+    opacity: 0;
+    transform: perspective(600px) rotateX(-80deg);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes burst-out {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.5) rotate(0deg);
+  }
+  65% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x), var(--y)) scale(1) rotate(var(--r));
+  }
+}
+
+@layer components {
+  .reveal {
+    animation: reveal-in var(--nx-slow) var(--nx-ease) backwards;
+    animation-delay: var(--delay, 0ms);
+  }
+  .flip {
+    display: inline-block;
+    transform-origin: 50% 60%;
+    animation: flip-in var(--nx-slow) var(--nx-ease) backwards;
+    animation-delay: var(--delay, 0ms);
+  }
+  .pop {
+    animation: pop-in var(--nx-slow) var(--nx-ease) backwards;
+  }
+
+  /* A small burst of confetti from the middle of its parent (which must be position: relative). */
+  .burst {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .burst > i {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--c);
+    opacity: 0;
+    animation: burst-out var(--nx-slow) var(--nx-ease) forwards;
+  }
+  .burst > i:nth-child(3n) {
+    border-radius: 50%;
+  }
+}

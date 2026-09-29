@@ -1,0 +1,60 @@
+/* Settings: the reminder time picker (a native select dressed like the kit's fields) and the save bar
+   rising in. Motion is 220 ms and stops under prefers-reduced-motion. */
+
+/* Tailwind's layer order, stated here too: if this file loads before app/globals.css, the kit's
+   components layer still sits above base and below utilities. */
+@layer properties, theme, base, components, utilities;
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@layer components {
+  /* The kit's SegmentedControl thumb also matches `.nx-seg-option > span`, which makes it relative
+     and 0 by 0, so the selection never shows. Put it back behind the chosen option, here only. */
+  .seg :global(.nx-seg-option) > :global(.nx-seg-thumb) {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .select {
+    appearance: none;
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 44px 12px 16px;
+    border-radius: var(--nx-r-btn);
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface);
+    color: var(--nx-ink);
+    /* touch.css sets 16px !important on every select; a layered !important wins over it. */
+    font: 17px/1.4 var(--nx-font-sans) !important;
+    cursor: pointer;
+    transition:
+      border-color var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease),
+      opacity var(--nx-base) var(--nx-ease);
+  }
+  :global([data-theme='dark']) .select {
+    background: var(--nx-surface-2);
+  }
+  .select:hover:not(:disabled) {
+    border-color: var(--nx-accent-line);
+  }
+  .select:focus-visible {
+    outline: none;
+    border-color: var(--nx-accent);
+    box-shadow: 0 0 0 4px var(--nx-accent-soft);
+  }
+  .select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .rise {
+    animation: rise-in var(--nx-base) var(--nx-ease) backwards;
+  }
+}
