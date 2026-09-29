@@ -31,6 +31,7 @@ Run `npm install`, then `npm run dev`. Run `npm run build` for the Sites/Cloudfl
 - `styles/` — the stylesheet, split by area and imported in order from `app/globals.css` (later files override earlier ones). Dark mode is `styles/dark.css`.
 - `public/sw.js` — the service worker; it only shows push notifications and never intercepts requests.
 - `supabase/functions/remind/` — the Deno Edge Function that sends the reminders (excluded from `tsc` and `oxlint`; see Reminders).
+- The new product for any couple (prod-challenge branch), previewed at `/preview` on sample data only: `lib/next/` (types, the sample world, selectors, actions), `components/next/` (the kit in `ui/`, `frames/`, the preview, and one folder per page in `pages/`), `styles/next.css` (scoped under `.nx`, imported last) and `app/preview/page.tsx`. `components/next/README.md` is the guide; `tests/next.mjs` covers it.
 
 Where to change things:
 
@@ -88,7 +89,7 @@ A device whose subscription has expired (the push service answers 404 or 410) is
 ## Validation
 
 - `npm run check` runs types (`tsc --noEmit`), lint (`oxlint`) and `npm test`.
-- `npm test` runs `tests/database.mjs` (PostgreSQL schema and authorization/scoring tests in an isolated PGlite database with dummy Auth accounts, including that a no-op sync writes nothing, the one-Save check-in and the steps cleanup script), `tests/progress.mjs` (the statistics, badge progress and the lock rule in `lib/progress.ts`), `tests/dates.mjs` (deadlines across daylight-saving changes, photo dates), `tests/selectors.mjs` (the review queue, calendar colours and costs), `tests/checkin.mjs` (check-in drafts, validation and what Save sends) and `tests/zoom.mjs` (the screenshot viewer's zoom maths).
+- `npm test` runs `tests/database.mjs` (PostgreSQL schema and authorization/scoring tests in an isolated PGlite database with dummy Auth accounts, including that a no-op sync writes nothing, the one-Save check-in and the steps cleanup script), `tests/progress.mjs` (the statistics, badge progress and the lock rule in `lib/progress.ts`), `tests/dates.mjs` (deadlines across daylight-saving changes, photo dates), `tests/selectors.mjs` (the review queue, calendar colours and costs), `tests/checkin.mjs` (check-in drafts, validation and what Save sends), `tests/zoom.mjs` (the screenshot viewer's zoom maths) and `tests/next.mjs` (the new product's sample world, selectors and actions, every planned preview page version, and the no-network, 14px-minimum and fictional-names rules).
 - `npm run build`
 
 No live habit records are inserted by the local tests. The app opens with actual empty challenge data, not mockup sample points.

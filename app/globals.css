@@ -13,3 +13,5 @@
 @import '../styles/viewer.css';
 @import '../styles/dark.css';
 @import '../styles/extras.css';
+/* The new UI (components/next): scoped under .nx, so it must stay last. */
+@import '../styles/next.css';

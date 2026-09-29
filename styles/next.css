@@ -1,0 +1,1851 @@
+/* ── The new UI (components/next) ──────────────────────────────────────────
+   Everything here is scoped under the .nx root (NxRoot in components/next/ui/root.tsx), so today's
+   app at / is unaffected. Imported last from app/globals.css.
+
+   How it layers:
+   1. Tokens: custom properties on .nx, per look ([data-look]) and per theme ([data-theme='dark'] on
+      <html>, as today). Tailwind gets them as nx-* utilities through @theme inline below.
+   2. Legacy resets: base.css, touch.css and dark.css style bare elements (button, input, h1, p, main…)
+      without a cascade layer, which would beat every Tailwind utility. Inside .nx each of those
+      properties is set to revert-layer, which hands it back to the layered styles: Tailwind's
+      preflight, then the kit (@layer components), then utilities. So utilities always win in .nx.
+   3. The kit's own classes (.nx-btn, .nx-glass…) live in @layer components; pass Tailwind classes to
+      a kit component to adjust it.
+   Motion: 150 / 220 / 300 ms, ease-out, and none at all under prefers-reduced-motion. */
+
+@theme inline {
+  --color-nx-ink: var(--nx-ink);
+  --color-nx-ink-2: var(--nx-ink-2);
+  --color-nx-accent: var(--nx-accent);
+  --color-nx-accent-strong: var(--nx-accent-strong);
+  --color-nx-accent-soft: var(--nx-accent-soft);
+  --color-nx-accent-line: var(--nx-accent-line);
+  --color-nx-on-accent: var(--nx-on-accent);
+  --color-nx-line: var(--nx-line);
+  --color-nx-line-strong: var(--nx-line-strong);
+  --color-nx-surface: var(--nx-surface);
+  --color-nx-surface-2: var(--nx-surface-2);
+  --color-nx-sunken: var(--nx-sunken);
+  --color-nx-done: var(--nx-done);
+  --color-nx-done-soft: var(--nx-done-soft);
+  --color-nx-done-bar: var(--nx-done-bar);
+  --color-nx-missed: var(--nx-missed);
+  --color-nx-missed-soft: var(--nx-missed-soft);
+  --color-nx-missed-bar: var(--nx-missed-bar);
+  --color-nx-wait: var(--nx-wait);
+  --color-nx-wait-soft: var(--nx-wait-soft);
+  --color-nx-wait-bar: var(--nx-wait-bar);
+  --color-nx-excused: var(--nx-excused);
+  --color-nx-excused-soft: var(--nx-excused-soft);
+  --color-nx-excused-bar: var(--nx-excused-bar);
+  --color-nx-ahead: var(--nx-ahead);
+  --color-nx-ahead-soft: var(--nx-ahead-soft);
+  --color-nx-danger: var(--nx-danger);
+
+  --font-nx-serif: var(--nx-font-serif);
+  --font-nx-sans: var(--nx-font-sans);
+
+  /* Type: text-nx-min (14px, the floor), -2 (15px secondary), -body (17px), -lead (19px);
+     serif display sizes for titles and big numbers. */
+  --text-nx-min: 14px;
+  --text-nx-min--line-height: 1.4;
+  --text-nx-2: 15px;
+  --text-nx-2--line-height: 1.45;
+  --text-nx-body: 17px;
+  --text-nx-body--line-height: 1.5;
+  --text-nx-lead: 19px;
+  --text-nx-lead--line-height: 1.45;
+  --text-nx-h3: 21px;
+  --text-nx-h3--line-height: 1.25;
+  --text-nx-h2: 26px;
+  --text-nx-h2--line-height: 1.2;
+  --text-nx-h1: var(--nx-fs-h1);
+  --text-nx-h1--line-height: 1.1;
+  --text-nx-num: 36px;
+  --text-nx-num--line-height: 1;
+  --text-nx-num-lg: 52px;
+  --text-nx-num-lg--line-height: 1;
+  --text-nx-num-xl: var(--nx-fs-num-xl);
+  --text-nx-num-xl--line-height: 1;
+
+  --radius-nx-sm: 12px;
+  --radius-nx: 18px;
+  --radius-nx-lg: 24px;
+
+  --shadow-nx-glass: var(--nx-glass-shadow);
+  --shadow-nx-lift: var(--nx-lift-shadow);
+
+  --ease-nx: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-nx-enter: nx-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-nx-fade: nx-fade 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes nx-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes nx-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes nx-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+@keyframes nx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Tokens: classic look, light ─────────────────────────────────────────── */
+.nx {
+  --nx-font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --nx-font-serif: Georgia, 'Times New Roman', serif;
+  --nx-fs-h1: clamp(32px, 2.4vw + 22px, 44px);
+  --nx-fs-num-xl: clamp(60px, 8vw + 32px, 96px);
+
+  /* Layout */
+  --nx-gutter: 20px;
+  --nx-page-max: 720px;
+  --nx-page-wide: 1080px;
+  --nx-r-sm: 12px;
+  --nx-r: 18px;
+  --nx-r-lg: 24px;
+  --nx-r-btn: 14px;
+  /* Set by the preview (its version bar) and by AppFrame (the phone tab bar). */
+  --nx-top-inset: 0px;
+  --nx-nav-h: 0px;
+
+  /* Motion */
+  --nx-fast: 150ms;
+  --nx-base: 220ms;
+  --nx-slow: 300ms;
+  --nx-stagger: 45ms;
+  --nx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Page */
+  --nx-page: #f6f8fb;
+  --nx-glow-a: #e2e8f8;
+  --nx-glow-b: #ebe6fa;
+  --nx-glow-c: #f7e9f1;
+
+  /* Text: ink for body, ink-2 for secondary; both pass 4.5:1 on the page and on cards. */
+  --nx-ink: #161a29;
+  --nx-ink-2: #58647d;
+
+  /* Lines and surfaces */
+  --nx-line: #e1e5ee;
+  --nx-line-strong: #ccd3e0;
+  --nx-surface: #ffffff;
+  --nx-surface-2: #ffffffb3;
+  --nx-sunken: #e9ecf3;
+  --nx-glass: linear-gradient(125deg, #ffffffd1, #ffffff78);
+  --nx-glass-hover: linear-gradient(125deg, #ffffffee, #ffffffa6);
+  --nx-glass-border: #ffffffe6;
+  --nx-glass-shadow: 0 1px 2px #1e2a5a0a, 0 12px 36px -10px #2a3a6b24;
+  --nx-lift-shadow: 0 2px 4px #1e2a5a0f, 0 18px 44px -12px #2a3a6b33;
+  --nx-scrim: #1b1f3a66;
+  --nx-bar: #161a29eb;
+  --nx-bar-ink: #ffffff;
+  --nx-bar-ink-2: #c9cedb;
+
+  /* Accent (the look) */
+  --nx-accent: #5b47a8;
+  --nx-accent-strong: #4a3794;
+  --nx-accent-soft: #ece8f8;
+  --nx-accent-line: #cbc1ee;
+  --nx-on-accent: #ffffff;
+  --nx-primary: linear-gradient(135deg, #6b55c9, #5541a0);
+  --nx-primary-hover: linear-gradient(135deg, #604ac0, #4b3892);
+  --nx-primary-shadow: 0 8px 20px -8px #5b47a899;
+
+  /* Tones: text on soft fill, and a bar colour */
+  --nx-done: #1f7a4b;
+  --nx-done-soft: #dcf5e6;
+  --nx-done-bar: #4fb383;
+  --nx-missed: #b23b3b;
+  --nx-missed-soft: #fde3e3;
+  --nx-missed-bar: #e27575;
+  --nx-wait: #855404;
+  --nx-wait-soft: #fff0d4;
+  --nx-wait-bar: #eab54d;
+  --nx-excused: #2f6b52;
+  --nx-excused-soft: #e2f3ea;
+  --nx-excused-bar: #a6dbbe;
+  --nx-ahead: #5c6780;
+  --nx-ahead-soft: #eef0f5;
+  --nx-danger: #b23b3b;
+  --nx-danger-fill: #b23b3b;
+}
+
+/* ── Tokens: classic look, dark ──────────────────────────────────────────── */
+[data-theme='dark'] .nx {
+  color-scheme: dark;
+  --nx-page: #0d0b14;
+  --nx-glow-a: #2a1f4acc;
+  --nx-glow-b: #3b173599;
+  --nx-glow-c: #1b1636;
+  --nx-ink: #ece9f5;
+  --nx-ink-2: #a9a5be;
+  --nx-line: #ffffff17;
+  --nx-line-strong: #ffffff2b;
+  --nx-surface: #17131f;
+  --nx-surface-2: #ffffff0d;
+  --nx-sunken: #ffffff12;
+  --nx-glass: linear-gradient(125deg, #ffffff14, #ffffff06);
+  --nx-glass-hover: linear-gradient(125deg, #ffffff1f, #ffffff0a);
+  --nx-glass-border: #ffffff1c;
+  --nx-glass-shadow: 0 12px 40px -10px #000000a6, inset 0 1px 0 #ffffff12;
+  --nx-lift-shadow: 0 18px 48px -12px #000000cc, inset 0 1px 0 #ffffff1a;
+  --nx-scrim: #05030acc;
+  --nx-bar: #000000d9;
+  --nx-bar-ink: #ffffff;
+  --nx-bar-ink-2: #b8b4c9;
+  --nx-accent: #c9bcff;
+  --nx-accent-strong: #ddd3ff;
+  --nx-accent-soft: #2c2350;
+  --nx-accent-line: #5d4d9e;
+  --nx-on-accent: #ffffff;
+  --nx-primary: linear-gradient(135deg, #7456e0, #a8458f);
+  --nx-primary-hover: linear-gradient(135deg, #7f63ea, #b4509b);
+  --nx-primary-shadow: 0 10px 28px -10px #8b6cf0b3;
+  --nx-done: #7fe0ad;
+  --nx-done-soft: #1c3a2c;
+  --nx-done-bar: #5fd49a;
+  --nx-missed: #ff9aa8;
+  --nx-missed-soft: #43192a;
+  --nx-missed-bar: #ff7a8a;
+  --nx-wait: #f5cd7a;
+  --nx-wait-soft: #3d2e12;
+  --nx-wait-bar: #f2c46a;
+  --nx-excused: #9fd8b8;
+  --nx-excused-soft: #1f3329;
+  --nx-excused-bar: #3f7a5b;
+  --nx-ahead: #9a97ad;
+  --nx-ahead-soft: #ffffff0a;
+  --nx-danger: #ff9aa8;
+  --nx-danger-fill: #c2414f;
+}
+
+/* ── Looks: accent and page glow per theme. Any element inside .nx can carry its own data-look. ── */
+.nx[data-look='seventy-five'],
+.nx [data-look='seventy-five'] {
+  --nx-page: #f8f7fa;
+  --nx-glow-a: #f6e1eb;
+  --nx-glow-b: #efe6f6;
+  --nx-glow-c: #fbece3;
+  --nx-accent: #a3326a;
+  --nx-accent-strong: #8c2659;
+  --nx-accent-soft: #f8e4ee;
+  --nx-accent-line: #e8b8cf;
+  --nx-primary: linear-gradient(135deg, #b23c78, #8f2a5c);
+  --nx-primary-hover: linear-gradient(135deg, #a53570, #822452);
+  --nx-primary-shadow: 0 8px 20px -8px #a3326a99;
+}
+[data-theme='dark'] .nx[data-look='seventy-five'],
+[data-theme='dark'] .nx [data-look='seventy-five'] {
+  --nx-page: #120a10;
+  --nx-glow-a: #4a1a35a6;
+  --nx-glow-b: #2a1a3acc;
+  --nx-glow-c: #2b1210;
+  --nx-accent: #ffa3cf;
+  --nx-accent-strong: #ffc2df;
+  --nx-accent-soft: #3a1a2c;
+  --nx-accent-line: #7a3558;
+  --nx-primary: linear-gradient(135deg, #b03a74, #8a2f86);
+  --nx-primary-hover: linear-gradient(135deg, #bd4580, #963a92);
+  --nx-primary-shadow: 0 10px 28px -10px #d0508fb3;
+}
+.nx[data-look='sleep'],
+.nx [data-look='sleep'] {
+  --nx-page: #f5f7fc;
+  --nx-glow-a: #dfe6fa;
+  --nx-glow-b: #e6e5fa;
+  --nx-glow-c: #e7eff9;
+  --nx-accent: #3d55b0;
+  --nx-accent-strong: #2f4596;
+  --nx-accent-soft: #e6ebfa;
+  --nx-accent-line: #bdc9f0;
+  --nx-primary: linear-gradient(135deg, #4a63c4, #34489a);
+  --nx-primary-hover: linear-gradient(135deg, #4058b8, #2d3f8c);
+  --nx-primary-shadow: 0 8px 20px -8px #3d55b099;
+}
+[data-theme='dark'] .nx[data-look='sleep'],
+[data-theme='dark'] .nx [data-look='sleep'] {
+  --nx-page: #0a0c16;
+  --nx-glow-a: #1a2550cc;
+  --nx-glow-b: #231a4a99;
+  --nx-glow-c: #0f1a33;
+  --nx-accent: #aebcff;
+  --nx-accent-strong: #c9d2ff;
+  --nx-accent-soft: #1c2550;
+  --nx-accent-line: #3c4c96;
+  --nx-primary: linear-gradient(135deg, #4760c8, #3a3fa8);
+  --nx-primary-hover: linear-gradient(135deg, #526bd2, #4449b4);
+  --nx-primary-shadow: 0 10px 28px -10px #5b76e6b3;
+}
+.nx[data-look='dry'],
+.nx [data-look='dry'] {
+  --nx-page: #f4f8f8;
+  --nx-glow-a: #dbf1ee;
+  --nx-glow-b: #e3edf8;
+  --nx-glow-c: #eef6ec;
+  --nx-accent: #13777a;
+  --nx-accent-strong: #0d6164;
+  --nx-accent-soft: #dff3f1;
+  --nx-accent-line: #a6dad5;
+  --nx-primary: linear-gradient(135deg, #147f80, #0f6668);
+  --nx-primary-hover: linear-gradient(135deg, #117374, #0c5a5c);
+  --nx-primary-shadow: 0 8px 20px -8px #13777a99;
+}
+[data-theme='dark'] .nx[data-look='dry'],
+[data-theme='dark'] .nx [data-look='dry'] {
+  --nx-page: #081012;
+  --nx-glow-a: #0f3a3ecc;
+  --nx-glow-b: #10283f99;
+  --nx-glow-c: #0c2320;
+  --nx-accent: #7fe3dc;
+  --nx-accent-strong: #a6efe9;
+  --nx-accent-soft: #0f3432;
+  --nx-accent-line: #1f6b67;
+  --nx-primary: linear-gradient(135deg, #13807f, #0e5f66);
+  --nx-primary-hover: linear-gradient(135deg, #178c8b, #126b73);
+  --nx-primary-shadow: 0 10px 28px -10px #1fa5a0b3;
+}
+.nx[data-look='fitness'],
+.nx [data-look='fitness'] {
+  --nx-page: #faf8f5;
+  --nx-glow-a: #fbe6d6;
+  --nx-glow-b: #edf3e2;
+  --nx-glow-c: #fdf0dc;
+  --nx-accent: #b4501a;
+  --nx-accent-strong: #9a4211;
+  --nx-accent-soft: #fbe9dc;
+  --nx-accent-line: #efc2a3;
+  --nx-primary: linear-gradient(135deg, #b8531a, #9a410f);
+  --nx-primary-hover: linear-gradient(135deg, #ab4b15, #8c3a0c);
+  --nx-primary-shadow: 0 8px 20px -8px #b4501a99;
+}
+[data-theme='dark'] .nx[data-look='fitness'],
+[data-theme='dark'] .nx [data-look='fitness'] {
+  --nx-page: #0f0b08;
+  --nx-glow-a: #3d2412cc;
+  --nx-glow-b: #1f2a1499;
+  --nx-glow-c: #2a1a0c;
+  --nx-accent: #ffb27d;
+  --nx-accent-strong: #ffcaa4;
+  --nx-accent-soft: #3a2212;
+  --nx-accent-line: #7a4522;
+  --nx-primary: linear-gradient(135deg, #c0561c, #9a3f14);
+  --nx-primary-hover: linear-gradient(135deg, #cc6124, #a8481a);
+  --nx-primary-shadow: 0 10px 28px -10px #e0782fb3;
+}
+
+@media (min-width: 1024px) {
+  .nx {
+    --nx-gutter: 32px;
+  }
+}
+/* While AppFrame's phone tab bar is on screen, everything (sheets and toasts included) knows its height. */
+.nx:has(.nx-tabbar) {
+  --nx-nav-h: calc(68px + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .nx:has(.nx-tabbar) {
+    --nx-nav-h: 0px;
+  }
+}
+
+/* ── Legacy resets (unlayered on purpose; see the header) ────────────────────
+   Each selector matches the specificity of its legacy twin through :where(.nx) and wins by coming
+   later. Kit and utility styles then apply as if the legacy rules did not exist. */
+:where(.nx) button {
+  cursor: revert-layer;
+  border: revert-layer;
+  background: revert-layer;
+  border-radius: revert-layer;
+  padding: revert-layer;
+  transition: revert-layer;
+  display: revert-layer;
+  align-items: revert-layer;
+  justify-content: revert-layer;
+  gap: revert-layer;
+  font-size: revert-layer;
+  color: revert-layer;
+}
+:where(.nx) button:hover:not(:disabled) {
+  background: revert-layer;
+}
+:where(.nx) button:disabled {
+  opacity: revert-layer;
+  cursor: revert-layer;
+}
+:where(.nx) button:focus-visible,
+:where(.nx) a:focus-visible,
+:where(.nx) input:focus-visible {
+  outline: revert-layer;
+  outline-offset: revert-layer;
+}
+:where(.nx) a {
+  color: revert-layer;
+  text-decoration: revert-layer;
+}
+:where(.nx) a:hover {
+  text-decoration: revert-layer;
+}
+:where(.nx) input,
+:where(.nx) textarea {
+  border: revert-layer;
+  border-radius: revert-layer;
+  background: revert-layer;
+  padding: revert-layer;
+  color: revert-layer;
+  max-width: revert-layer;
+}
+:where(.nx) textarea {
+  width: revert-layer;
+  min-height: revert-layer;
+  resize: revert-layer;
+  margin-top: revert-layer;
+  display: revert-layer;
+  font-size: revert-layer;
+}
+[data-theme='dark'] :where(.nx) input::placeholder,
+[data-theme='dark'] :where(.nx) textarea::placeholder {
+  color: revert-layer;
+}
+:where(.nx) main {
+  max-width: revert-layer;
+  margin: revert-layer;
+}
+:where(.nx) h1,
+:where(.nx) h2,
+:where(.nx) h3 {
+  font-family: revert-layer;
+  font-weight: revert-layer;
+  letter-spacing: revert-layer;
+  font-size: revert-layer;
+  line-height: revert-layer;
+  margin: revert-layer;
+}
+:where(.nx) h1 span {
+  color: revert-layer;
+}
+:where(.nx) p {
+  margin: revert-layer;
+}
+
+/* ── Base: the root and bare elements inside it ──────────────────────────── */
+@layer base {
+  .nx {
+    position: relative;
+    isolation: isolate;
+    min-height: 100dvh;
+    color: var(--nx-ink);
+    background: var(--nx-page);
+    font-family: var(--nx-font-sans);
+    font-size: 17px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-variant-numeric: lining-nums;
+    --nx-page-bg:
+      radial-gradient(ellipse at 10% 82%, var(--nx-glow-a) 0, transparent 50%),
+      radial-gradient(ellipse at 88% 12%, var(--nx-glow-b) 0, transparent 46%),
+      radial-gradient(ellipse at 60% 50%, var(--nx-glow-c) 0, transparent 60%),
+      var(--nx-page);
+  }
+  /* The page glow stays put while the page scrolls. */
+  .nx::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--nx-page-bg);
+    pointer-events: none;
+    transition: opacity var(--nx-slow) var(--nx-ease);
+  }
+  .nx :where(h1, h2, h3, h4) {
+    font-family: var(--nx-font-serif);
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  .nx :where(p, li) {
+    text-wrap: pretty;
+  }
+  .nx
+    :where(
+      button,
+      [role='button'],
+      [role='switch'],
+      [role='radio'],
+      a[href],
+      label[for],
+      summary
+    ):not(:disabled, [aria-disabled='true']) {
+    cursor: pointer;
+  }
+  .nx :where(button, a, [role='button']) {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .nx :where(:focus-visible) {
+    outline: 2px solid var(--nx-accent);
+    outline-offset: 3px;
+  }
+  .nx :where(input, textarea)::placeholder {
+    color: var(--nx-ink-2);
+    opacity: 0.8;
+  }
+  .nx ::selection {
+    background: var(--nx-accent-soft);
+    color: var(--nx-ink);
+  }
+}
+
+@layer components {
+  /* ── Motion helpers ─────────────────────────────────────────────────────── */
+  /* Enter: fade up once on mount. --nx-i staggers siblings (Stagger sets it). */
+  .nx-enter {
+    animation: nx-enter var(--nx-base) var(--nx-ease) both;
+    animation-delay: calc(var(--nx-i, 0) * var(--nx-stagger));
+  }
+  .nx-fade-in {
+    animation: nx-fade var(--nx-base) var(--nx-ease) both;
+  }
+  /* Press feedback for anything tappable that is not a kit Button. */
+  .nx-press {
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease);
+  }
+  .nx-press:active:not(:disabled, [aria-disabled='true']) {
+    transform: scale(0.98);
+  }
+
+  /* ── Buttons ────────────────────────────────────────────────────────────── */
+  .nx-btn {
+    --nx-btn-h: 48px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: var(--nx-btn-h);
+    padding: 0 22px;
+    border: 1.5px solid transparent;
+    border-radius: var(--nx-r-btn);
+    background: transparent;
+    color: var(--nx-ink);
+    font: 600 17px/1.2 var(--nx-font-sans);
+    letter-spacing: 0.005em;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    user-select: none;
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease),
+      opacity var(--nx-base) var(--nx-ease);
+  }
+  .nx-btn:active:not(:disabled, [data-loading]) {
+    transform: scale(0.97);
+  }
+  .nx-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .nx-btn[data-size='lg'] {
+    --nx-btn-h: 56px;
+    padding: 0 28px;
+    font-size: 18px;
+  }
+  .nx-btn[data-full] {
+    width: 100%;
+  }
+  .nx-btn[data-variant='primary'] {
+    background: var(--nx-primary);
+    color: var(--nx-on-accent);
+    box-shadow: var(--nx-primary-shadow);
+  }
+  .nx-btn[data-variant='primary']:hover:not(:disabled) {
+    background: var(--nx-primary-hover);
+  }
+  .nx-btn[data-variant='secondary'] {
+    border-color: var(--nx-accent-line);
+    background: var(--nx-surface-2);
+    color: var(--nx-accent);
+  }
+  .nx-btn[data-variant='secondary']:hover:not(:disabled) {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+  }
+  .nx-btn[data-variant='quiet'] {
+    --nx-btn-h: 44px;
+    padding: 0 12px;
+    color: var(--nx-accent);
+  }
+  .nx-btn[data-variant='quiet']:hover:not(:disabled) {
+    background: var(--nx-accent-soft);
+  }
+  .nx-btn[data-variant='danger'] {
+    background: var(--nx-danger-fill);
+    color: #fff;
+  }
+  .nx-btn[data-variant='danger']:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  .nx-btn[data-loading] {
+    cursor: progress;
+  }
+  .nx-btn[data-loading] > .nx-btn-label {
+    opacity: 0.55;
+  }
+  .nx-spinner {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2.5px solid currentColor;
+    border-right-color: transparent;
+    animation: nx-spin 700ms linear infinite;
+  }
+  .nx-icon-btn {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--nx-line);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease);
+  }
+  .nx-icon-btn:hover:not(:disabled) {
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+  }
+  .nx-icon-btn:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+  .nx-icon-btn[data-plain] {
+    border-color: transparent;
+    background: transparent;
+  }
+
+  /* ── Cards ──────────────────────────────────────────────────────────────── */
+  .nx-glass {
+    position: relative;
+    border-radius: var(--nx-r-lg);
+    border: 1px solid var(--nx-glass-border);
+    background: var(--nx-glass);
+    box-shadow: var(--nx-glass-shadow);
+    -webkit-backdrop-filter: blur(22px) saturate(1.15);
+    backdrop-filter: blur(22px) saturate(1.15);
+  }
+  .nx-card {
+    position: relative;
+    border-radius: var(--nx-r);
+    border: 1px solid var(--nx-line);
+    background: var(--nx-surface-2);
+  }
+  .nx-pad-sm {
+    padding: 14px 16px;
+  }
+  .nx-pad {
+    padding: 20px;
+  }
+  .nx-pad-lg {
+    padding: 24px;
+  }
+  @media (min-width: 640px) {
+    .nx-pad {
+      padding: 24px;
+    }
+    .nx-pad-lg {
+      padding: 32px;
+    }
+  }
+  /* A whole card that is one button (RowButton, StatButton, tappable cards). */
+  .nx-tappable {
+    display: flex;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease);
+  }
+  .nx-tappable:hover:not(:disabled) {
+    background: var(--nx-glass-hover);
+    box-shadow: var(--nx-lift-shadow);
+  }
+  .nx-tappable:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+  .nx-row {
+    align-items: center;
+    gap: 14px;
+    min-height: 60px;
+    padding: 14px 16px 14px 18px;
+  }
+  .nx-row-chevron {
+    flex-shrink: 0;
+    color: var(--nx-accent);
+    transition: transform var(--nx-base) var(--nx-ease);
+  }
+  .nx-tappable:hover .nx-row-chevron {
+    transform: translateX(2px);
+  }
+
+  /* ── Stats: always a button ─────────────────────────────────────────────── */
+  .nx-stat {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-height: 44px;
+    padding: 16px 18px;
+  }
+  .nx-stat-label {
+    font-size: 15px;
+    line-height: 1.35;
+    color: var(--nx-ink-2);
+    padding-right: 28px;
+  }
+  .nx-stat-value {
+    font: 36px/1.05 var(--nx-font-serif);
+    letter-spacing: -0.02em;
+    color: var(--nx-ink);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .nx-stat[data-size='lg'] .nx-stat-value {
+    font-size: 52px;
+  }
+  .nx-stat[data-tone='accent'] .nx-stat-value {
+    color: var(--nx-accent);
+  }
+  .nx-stat[data-tone='done'] .nx-stat-value {
+    color: var(--nx-done);
+  }
+  .nx-stat[data-tone='missed'] .nx-stat-value {
+    color: var(--nx-missed);
+  }
+  .nx-stat[data-tone='wait'] .nx-stat-value {
+    color: var(--nx-wait);
+  }
+  .nx-stat-hint {
+    font-size: 15px;
+    line-height: 1.35;
+    color: var(--nx-ink-2);
+  }
+  .nx-stat .nx-row-chevron {
+    position: absolute;
+    top: 16px;
+    right: 14px;
+  }
+
+  /* ── Titles and sections ────────────────────────────────────────────────── */
+  .nx-page-title {
+    font: 400 var(--nx-fs-h1) / 1.1 var(--nx-font-serif);
+    letter-spacing: -0.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .nx-kicker {
+    font-size: 15px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: var(--nx-accent);
+  }
+  .nx-section-title {
+    font: 400 24px/1.2 var(--nx-font-serif);
+    letter-spacing: -0.015em;
+    margin: 0;
+  }
+
+  /* ── Progress bars ──────────────────────────────────────────────────────── */
+  .nx-bar {
+    --nx-bar-h: 10px;
+    position: relative;
+    height: var(--nx-bar-h);
+    border-radius: 999px;
+    background: var(--nx-sunken);
+    overflow: hidden;
+  }
+  .nx-bar[data-size='sm'] {
+    --nx-bar-h: 6px;
+  }
+  .nx-bar[data-size='lg'] {
+    --nx-bar-h: 14px;
+  }
+  .nx-bar-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--nx-bar-color, var(--nx-accent));
+    transform-origin: left center;
+    transform: scaleX(var(--nx-bar-value, 0));
+    transition: transform var(--nx-slow) var(--nx-ease);
+  }
+  @starting-style {
+    .nx-bar-fill {
+      transform: scaleX(0);
+    }
+  }
+  .nx-bar-segments {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 5px;
+  }
+  .nx-bar-segment {
+    height: var(--nx-bar-h, 10px);
+    border-radius: 999px;
+    background: var(--nx-sunken);
+    overflow: hidden;
+  }
+  .nx-bar-segment > i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--nx-bar-color, var(--nx-accent));
+    transform-origin: left center;
+    transform: scaleX(0);
+    transition: transform var(--nx-slow) var(--nx-ease);
+    transition-delay: calc(var(--nx-i, 0) * 60ms);
+  }
+  .nx-bar-segment[data-on] > i {
+    transform: scaleX(1);
+  }
+  @starting-style {
+    .nx-bar-segment[data-on] > i {
+      transform: scaleX(0);
+    }
+  }
+
+  /* ── People ─────────────────────────────────────────────────────────────── */
+  .nx-avatar {
+    --nx-avatar: 40px;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: var(--nx-avatar);
+    height: var(--nx-avatar);
+    border-radius: 50%;
+    background: hsl(var(--nx-hue, 260) 62% 91%);
+    color: hsl(var(--nx-hue, 260) 45% 30%);
+    font: 600 17px/1 var(--nx-font-sans);
+    user-select: none;
+  }
+  [data-theme='dark'] .nx-avatar {
+    background: hsl(var(--nx-hue, 260) 32% 26%);
+    color: hsl(var(--nx-hue, 260) 80% 88%);
+  }
+  .nx-avatar[data-size='sm'] {
+    --nx-avatar: 32px;
+    font-size: 14px;
+  }
+  .nx-avatar[data-size='lg'] {
+    --nx-avatar: 56px;
+    font-size: 22px;
+  }
+  .nx-pair {
+    display: inline-flex;
+    align-items: center;
+  }
+  .nx-pair > .nx-avatar {
+    box-shadow: 0 0 0 2.5px var(--nx-page);
+  }
+  .nx-pair > .nx-avatar + .nx-avatar {
+    margin-left: calc(var(--nx-avatar) * -0.28);
+  }
+  .nx-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 3px 14px 3px 3px;
+    border-radius: 999px;
+    border: 1px solid var(--nx-line);
+    background: var(--nx-surface-2);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--nx-ink);
+  }
+  button.nx-chip {
+    min-height: 44px;
+  }
+
+  /* ── Status pills ───────────────────────────────────────────────────────── */
+  .nx-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 28px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font: 600 14px/1.2 var(--nx-font-sans);
+    white-space: nowrap;
+    background: var(--nx-ahead-soft);
+    color: var(--nx-ahead);
+  }
+  .nx-pill[data-status='done'] {
+    background: var(--nx-done-soft);
+    color: var(--nx-done);
+  }
+  .nx-pill[data-status='missed'],
+  .nx-pill[data-status='disputed'] {
+    background: var(--nx-missed-soft);
+    color: var(--nx-missed);
+  }
+  .nx-pill[data-status='review'] {
+    background: var(--nx-wait-soft);
+    color: var(--nx-wait);
+  }
+  .nx-pill[data-status='forgiven'] {
+    background: var(--nx-excused-soft);
+    color: var(--nx-excused);
+  }
+  .nx-pill[data-status='open'] {
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+  }
+
+  /* ── Count badge (nav, rows) ────────────────────────────────────────────── */
+  .nx-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--nx-primary);
+    color: var(--nx-on-accent);
+    font: 700 14px/1 var(--nx-font-sans);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Sheet: bottom sheet on phones, centred dialog from 640px ───────────── */
+  .nx-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: var(--nx-scrim);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    transition: opacity var(--nx-slow) var(--nx-ease);
+  }
+  .nx-scrim[data-starting-style],
+  .nx-scrim[data-ending-style] {
+    opacity: 0;
+  }
+  .nx-sheet {
+    position: fixed;
+    z-index: 81;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - var(--nx-top-inset) - 24px);
+    border-radius: 28px 28px 0 0;
+    border: 1px solid var(--nx-glass-border);
+    border-bottom: 0;
+    background: var(--nx-surface);
+    box-shadow: 0 -12px 48px -12px #0000004d;
+    color: var(--nx-ink);
+    outline: none;
+    transition:
+      transform var(--nx-slow) var(--nx-ease),
+      opacity var(--nx-slow) var(--nx-ease);
+  }
+  .nx-sheet[data-starting-style],
+  .nx-sheet[data-ending-style] {
+    transform: translateY(100%);
+  }
+  .nx-sheet-grabber {
+    align-self: center;
+    width: 40px;
+    height: 5px;
+    margin-top: 10px;
+    border-radius: 999px;
+    background: var(--nx-line-strong);
+  }
+  .nx-sheet-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px 4px 24px;
+  }
+  .nx-sheet-title {
+    flex: 1;
+    min-width: 0;
+    margin: 8px 0 0;
+    font: 400 26px/1.2 var(--nx-font-serif);
+    letter-spacing: -0.015em;
+  }
+  .nx-sheet-description {
+    margin: 4px 24px 0;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--nx-ink-2);
+  }
+  .nx-sheet-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px 24px 24px;
+  }
+  .nx-sheet-foot {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    padding: 12px 24px max(20px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--nx-line);
+  }
+  @media (min-width: 640px) {
+    .nx-sheet {
+      left: 50%;
+      right: auto;
+      bottom: auto;
+      top: calc(50% + var(--nx-top-inset) / 2);
+      width: min(560px, calc(100vw - 48px));
+      max-height: min(760px, calc(100dvh - var(--nx-top-inset) - 64px));
+      border-radius: 28px;
+      border-bottom: 1px solid var(--nx-glass-border);
+      box-shadow: 0 30px 80px -20px #1b1f3a66;
+      transform: translate(-50%, -50%);
+    }
+    .nx-sheet[data-starting-style],
+    .nx-sheet[data-ending-style] {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% + 18px)) scale(0.98);
+    }
+    .nx-sheet-grabber {
+      display: none;
+    }
+    .nx-sheet-head {
+      padding-top: 20px;
+    }
+    .nx-sheet-foot {
+      flex-direction: row;
+      justify-content: flex-end;
+      padding-bottom: 20px;
+    }
+  }
+  [data-theme='dark'] .nx-sheet {
+    background: linear-gradient(160deg, #1d1829, #141019);
+  }
+
+  /* ── Menu ───────────────────────────────────────────────────────────────── */
+  .nx-menu {
+    z-index: 70;
+    min-width: 240px;
+    max-height: var(--available-height);
+    overflow-y: auto;
+    padding: 6px;
+    border-radius: 18px;
+    border: 1px solid var(--nx-glass-border);
+    background: var(--nx-surface);
+    box-shadow: var(--nx-lift-shadow);
+    color: var(--nx-ink);
+    transform-origin: var(--transform-origin);
+    transition:
+      transform var(--nx-base) var(--nx-ease),
+      opacity var(--nx-base) var(--nx-ease);
+    outline: none;
+  }
+  .nx-menu[data-starting-style],
+  .nx-menu[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  [data-theme='dark'] .nx-menu {
+    background: #1b1724;
+  }
+  .nx-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: 17px;
+    color: var(--nx-ink);
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+  }
+  .nx-menu-item[data-highlighted] {
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+  }
+  .nx-menu-item[aria-current='page'],
+  .nx-menu-item[data-checked] {
+    color: var(--nx-accent);
+    font-weight: 600;
+  }
+  .nx-menu-item > svg:first-child {
+    flex-shrink: 0;
+    color: var(--nx-accent);
+  }
+
+  /* ── Toast ──────────────────────────────────────────────────────────────── */
+  .nx-toasts {
+    position: fixed;
+    z-index: 90;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--nx-nav-h) + var(--nx-action-h, 0px) + 16px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    pointer-events: none;
+  }
+  .nx-toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: min(480px, 100%);
+    min-height: 56px;
+    padding: 6px 6px 6px 18px;
+    border-radius: 18px;
+    background: var(--nx-bar);
+    color: var(--nx-bar-ink);
+    box-shadow: 0 16px 40px -12px #00000066;
+    font-size: 17px;
+    pointer-events: auto;
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+  .nx-toast-text {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 0;
+  }
+  .nx-toast .nx-btn[data-variant='quiet'] {
+    color: var(--nx-bar-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .nx-toast .nx-btn[data-variant='quiet']:hover {
+    background: #ffffff1f;
+  }
+
+  /* ── Choices: Yes/No, segmented control, toggle ─────────────────────────── */
+  .nx-yesno {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .nx-choice {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 64px;
+    padding: 0 16px;
+    border-radius: var(--nx-r);
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    font: 600 19px/1.2 var(--nx-font-sans);
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease);
+  }
+  .nx-choice:not(:has(input:disabled)):hover {
+    border-color: var(--nx-accent-line);
+  }
+  .nx-choice:not(:has(input:disabled)):active {
+    transform: scale(0.97);
+  }
+  .nx-choice:has(input:checked) {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+    box-shadow: 0 0 0 1px var(--nx-accent) inset;
+  }
+  .nx-choice:has(input:checked) > svg {
+    animation: nx-pop var(--nx-slow) var(--nx-ease) both;
+  }
+  .nx-choice:has(input:focus-visible),
+  .nx-seg-option:has(input:focus-visible) {
+    outline: 2px solid var(--nx-accent);
+    outline-offset: 3px;
+  }
+  .nx-choice:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .nx-seg {
+    position: relative;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 16px;
+    background: var(--nx-sunken);
+  }
+  .nx-seg-option {
+    cursor: pointer;
+    position: relative;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 12px;
+    color: var(--nx-ink-2);
+    font: 600 15px/1.2 var(--nx-font-sans);
+    white-space: nowrap;
+    transition: color var(--nx-base) var(--nx-ease);
+  }
+  .nx-seg-option:has(input:checked) {
+    color: var(--nx-ink);
+  }
+  .nx-seg-thumb {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 12px;
+    background: var(--nx-surface);
+    box-shadow:
+      0 1px 3px #1e2a5a1f,
+      0 4px 12px -4px #1e2a5a26;
+  }
+  [data-theme='dark'] .nx-seg-thumb {
+    background: #ffffff1f;
+  }
+  .nx-seg-option > span {
+    position: relative;
+    z-index: 1;
+  }
+  .nx-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    min-height: 56px;
+    padding: 8px 0;
+    text-align: left;
+    color: inherit;
+  }
+  .nx-switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 52px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--nx-line-strong);
+    transition: background var(--nx-base) var(--nx-ease);
+  }
+  .nx-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px #0000002e;
+    transition: transform var(--nx-base) var(--nx-ease);
+  }
+  [aria-checked='true'] > .nx-switch {
+    background: var(--nx-accent);
+  }
+  [data-theme='dark'] [aria-checked='true'] > .nx-switch {
+    background: #7456e0;
+  }
+  [aria-checked='true'] > .nx-switch::after {
+    transform: translateX(20px);
+  }
+
+  /* ── Fields ─────────────────────────────────────────────────────────────── */
+  .nx-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .nx-field-label {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--nx-ink);
+  }
+  .nx-field-hint {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--nx-ink-2);
+  }
+  .nx-field-error {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--nx-missed);
+  }
+  .nx-input {
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 16px;
+    border-radius: var(--nx-r-btn);
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface);
+    color: var(--nx-ink);
+    font: 17px/1.4 var(--nx-font-sans) !important;
+    transition:
+      border-color var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease);
+  }
+  [data-theme='dark'] .nx-input {
+    background: #ffffff0a;
+  }
+  .nx-input:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .nx-input:focus,
+  .nx-input:focus-visible {
+    outline: none;
+    border-color: var(--nx-accent);
+    box-shadow: 0 0 0 4px var(--nx-accent-soft);
+  }
+  .nx-input[aria-invalid='true'] {
+    border-color: var(--nx-missed);
+  }
+  textarea.nx-input {
+    min-height: 104px;
+    resize: vertical;
+  }
+  .nx-number {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .nx-number-box {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    min-height: 64px;
+    padding: 0 14px 0 16px;
+    cursor: text;
+    border-radius: var(--nx-r);
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface);
+    transition:
+      border-color var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease);
+  }
+  [data-theme='dark'] .nx-number-box {
+    background: #ffffff0a;
+  }
+  .nx-number-box:focus-within {
+    border-color: var(--nx-accent);
+    box-shadow: 0 0 0 4px var(--nx-accent-soft);
+  }
+  .nx-number-input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--nx-ink);
+    font: 600 clamp(24px, 7vw, 30px) / 1.2 var(--nx-font-sans) !important;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    padding: 0;
+  }
+  .nx-number-unit {
+    align-self: center;
+    flex-shrink: 0;
+    font-size: 15px;
+    color: var(--nx-ink-2);
+  }
+  .nx-number .nx-icon-btn {
+    width: 52px;
+    height: auto;
+    min-height: 64px;
+    border-radius: var(--nx-r);
+  }
+  .nx-target[data-met='true'] {
+    color: var(--nx-done);
+  }
+  .nx-target[data-met='false'] {
+    color: var(--nx-missed);
+  }
+
+  /* ── Screenshots ────────────────────────────────────────────────────────── */
+  .nx-proofs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .nx-proof {
+    position: relative;
+    width: 76px;
+    height: 124px;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 14px;
+    border: 1px solid var(--nx-line-strong);
+    background: var(--nx-sunken);
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease);
+  }
+  .nx-proof:hover {
+    box-shadow: var(--nx-lift-shadow);
+  }
+  .nx-proof:active {
+    transform: scale(0.96);
+  }
+  .nx-proof > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+  .nx-proof-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 76px;
+    height: 124px;
+    padding: 8px;
+    border-radius: 14px;
+    border: 1.5px dashed var(--nx-accent-line);
+    color: var(--nx-accent);
+    font: 600 14px/1.25 var(--nx-font-sans);
+    text-align: center;
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease);
+  }
+  .nx-proof-add:hover {
+    background: var(--nx-accent-soft);
+  }
+  .nx-proof-add:active {
+    transform: scale(0.96);
+  }
+  .nx-proof-remove {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+  }
+  .nx-proof-remove > span {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--nx-bar);
+    color: var(--nx-bar-ink);
+  }
+  .nx-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    background: #07060bf2;
+    color: #fff;
+    outline: none;
+    transition: opacity var(--nx-base) var(--nx-ease);
+  }
+  .nx-viewer[data-starting-style],
+  .nx-viewer[data-ending-style] {
+    opacity: 0;
+  }
+  .nx-viewer-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+    font-size: 15px;
+  }
+  .nx-viewer-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    padding: 0 12px;
+  }
+  .nx-viewer-stage > img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 18px;
+    object-fit: contain;
+    animation: nx-fade var(--nx-base) var(--nx-ease) both;
+  }
+  .nx-viewer-foot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+    font-size: 15px;
+    color: #d6d3e0;
+  }
+  .nx-viewer .nx-icon-btn {
+    border-color: #ffffff29;
+    background: #ffffff14;
+    color: #fff;
+  }
+  .nx-viewer .nx-icon-btn:hover:not(:disabled) {
+    background: #ffffff29;
+    color: #fff;
+  }
+
+  /* ── Empty state ────────────────────────────────────────────────────────── */
+  .nx-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 36px 24px;
+    text-align: center;
+  }
+  .nx-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 6px;
+    border-radius: 50%;
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+  }
+
+  /* ── Action bar: the main action, pinned above the tab bar on phones ────── */
+  .nx-action-bar {
+    position: sticky;
+    z-index: 30;
+    bottom: calc(var(--nx-nav-h) + 12px);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 24px;
+    padding: 12px;
+    border-radius: 22px;
+    border: 1px solid var(--nx-glass-border);
+    background: var(--nx-glass);
+    box-shadow: var(--nx-lift-shadow);
+    -webkit-backdrop-filter: blur(22px) saturate(1.2);
+    backdrop-filter: blur(22px) saturate(1.2);
+  }
+  @media (min-width: 640px) {
+    .nx-action-bar {
+      flex-direction: row-reverse;
+      align-items: center;
+    }
+  }
+
+  /* ── Frames ─────────────────────────────────────────────────────────────── */
+  .nx-frame {
+    min-height: calc(100dvh - var(--nx-top-inset));
+    padding-bottom: calc(var(--nx-nav-h) + 40px);
+  }
+  .nx-main {
+    width: 100%;
+    max-width: calc(var(--nx-page-max) + 2 * var(--nx-gutter));
+    margin: 0 auto;
+    padding: 0 var(--nx-gutter);
+  }
+  .nx-main[data-wide] {
+    max-width: calc(var(--nx-page-wide) + 2 * var(--nx-gutter));
+  }
+  .nx-main[data-narrow] {
+    max-width: calc(520px + 2 * var(--nx-gutter));
+  }
+  .nx-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 64px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .nx-brand {
+    font: 400 21px/1.15 var(--nx-font-serif);
+    letter-spacing: -0.02em;
+    color: var(--nx-ink);
+  }
+  .nx-day-link {
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 0 6px;
+    margin: -6px 0 -6px -6px;
+    border-radius: 10px;
+    font-size: 15px;
+    color: var(--nx-ink-2);
+    transition: color var(--nx-base) var(--nx-ease);
+  }
+  .nx-day-link:hover {
+    color: var(--nx-accent);
+  }
+  .nx-tabbar {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: space-around;
+    padding: 6px max(6px, env(safe-area-inset-left))
+      max(6px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--nx-glass-border);
+    background: color-mix(in srgb, var(--nx-surface) 86%, transparent);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+    backdrop-filter: blur(24px) saturate(1.3);
+    box-shadow: 0 -8px 30px -12px #1e2a5a26;
+  }
+  .nx-tab {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 56px;
+    border-radius: 14px;
+    color: var(--nx-ink-2);
+    font: 600 14px/1.1 var(--nx-font-sans);
+    transition:
+      color var(--nx-base) var(--nx-ease),
+      transform var(--nx-fast) var(--nx-ease);
+  }
+  .nx-tab:active {
+    transform: scale(0.94);
+  }
+  .nx-tab[aria-current='page'],
+  .nx-tab[data-active] {
+    color: var(--nx-accent);
+  }
+  .nx-tab-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 30px;
+    border-radius: 999px;
+    transition: background var(--nx-base) var(--nx-ease);
+  }
+  .nx-tab[aria-current='page'] .nx-tab-icon,
+  .nx-tab[data-active] .nx-tab-icon {
+    background: var(--nx-accent-soft);
+  }
+  .nx-tab .nx-count {
+    position: absolute;
+    top: -6px;
+    left: 32px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    box-shadow: 0 0 0 2px var(--nx-surface);
+  }
+  .nx-topnav {
+    display: none;
+  }
+  @media (min-width: 1024px) {
+    .nx-tabbar {
+      display: none;
+    }
+    .nx-topnav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .nx-topnav .nx-tab {
+      flex: none;
+      flex-direction: row;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 12px;
+      font-size: 15px;
+    }
+    .nx-topnav .nx-tab:hover {
+      color: var(--nx-accent);
+      background: var(--nx-accent-soft);
+    }
+    .nx-topnav .nx-tab[aria-current='page'],
+    .nx-topnav .nx-tab[data-active] {
+      background: var(--nx-accent-soft);
+    }
+    .nx-topnav .nx-tab-icon {
+      width: auto;
+      height: auto;
+      background: none !important;
+    }
+    .nx-topnav .nx-tab .nx-count {
+      position: static;
+      box-shadow: none;
+    }
+    /* The header spans the wide width, so the name and the tabs never squeeze each other. */
+    .nx-app-header .nx-topbar {
+      max-width: calc(var(--nx-page-wide) + 2 * var(--nx-gutter));
+    }
+    .nx-app-header {
+      position: sticky;
+      top: var(--nx-top-inset);
+      z-index: 40;
+    }
+    .nx-app-header::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 -1px;
+      z-index: -1;
+      border-bottom: 1px solid var(--nx-line);
+      background: color-mix(in srgb, var(--nx-page) 78%, transparent);
+      -webkit-backdrop-filter: blur(20px) saturate(1.2);
+      backdrop-filter: blur(20px) saturate(1.2);
+    }
+  }
+
+  /* ── The preview's version bar (a tool, not part of the product) ───────── */
+  .nx-preview-bar {
+    position: fixed;
+    z-index: 60;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 60px;
+    padding: 0 max(8px, env(safe-area-inset-right)) 0
+      max(8px, env(safe-area-inset-left));
+    background: var(--nx-bar);
+    color: var(--nx-bar-ink);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid #ffffff14;
+  }
+  .nx-preview-bar .nx-pb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 10px;
+    border-radius: 12px;
+    color: var(--nx-bar-ink);
+    font: 600 15px/1 var(--nx-font-sans);
+    transition:
+      background var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease),
+      transform var(--nx-fast) var(--nx-ease);
+  }
+  .nx-preview-bar .nx-pb-btn:hover {
+    background: #ffffff1f;
+  }
+  .nx-preview-bar .nx-pb-btn:active {
+    transform: scale(0.95);
+  }
+  .nx-preview-bar .nx-pb-btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
+  }
+  .nx-preview-bar .nx-pb-version {
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid #ffffff33;
+  }
+  .nx-preview-bar .nx-pb-version[aria-pressed='true'] {
+    background: #fff;
+    color: #161a29;
+    border-color: #fff;
+  }
+  .nx-preview-bar .nx-pb-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 400 18px/1.2 var(--nx-font-serif);
+    padding: 0 4px;
+  }
+  .nx-preview-bar .nx-pb-sep {
+    width: 1px;
+    height: 28px;
+    margin: 0 2px;
+    background: #ffffff29;
+  }
+}
+
+/* ── Reduced motion: nothing moves ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .nx {
+    --nx-fast: 0ms;
+    --nx-base: 0ms;
+    --nx-slow: 0ms;
+    --nx-stagger: 0ms;
+  }
+  .nx *,
+  .nx *::before,
+  .nx *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .nx .nx-spinner {
+    animation: nx-spin 1.4s linear infinite !important;
+  }
+}

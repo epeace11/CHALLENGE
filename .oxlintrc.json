@@ -30,7 +30,8 @@
     "dist/**",
     "coverage/**",
     "next-env.d.ts",
-    "supabase/functions/**"
+    "supabase/functions/**",
+    ".claude/**"
   ],
   "rules": {
     "no-array-constructor": "error",

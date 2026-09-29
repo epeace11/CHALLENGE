@@ -16,6 +16,15 @@ const { d1, r2 } = hostingConfig as {
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
 
+// Parallel workers run in git worktrees at <checkout>/.claude/worktrees/<name>, without their own
+// node_modules: packages resolve from the main checkout, so its root must be servable there. The
+// main checkout, in turn, never watches the worktrees (anchored here, so a worktree still watches
+// its own files).
+const projectRoot = process.cwd();
+const mainCheckout = projectRoot.match(
+  /^(.*)[\\/]\.claude[\\/]worktrees[\\/][^\\/]+$/,
+)?.[1];
+
 const localBindingConfig = {
   main: 'vinext/server/fetch-handler',
   compatibility_flags: ['nodejs_compat'],
@@ -50,9 +59,15 @@ export default defineConfig(async () => {
 
   return {
     css: { postcss: { plugins: [tailwindcss()] } },
-    server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+    server: {
+      watch: {
+        ignored: [`${projectRoot}/.claude/worktrees/**`],
+        ...(isCodexSeatbeltSandbox
+          ? { useFsEvents: false, usePolling: true }
+          : {}),
+      },
+      ...(mainCheckout ? { fs: { allow: [mainCheckout] } } : {}),
+    },
     plugins: [
       vinext(),
       sites(),
