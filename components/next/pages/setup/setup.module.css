@@ -1,0 +1,239 @@
+/* Set up and rules: controls the kit does not have. Tokens only, so light, dark and every look work. */
+/* Tailwind's layer order, stated first: if this sheet is registered before app/globals.css, the
+   components layer still sits between base (preflight) and utilities. */
+@layer properties, theme, base, components, utilities;
+
+@keyframes pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@layer components {
+  /* ── Keys: one choice (the step) or several (weekdays), filled with the accent when on ── */
+  .keys {
+    display: grid;
+    gap: 8px;
+  }
+  .keys[data-count='5'] {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .keys[data-count='7'] {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .key {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 52px;
+    padding: 0 4px;
+    border-radius: var(--nx-r-sm);
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    font: 600 17px/1.2 var(--nx-font-sans);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease);
+  }
+  .keys[data-count='7'] .key {
+    min-height: 48px;
+    font-size: 15px;
+  }
+  .key:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .key:active {
+    transform: scale(0.96);
+  }
+  .key:has(input:checked) {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+    box-shadow: 0 0 0 1px var(--nx-accent) inset;
+  }
+  .key:has(input:focus-visible),
+  .radioRow:has(input:focus-visible),
+  .chip:has(input:focus-visible) {
+    outline: 2px solid var(--nx-accent);
+    outline-offset: 3px;
+  }
+
+  /* ── Radio rows: a short list of choices, one per line ── */
+  .radioRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 60px;
+    padding: 12px 16px;
+    border-radius: var(--nx-r);
+    border: 1.5px solid var(--nx-line);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    cursor: pointer;
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease);
+  }
+  .radioRow:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .radioRow:active {
+    transform: scale(0.985);
+  }
+  .radioRow:has(input:checked) {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+  }
+  .radioDot {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--nx-line-strong);
+    transition: border-color var(--nx-base) var(--nx-ease);
+  }
+  .radioDot::after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--nx-accent);
+    transform: scale(0);
+    transition: transform var(--nx-base) var(--nx-ease);
+  }
+  .radioRow:has(input:checked) .radioDot {
+    border-color: var(--nx-accent);
+  }
+  .radioRow:has(input:checked) .radioDot::after {
+    transform: scale(1);
+  }
+
+  /* ── Filter chips (the rule library's groups) ── */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    font: 600 15px/1.2 var(--nx-font-sans);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease);
+  }
+  .chip:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .chip:active {
+    transform: scale(0.96);
+  }
+  .chip:has(input:checked) {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+  }
+
+  /* ── The library's Add / Added mark ── */
+  .addMark {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 36px;
+    padding: 0 14px 0 10px;
+    border-radius: 999px;
+    border: 1.5px solid var(--nx-accent-line);
+    color: var(--nx-accent);
+    font: 600 15px/1 var(--nx-font-sans);
+    white-space: nowrap;
+    transition:
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease);
+  }
+  .addMark[data-added] {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+  }
+  .addMark[data-added] > svg {
+    animation: pop var(--nx-slow) var(--nx-ease) both;
+  }
+
+  /* ── Rows inside one glass card, split by hairlines ── */
+  .listRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 64px;
+    padding: 14px 16px 14px 20px;
+    text-align: left;
+    color: inherit;
+    transition: background var(--nx-base) var(--nx-ease);
+  }
+  .listRow:hover {
+    background: var(--nx-accent-soft);
+  }
+  .listRow:active .listChevron {
+    transform: translateX(2px);
+  }
+  .listChevron {
+    flex-shrink: 0;
+    color: var(--nx-accent);
+    transition: transform var(--nx-base) var(--nx-ease);
+  }
+  .list > * + * {
+    border-top: 1px solid var(--nx-line);
+  }
+  .list > :first-child .listRow,
+  .list > .listRow:first-child {
+    border-top-left-radius: calc(var(--nx-r-lg) - 1px);
+    border-top-right-radius: calc(var(--nx-r-lg) - 1px);
+  }
+  .list > :last-child .listRow,
+  .list > .listRow:last-child {
+    border-bottom-left-radius: calc(var(--nx-r-lg) - 1px);
+    border-bottom-right-radius: calc(var(--nx-r-lg) - 1px);
+  }
+
+  /* ── The builder's check-in preview ── */
+  .preview {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    border-radius: var(--nx-r-lg);
+    border: 1.5px dashed var(--nx-accent-line);
+    background: var(--nx-surface-2);
+  }
+}
