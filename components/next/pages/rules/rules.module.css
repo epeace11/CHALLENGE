@@ -1,0 +1,218 @@
+/* Rules and help: pieces the kit does not have. Tokens only, so light, dark and every look work. */
+@layer components {
+  /* Short answers that open in place ("How it works"). */
+  .faq {
+    display: flex;
+    flex-direction: column;
+  }
+  .faqItem + .faqItem {
+    border-top: 1px solid var(--nx-line);
+  }
+  .faqButton {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 60px;
+    padding: 12px 4px;
+    border-radius: 12px;
+    color: var(--nx-ink);
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: left;
+  }
+  .faqButton:hover {
+    color: var(--nx-accent);
+  }
+  .faqChevron {
+    flex-shrink: 0;
+    margin-left: auto;
+    color: var(--nx-accent);
+    transition: transform var(--nx-base) var(--nx-ease);
+  }
+  .faqButton[aria-expanded='true'] .faqChevron {
+    transform: rotate(180deg);
+  }
+  /* The answer grows from nothing to its height; grid rows animate where height cannot. */
+  .faqAnswer {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows var(--nx-base) var(--nx-ease),
+      opacity var(--nx-base) var(--nx-ease);
+  }
+  .faqAnswer[data-open] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  .faqAnswer > div {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .faqBody {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0 4px 18px;
+  }
+
+  /* Options as chips that wrap (the segmented control is for 2–3 short options). */
+  .choices {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  /* Floated so the legend sits in the flow like a label, above the chips. */
+  .choicesLegend {
+    float: left;
+    width: 100%;
+    padding: 0;
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--nx-ink);
+  }
+  .choiceRow {
+    clear: both;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .choice {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 48px;
+    padding: 8px 16px;
+    border-radius: 14px;
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.25;
+    cursor: pointer;
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease);
+  }
+  .choice:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .choice:active {
+    transform: scale(0.97);
+  }
+  .choice:has(input:checked),
+  .choice[aria-pressed='true'] {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+    box-shadow: 0 0 0 1px var(--nx-accent) inset;
+  }
+  button.choice {
+    text-align: left;
+  }
+  .choice:has(input:focus-visible) {
+    outline: 2px solid var(--nx-accent);
+    outline-offset: 3px;
+  }
+  .choiceDetail {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--nx-ink-2);
+  }
+
+  /* A native select and date field in the kit's input style. */
+  .fieldLabel {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--nx-ink);
+  }
+  .control {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input {
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface);
+    color: var(--nx-ink);
+    /* The legacy stylesheet sets font on every input; like the kit's inputs, this wins. */
+    font: 17px/1.4 var(--nx-font-sans) !important;
+    appearance: none;
+    transition:
+      border-color var(--nx-base) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease);
+  }
+  .input:hover {
+    border-color: var(--nx-accent-line);
+  }
+  .input:focus-visible {
+    outline: none;
+    border-color: var(--nx-accent);
+    box-shadow: 0 0 0 4px var(--nx-accent-soft);
+  }
+  select.input {
+    padding-right: 44px;
+  }
+  .selectChevron {
+    position: absolute;
+    right: 14px;
+    pointer-events: none;
+    color: var(--nx-accent);
+  }
+
+  /* Little facts about a rule on its card: days, how you answer, screenshot. */
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .fact {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 4px 12px 4px 10px;
+    border-radius: 999px;
+    background: var(--nx-sunken);
+    color: var(--nx-ink-2);
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  .fact > svg {
+    flex-shrink: 0;
+    color: var(--nx-accent);
+  }
+
+  .groupIcon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+  }
+
+  /* Around a Glide: the slide never widens the page. Reaches into the gutters so shadows stay. */
+  .clipX {
+    margin-inline: calc(-1 * var(--nx-gutter));
+    padding-inline: var(--nx-gutter);
+    overflow-x: clip;
+  }
+}
