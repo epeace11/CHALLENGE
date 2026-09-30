@@ -1594,8 +1594,8 @@
     padding: 12px;
     border-radius: 22px;
     border: 1px solid var(--nx-glass-border);
-    /* Nearly opaque: where the blur does not apply, the page's text must not show through. */
-    background: color-mix(in srgb, var(--nx-surface) 92%, transparent);
+    /* Opaque: the page's text scrolls under this bar and must never show through its buttons. */
+    background: var(--nx-surface);
     box-shadow: var(--nx-lift-shadow);
     -webkit-backdrop-filter: blur(22px) saturate(1.2);
     backdrop-filter: blur(22px) saturate(1.2);

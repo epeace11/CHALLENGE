@@ -1,4 +1,4 @@
-// Version 1: the two gifts are revealed first as big cards, each with its own "Mark gift as given"; best streaks, badges and what next follow.
+// Version 1: the two gifts are revealed first as big cards, each with its own button ("Mark gift as given", or "Mark as received" for yours); best streaks, badges and what next follow.
 'use client';
 import { useState, type CSSProperties } from 'react';
 import {
@@ -72,13 +72,16 @@ export default function VerdictV1() {
     );
 
   const gifts = giftsOf(v);
-  const next = gifts.find((g) => !given[g.id]);
+  // The gift you give comes first: marking it is yours to do; the one you get you only confirm.
+  const next =
+    gifts.find((g) => !given[g.id] && g.from.isMe) ??
+    gifts.find((g) => !given[g.id]);
   const setOne = (id: string, value: boolean) =>
     setGiven((s) => ({ ...s, [id]: value }));
   const mark = (g: Gift) => {
     setOne(g.id, true);
     toast({
-      text: `${giftName(g)} marked as given`,
+      text: `${giftName(g)} marked as ${g.to.isMe ? 'received' : 'given'}`,
       action: { label: 'Undo', onClick: () => setOne(g.id, false) },
     });
   };
@@ -195,7 +198,7 @@ const giftName = (g: Gift) =>
 
 /**
  * One gift, revealed: who gets it and how much (the amount counts up once the card is in), who gives
- * it, and the button that marks it given. The amount opens how it was set.
+ * it, and the button that marks it given (or, for the gift you get, received). The amount opens how it was set.
  */
 function GiftCard({
   gift,
@@ -260,7 +263,7 @@ function GiftCard({
               >
                 <Check size={18} strokeWidth={2.6} aria-hidden="true" />
               </span>
-              Given
+              {gift.to.isMe ? 'Received' : 'Given'}
               <Burst />
             </span>
             <Button variant="quiet" className="ml-auto" onClick={onUndo}>
@@ -275,7 +278,7 @@ function GiftCard({
             icon={Check}
             onClick={onMark}
           >
-            Mark gift as given
+            {gift.to.isMe ? 'Mark as received' : 'Mark gift as given'}
           </Button>
         )}
       </div>

@@ -186,7 +186,7 @@ export function nextMissText(world: World, gift: Gift) {
 /* ── Gifts ─────────────────────────────────────────────────────────────── */
 
 /**
- * One gift from the side of whoever receives it: "Maya gets a $45 gift", from whose points, what
+ * One gift from the side of whoever receives it ("You get a $45 gift", "Jordan gets a $21 gift"), from whose points, what
  * the next miss adds, and who is ahead. The whole card is a button that opens the points behind it.
  */
 export function GiftCard({
@@ -208,7 +208,9 @@ export function GiftCard({
       <span className="flex items-center gap-2.5 pr-8">
         <Avatar person={recipient} size="sm" decorative />
         <span className="text-nx-lead font-semibold">
-          {recipient.name} gets a
+          {recipient.id === world.me.id
+            ? 'You get a'
+            : `${recipient.name} gets a`}
         </span>
       </span>
       <span className="mt-3 flex items-baseline gap-2">

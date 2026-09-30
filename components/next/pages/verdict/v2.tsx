@@ -77,14 +77,19 @@ export default function VerdictV2() {
     );
 
   const gifts = giftsOf(v);
-  const next = gifts.find((g) => !given[g.id]);
+  // The gift you give comes first: marking it is yours to do; the one you get you only confirm.
+  const next =
+    gifts.find((g) => !given[g.id] && g.from.isMe) ??
+    gifts.find((g) => !given[g.id]);
   const setOne = (id: string, value: boolean) =>
     setGiven((s) => ({ ...s, [id]: value }));
   const mark = (g: Gift) => {
     setOne(g.id, true);
     setBurst((b) => ({ id: g.id, n: (b?.n ?? 0) + 1 }));
     toast({
-      text: `The ${formatMoney(g.amount)} gift is marked as given`,
+      text: g.to.isMe
+        ? `The ${formatMoney(g.amount)} gift is marked as received`
+        : `Your ${formatMoney(g.amount)} gift is marked as given`,
       action: { label: 'Undo', onClick: () => setOne(g.id, false) },
     });
   };
@@ -154,7 +159,15 @@ export default function VerdictV2() {
                     ? `${g.from.person.name} gives you a ${formatMoney(g.amount)} gift`
                     : `You give ${g.to.person.name} a ${formatMoney(g.amount)} gift`
                 }
-                detail={done ? 'Given' : 'Not given yet'}
+                detail={
+                  done
+                    ? g.to.isMe
+                      ? 'Received'
+                      : 'Given'
+                    : g.to.isMe
+                      ? 'Not received yet'
+                      : 'Not given yet'
+                }
                 onClick={() => setSheet('gifts')}
               />
             );
@@ -238,7 +251,9 @@ export default function VerdictV2() {
               icon={Check}
               onClick={() => mark(next)}
             >
-              Mark the {formatMoney(next.amount)} gift as given
+              {next.to.isMe
+                ? `Mark the ${formatMoney(next.amount)} gift as received`
+                : `Mark your ${formatMoney(next.amount)} gift as given`}
             </Button>
             <Button icon={RotateCcw} onClick={() => navigate('setup')}>
               Run it again

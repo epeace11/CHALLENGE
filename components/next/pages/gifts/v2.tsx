@@ -70,9 +70,11 @@ export default function GiftsV2() {
             className="-ml-3 self-start"
             onClick={() => navigate('progress')}
           >
-            {lead.personId
-              ? `${nameOf(world, lead.personId)} is ahead by ${plural(lead.margin, 'point')}`
-              : 'You’re tied on points'}
+            {!lead.personId
+              ? 'You’re tied on points'
+              : lead.personId === me.id
+                ? `You’re ahead by ${plural(lead.margin, 'point')}`
+                : `${nameOf(world, lead.personId)} is ahead by ${plural(lead.margin, 'point')}`}
           </Button>
         </Enter>
 
@@ -81,7 +83,11 @@ export default function GiftsV2() {
             <GlassCard
               pad="lg"
               as="section"
-              aria-label={`What ${gift.recipient.name} gets, point by point`}
+              aria-label={
+                gift.recipient.id === me.id
+                  ? 'What you get, point by point'
+                  : `What ${gift.recipient.name} gets, point by point`
+              }
             >
               <h2 className="nx-section-title">
                 {gift.payer.id === me.id
@@ -138,7 +144,7 @@ export default function GiftsV2() {
 }
 
 /**
- * The two gifts side by side, recipient first ("Maya gets $45"). They are one choice: the one picked
+ * The two gifts side by side, recipient first ("You get $45"). They are one choice: the one picked
  * has an accent ring that slides across, and its receipt shows below. Native radios, so arrow keys work.
  */
 function GiftSwitch({
@@ -192,7 +198,9 @@ function GiftSwitch({
               <Check size={15} strokeWidth={3} />
             </span>
             <span className="pr-7 text-nx-body font-semibold">
-              {gift.recipient.name} gets
+              {gift.recipient.id === world.me.id
+                ? 'You get'
+                : `${gift.recipient.name} gets`}
             </span>
             <span className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
               <span className="font-nx-serif text-nx-num-lg leading-none tabular-nums">
