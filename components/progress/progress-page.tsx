@@ -64,6 +64,12 @@ export function ProgressPage() {
             <span>{won.ties === 1 ? 'tie' : 'ties'}</span>
           </div>
         </div>
+        {won.review > 0 && (
+          <p className="muted small">
+            {won.review} {won.review === 1 ? 'day' : 'days'} under review until
+            a forgiveness request is decided.
+          </p>
+        )}
         {won.recent.length === 0 && (
           <p className="muted">No day has closed yet.</p>
         )}

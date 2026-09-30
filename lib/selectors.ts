@@ -7,7 +7,7 @@ import {
 } from './rules.ts';
 import type { Week } from './weeks.ts';
 import type { Data, Entry, Point } from './types.ts';
-import { pointCosts, weeklyDone } from './progress.ts';
+import { askedPoints, costsMoney, pointCosts, weeklyDone } from './progress.ts';
 
 /** Small read-only queries over the loaded data, shared by the pages and dialogs. */
 
@@ -55,10 +55,12 @@ export const notesOf = (data: Data, uid: string, day: string) =>
 
 /* ── Points and forgiveness ─────────────────────────── */
 
-/** Points that still count: not forgiven, not voided. */
-export const activePointCount = (data: Data, uid: string) =>
-  data.points.filter((p) => p.user_id === uid && !p.forgiven && !p.voided)
+/** Points that still count: not forgiven, not voided, not waiting on a forgiveness request. */
+export const activePointCount = (data: Data, uid: string) => {
+  const asked = askedPoints(data);
+  return data.points.filter((p) => p.user_id === uid && costsMoney(p, asked))
     .length;
+};
 /** Every miss that became a point, forgiven ones included. */
 export const missedTotal = (data: Data, uid: string) =>
   data.points.filter((p) => p.user_id === uid && !p.voided).length;
@@ -85,7 +87,7 @@ export const ledgerPoints = (data: Data) =>
     .filter((p) => !p.voided || p.forgiven)
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
-/** Dollars a point added to its owner's gift: the n-th active point costs $n; forgiven and voided points cost nothing. */
+/** Dollars a point added to its owner's gift: the n-th active point costs $n; forgiven, voided and still-asked points cost nothing. */
 export const pointDollars = (data: Data, p: Point) =>
   pointCosts(data, p.user_id).get(p.id) ?? 0;
 

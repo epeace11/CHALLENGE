@@ -27,7 +27,7 @@ export function HabitView({ ruleId }: { ruleId: string }) {
             (e) =>
               e.user_id === p.id &&
               e.rule_id === r.id &&
-              tone(e, e.day, now) === 'missed',
+              tone(e, e.day, now, undefined, stats.asked) === 'missed',
           )
           .sort((a, b) => b.day.localeCompare(a.day));
         return (
@@ -45,7 +45,7 @@ export function HabitView({ ruleId }: { ruleId: string }) {
                 .filter((d) => dailyRules(p.name, d).some((x) => x.id === r.id))
                 .map((d) => {
                   const e = stats.ix.get(entryKey(p.id, r.id, d)),
-                    cls = `dot ${tone(e, d, now)}`;
+                    cls = `dot ${tone(e, d, now, undefined, stats.asked)}`;
                   return e && (e.proposed_note ?? e.note) ? (
                     <button
                       key={d}

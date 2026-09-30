@@ -365,6 +365,65 @@ assert.equal(
     3 * days().filter((d) => new Date(d + 'T12:00Z').getUTCDay() <= 4).length +
     16,
 );
+
+// A miss waiting on a forgiveness request is under review: no point, no dollars, and its day is neither won, lost nor tied until the partner decides.
+{
+  const miss = entries.find(
+      (e) =>
+        e.user_id === 'e' && e.rule_id === 'prayer' && e.day === '2026-09-16',
+    ),
+    asking = {
+      ...data,
+      points: points.map((q) =>
+        q.id === 'p1' ? { ...q, entry_id: miss.id } : q,
+      ),
+      requests: [
+        {
+          id: 'r1',
+          point_id: 'p1',
+          requester_id: 'e',
+          reason: 'sick',
+          status: 'pending',
+        },
+      ],
+    };
+  assert.equal(
+    tone(miss, miss.day, now, undefined, new Set([miss.id])),
+    'review',
+  );
+  const b = personBar(asking, erin, now);
+  assert.deepEqual(
+    { missed: b.missed, review: b.review },
+    { missed: 0, review: 4 },
+  );
+  const w = daysWon(asking, now);
+  assert.deepEqual(
+    { e: w.wins.e, k: w.wins.k, ties: w.ties, review: w.review },
+    { e: 3, k: 0, ties: 0, review: 1 },
+  );
+  assert.equal(nextMissCost(asking, erin.id), 1);
+  assert.equal(
+    habitStats(asking, erin, now).find((s) => s.rule.id === 'prayer').missed,
+    0,
+  );
+  // Sep 15 done, 16 asked (neither extends nor breaks), 17 excused, 18 done, 19 pending: a run of 3, not 4.
+  const prayer = habitStats(asking, erin, now).find(
+    (s) => s.rule.id === 'prayer',
+  );
+  assert.deepEqual(
+    { streak: prayer.streak, best: prayer.best },
+    { streak: 3, best: 3 },
+  );
+  // Denied: it counts again.
+  const denied = {
+    ...asking,
+    requests: [{ ...asking.requests[0], status: 'denied' }],
+  };
+  assert.equal(personBar(denied, erin, now).missed, 1);
+  assert.deepEqual(daysWon(denied, now).wins.e, 4);
+  assert.equal(nextMissCost(denied, erin.id), 2);
+}
+
 console.log(
-  'PASS: progress stats — tones, bars, streaks (excused keeps them), worst-first order, days won, perfect days, costs, badges.',
+  'PASS: progress stats — tones, bars, streaks (excused keeps them), worst-first order, days won (pending forgiveness undecided), perfect days, costs, badges.',
 );

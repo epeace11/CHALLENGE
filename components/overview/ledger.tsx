@@ -66,7 +66,13 @@ export function MoneyBlock() {
                   {p.forgiven ? 'Forgiven' : p.reason.replaceAll('_', ' ')}
                 </p>
               </div>
-              <span>{p.forgiven ? '$0' : `$${pointDollars(data, p)}`}</span>
+              <span>
+                {p.forgiven
+                  ? '$0'
+                  : requestFor(data, p.id)?.status === 'pending'
+                    ? 'Reviewing'
+                    : `$${pointDollars(data, p)}`}
+              </span>
               <PointAction p={p} />
             </div>
           ))}

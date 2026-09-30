@@ -12,6 +12,7 @@ import type { Draft } from '@/lib/checkin';
 import { START, clampDate, defaultDate, shift, toronto } from '@/lib/dates';
 import {
   badges,
+  askedEntries,
   daysWon,
   habitOrder,
   habitStats,
@@ -171,6 +172,7 @@ function useChallengeState(
     const habits = per((p) => habitStats(data, p, now, ix));
     return {
       ix,
+      asked: askedEntries(data),
       bars: per<Counts>((p) => personBar(data, p, now, ix)),
       habits: habits as Record<string, HabitStat[]>,
       order: habitOrder(habits),

@@ -9,7 +9,7 @@ import {
 } from './dates.ts';
 import { rules, dailyRules, weeklyRules, type Rule } from './rules.ts';
 import { targetFor, weekOf } from './weeks.ts';
-import type { Data, Entry, Profile } from './types.ts';
+import type { Data, Entry, Point, Profile } from './types.ts';
 
 /** Scoring and statistics derived from the loaded data. Pure functions, covered by tests/progress.mjs. */
 
@@ -46,6 +46,22 @@ export const emptyCounts = (): Counts => ({
 });
 export const total = (c: Counts) => tones.reduce((s, t) => s + c[t], 0);
 
+/** Points with a forgiveness request still waiting on the partner: under review, so they cost nothing and their day is neither won nor lost until the request is denied. */
+export const askedPoints = (data: Data) =>
+  new Set(
+    data.requests.filter((r) => r.status === 'pending').map((r) => r.point_id),
+  );
+/** Entries whose miss is waiting on a forgiveness request. */
+export const askedEntries = (data: Data, asked = askedPoints(data)) =>
+  new Set(
+    data.points
+      .filter((q) => asked.has(q.id) && !q.forgiven && !q.voided && q.entry_id)
+      .map((q) => q.entry_id as string),
+  );
+/** Whether a point adds to its owner's gift: not forgiven, not voided and not waiting on a forgiveness request. */
+export const costsMoney = (q: Point, asked: Set<string>) =>
+  !q.forgiven && !q.voided && !asked.has(q.id);
+
 /** Settled after its deadline (approved, auto-confirmed, forgiven, conceded or a No): no more edits or forgiveness requests. Mirrors challenge_locked in the database; unlogged misses stay open. */
 export const locked = (e: Entry | undefined, now: number) =>
   !!e &&
@@ -80,16 +96,18 @@ export const index = (data: Data) => {
 };
 export type Index = ReturnType<typeof index>;
 
-/** Status colour of one habit on one day. */
+/** Status colour of one habit on one day. `asked` holds the entries waiting on a forgiveness request, which stay under review. */
 export function tone(
   e: Entry | undefined,
   day: string,
   now: number,
   maxDate = maxLoggable(now),
+  asked?: Set<string>,
 ): Tone {
   if (day > maxDate) return 'future';
   if (!e) return closed(day, now) ? 'missed' : 'open';
   if (
+    asked?.has(e.id) ||
     e.proposed_done !== null ||
     e.status === 'pending' ||
     e.status === 'disputed'
@@ -124,10 +142,12 @@ export function personBar(
   ix = index(data),
 ): Counts {
   const c = emptyCounts(),
-    maxDate = maxLoggable(now);
+    maxDate = maxLoggable(now),
+    askedP = askedPoints(data),
+    asked = askedEntries(data, askedP);
   for (const d of days())
     for (const r of dailyRules(p.name, d))
-      c[tone(ix.get(key(p.id, r.id, d)), d, now, maxDate)]++;
+      c[tone(ix.get(key(p.id, r.id, d)), d, now, maxDate, asked)]++;
   for (const r of weeklyRules(p.name))
     for (const w of data.weeks) {
       const t = targetFor(w, r.id);
@@ -137,17 +157,21 @@ export function personBar(
       if (w.start > maxDate) c.future += t;
       else if (closed(w.end, now)) {
         const short = t - v,
-          forgiven = data.points.filter(
+          slots = data.points.filter(
             (q) =>
               q.user_id === p.id &&
               q.rule_id === r.id &&
               q.day === w.end &&
-              !q.voided &&
-              q.forgiven,
-          ).length,
-          ex = Math.min(short, forgiven);
+              !q.voided,
+          ),
+          ex = Math.min(short, slots.filter((q) => q.forgiven).length),
+          asking = Math.min(
+            short - ex,
+            slots.filter((q) => !q.forgiven && askedP.has(q.id)).length,
+          );
         c.excused += ex;
-        c.missed += short - ex;
+        c.review += asking;
+        c.missed += short - ex - asking;
       } else c.future += t - v;
     } // A week in progress is not 'open': the remaining days only resolve when the week is assessed.
   return c;
@@ -164,7 +188,7 @@ export type HabitStat = {
   reached: Record<number, string>;
   dollars: number;
 };
-/** Per daily habit: colour counts, hit rate, current and best streak (excused and open days neither break nor extend), dollars it has cost. */
+/** Per daily habit: colour counts, hit rate, current and best streak (excused, open and forgiveness-pending days neither break nor extend), dollars it has cost. */
 export function habitStats(
   data: Data,
   p: Profile,
@@ -172,7 +196,8 @@ export function habitStats(
   ix = index(data),
 ): HabitStat[] {
   const maxDate = maxLoggable(now),
-    cost = costByHabit(data, p.id);
+    cost = costByHabit(data, p.id),
+    asked = askedEntries(data);
   return rules
     .filter((r) => !r.weekly && (!r.person || r.person === p.name))
     .map((r) => {
@@ -182,8 +207,11 @@ export function habitStats(
         best = 0;
       for (const d of days()) {
         if (!dailyRules(p.name, d).some((x) => x.id === r.id)) continue;
-        const t = tone(ix.get(key(p.id, r.id, d)), d, now, maxDate);
+        const e = ix.get(key(p.id, r.id, d)),
+          t = tone(e, d, now, maxDate, asked);
         counts[t]++;
+        // A miss waiting on a forgiveness request is still under review: like an excused day it neither extends nor breaks the streak.
+        if (e && asked.has(e.id)) continue;
         if (t === 'done' || t === 'review') {
           run++;
           best = Math.max(best, run);
@@ -236,11 +264,12 @@ export function habitOrder(stats: Record<string, HabitStat[]>): Rule[] {
     .map((a) => a.rule);
 }
 
-/** Position-based cost of each active point, matching the ledger: the n-th point costs $n. */
+/** Position-based cost of each active point, matching the ledger: the n-th point costs $n. A point waiting on a forgiveness request costs nothing yet. */
 export function pointCosts(data: Data, uid: string) {
-  const m = new Map<string, number>();
+  const m = new Map<string, number>(),
+    asked = askedPoints(data);
   [...data.points]
-    .filter((q) => q.user_id === uid && !q.forgiven && !q.voided)
+    .filter((q) => q.user_id === uid && costsMoney(q, asked))
     .sort(
       (a, b) =>
         a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
@@ -271,23 +300,36 @@ const missesOn = (data: Data, p: Profile, d: string, now: number, ix: Index) =>
   dailyRules(p.name, d).filter(
     (r) => tone(ix.get(key(p.id, r.id, d)), d, now) === 'missed',
   ).length;
+/** Head-to-head by day: fewer misses takes it. A day with a forgiveness request still waiting is under review, neither won, lost nor tied, until the partner decides. */
 export function daysWon(data: Data, now: number, ix = index(data)) {
   const wins: Record<string, number> = {},
-    recent: { day: string; winner: string | null }[] = [];
-  let ties = 0;
+    recent: { day: string; winner: string | null; review?: true }[] = [],
+    asked = askedEntries(data),
+    askedOn = (p: Profile, d: string) =>
+      dailyRules(p.name, d).some((r) => {
+        const e = ix.get(key(p.id, r.id, d));
+        return !!e && asked.has(e.id);
+      });
+  let ties = 0,
+    review = 0;
   for (const p of data.profiles) wins[p.id] = 0;
   if (data.profiles.length === 2)
     for (const d of days()) {
       if (!closed(d, now)) break;
-      const [a, b] = data.profiles,
-        ma = missesOn(data, a, d, now, ix),
+      const [a, b] = data.profiles;
+      if (askedOn(a, d) || askedOn(b, d)) {
+        review++;
+        recent.push({ day: d, winner: null, review: true });
+        continue;
+      }
+      const ma = missesOn(data, a, d, now, ix),
         mb = missesOn(data, b, d, now, ix),
         winner = ma < mb ? a.id : mb < ma ? b.id : null;
       if (winner) wins[winner]++;
       else ties++;
       recent.push({ day: d, winner });
     }
-  return { wins, ties, recent: recent.slice(-7), all: recent };
+  return { wins, ties, review, recent: recent.slice(-7), all: recent };
 }
 
 /** Days with every daily habit done or excused, the longest run of them, and the run ending on the latest closed day. */
@@ -359,8 +401,9 @@ export function badges(
       .filter(Boolean)
       .sort()[0];
   const half = shift(START, 14),
+    askedP = askedPoints(data),
     halfPoints = data.points.filter(
-      (q) => q.user_id === p.id && !q.forgiven && !q.voided && q.day <= half,
+      (q) => q.user_id === p.id && costsMoney(q, askedP) && q.day <= half,
     ).length;
   const gymWeeks = data.weeks.filter(
       (w) => targetFor(w, 'gym') > 0 && closed(w.end, now),
@@ -387,6 +430,7 @@ export function badges(
   let hatTrick: string | undefined,
     winRun = 0;
   for (const r of daysWon(data, now, ix).all) {
+    if (r.review) continue; // an undecided day neither extends nor breaks the run
     winRun = r.winner === p.id ? winRun + 1 : 0;
     if (winRun === 3) hatTrick ??= r.day;
   }

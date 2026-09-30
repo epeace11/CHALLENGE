@@ -243,8 +243,8 @@ assert.deepEqual(
     missedTotal(data, 'k'),
     forgivenCount(data, 'k'),
   ],
-  [2, 2, 0],
-); // the voided point counts nowhere
+  [0, 2, 0],
+); // the voided point counts nowhere; both of Kazzy's points wait on a forgiveness request, so neither counts yet
 assert.equal(activePointOf(data, eMissed.id).id, 'p1');
 assert.equal(activePointOf(data, eExcused.id), undefined); // forgiven
 assert.equal(requestFor(data, 'p3').id, 'r1');
@@ -254,16 +254,16 @@ assert.deepEqual(
   ledgerPoints(data).map((p) => p.id),
   ['p3', 'p1', 'p2', 'p4'],
 ); // oldest first; voided and unforgiven left out
-// The n-th active point costs $n; forgiven and voided points cost nothing.
+// The n-th active point costs $n; forgiven, voided and still-asked points cost nothing.
 assert.deepEqual(
   points.map((p) => pointDollars(data, p)),
-  [1, 0, 1, 2, 0],
+  [1, 0, 0, 0, 0],
 );
 assert.deepEqual(
   standings(data).map((p) => p.id),
-  ['e', 'k'],
-);
-assert.equal(leaderOf(data), 'e');
+  ['k', 'e'],
+); // Kazzy's asked points don't count while they wait
+assert.equal(leaderOf(data), 'k');
 assert.equal(leaderOf({ ...data, points: [] }), null); // a tie has no leader
 
 // What Erin sees in Review: Kazzy's seven pending answers, both of his asks (the late correction that came with an ask is decided on the Forgiveness tab), and the dispute she is party to.

@@ -765,9 +765,19 @@ p {
 .review-card h3 {
   font-size: 24px;
 }
+/* The text wraps first; the buttons keep their width and stay on one line. */
+.review-card > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.review-card > .actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
 .review-card p:not(.eyebrow) {
   font-size: 14px;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .actions {
   display: flex;
@@ -1206,6 +1216,7 @@ a:hover {
   }
   .review-card .actions {
     margin-top: 18px;
+    flex-wrap: wrap;
   }
   .review-toolbar {
     align-items: flex-start;
