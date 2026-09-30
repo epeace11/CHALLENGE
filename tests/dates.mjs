@@ -11,6 +11,7 @@ import {
   days,
   daysLeft,
   formatDate,
+  formatDayHeading,
   formatShortDate,
   formatTime,
   formatPhotoDate,
@@ -49,6 +50,7 @@ assert.equal(daysLeft('2026-10-15'), 0);
 assert.equal(daysLeft('2026-09-01'), 30);
 
 assert.equal(formatDate('2026-09-23'), 'Wednesday, Sep 23');
+assert.equal(formatDayHeading('2026-09-28'), 'Monday, September 28');
 assert.equal(formatShortDate('2026-09-23'), 'Sep 23');
 assert.equal(formatTime('2026-09-23T19:05:00Z'), '3:05 PM');
 // Photo dates are stored as UTC instants; they read in Toronto time, so a 9:14 pm UTC shot is 5:14 pm that day, and one after 8 pm Toronto time is not pushed to the next day.

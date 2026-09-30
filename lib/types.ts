@@ -72,6 +72,7 @@ export type Data = {
   requests: Request[];
   disputes: Dispute[];
   finalizations: { user_id: string }[];
+  /** The loaded stretch of the shared journal, not necessarily all of it (lib/journal.ts). */
   journals: Journal[];
   photos: Photo[];
   weeks: Week[];

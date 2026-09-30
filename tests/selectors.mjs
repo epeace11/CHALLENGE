@@ -6,7 +6,6 @@ import {
   firstUnanswered,
   historyOf,
   recentEntries,
-  notesOf,
   activePointCount,
   missedTotal,
   forgivenCount,
@@ -225,8 +224,6 @@ const h = historyOf(data, 'e');
 assert.deepEqual([h[0].day, h[0].rule_id], ['2026-09-19', 'prayer']); // newest day first, then rule order
 assert.deepEqual([h.at(-1).day, h.at(-1).rule_id], ['2026-09-15', 'gym']);
 assert.equal(recentEntries(data, 1)[0], k16); // latest change first
-assert.equal(notesOf(data, 'e', '2026-09-15').length, 1);
-assert.equal(notesOf(data, 'k', '2026-09-15').length, 0);
 
 // Points, forgiveness and money
 assert.deepEqual(

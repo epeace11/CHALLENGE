@@ -72,6 +72,16 @@ export function formatDate(d: string) {
   });
 }
 
+/** "Wednesday, September 23": a journal day's heading. */
+export function formatDayHeading(d: string) {
+  return new Date(d + 'T12:00Z').toLocaleDateString('en-CA', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 /** "Sep 23": formatDate without the weekday. */
 export const formatShortDate = (d: string) =>
   formatDate(d).replace(/^\w+, /, '');

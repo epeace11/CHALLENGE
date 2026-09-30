@@ -22,6 +22,7 @@ import {
   type Counts,
   type HabitStat,
 } from '@/lib/progress';
+import type { JournalWindow } from '@/lib/journal';
 import type { Data, Entry, Point, Profile } from '@/lib/types';
 
 /** Pages in the navigation bars. Rules is reached from the Overview. */
@@ -45,6 +46,13 @@ type Store = {
   error: string;
   refresh: (sync?: boolean) => Promise<void>;
   setError: (e: string) => void;
+  /** The journal's loaded window and the ways to move it back (hooks/use-challenge-data.ts). */
+  journal: {
+    window: JournalWindow;
+    loadingOlder: boolean;
+    loadOlder: () => Promise<void>;
+    reach: (day: string) => Promise<void>;
+  };
 };
 
 function useChallengeState(

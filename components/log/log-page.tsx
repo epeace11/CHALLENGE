@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Check, ChevronLeft, NotebookPen } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
-import { DayJournal } from '@/components/shared/journal';
+import { JournalFeed } from '@/components/shared/journal';
 import { formatDate, formatShortDate, shift, untilLock } from '@/lib/dates';
 import { locked } from '@/lib/progress';
 import { activeRules, type Rule } from '@/lib/rules';
@@ -81,9 +81,11 @@ export function LogPage() {
               <NotebookPen size={18} />
               Journal
             </h3>
-            <span className="muted small">{formatShortDate(date)}</span>
+            <span className="muted small">
+              Adding to {formatShortDate(date)}
+            </span>
           </div>
-          <DayJournal uid={me.id} day={date} />
+          <JournalFeed day={date} focus />
         </section>
         <DeadlineNote
           date={date}

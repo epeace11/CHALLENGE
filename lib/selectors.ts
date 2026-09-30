@@ -50,9 +50,6 @@ export const recentEntries = (data: Data, n = 6) =>
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
     .slice(0, n);
 
-export const notesOf = (data: Data, uid: string, day: string) =>
-  data.journals.filter((j) => j.user_id === uid && j.day === day);
-
 /* ── Points and forgiveness ─────────────────────────── */
 
 /** Points that still count: not forgiven, not voided, not waiting on a forgiveness request. */

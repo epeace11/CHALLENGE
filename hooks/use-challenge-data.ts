@@ -1,8 +1,15 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { loadChallenge } from '@/lib/api';
-import { emptyData, type Data } from '@/lib/types';
+import { loadChallenge, notesSince, olderNotes } from '@/lib/api';
+import {
+  addOlder,
+  covers,
+  landNotes,
+  startOf,
+  type JournalWindow,
+} from '@/lib/journal';
+import { emptyData, type Data, type Journal } from '@/lib/types';
 
 /** Tables whose changes reload the app: the ones published to Realtime (supabase/setup.sql). */
 const LIVE_TABLES = [
@@ -18,6 +25,8 @@ const LIVE_TABLES = [
 /**
  * Loads the challenge for the signed-in user and keeps it fresh: every minute, on
  * window focus, and within a moment of any database change (Supabase Realtime).
+ * Journal notes load a page at a time: the newest first, then further back on request
+ * (`journal.loadOlder`, `journal.reach`). Each reload refreshes every note loaded so far.
  */
 export function useChallengeData(uid: string | undefined) {
   const [data, setData] = useState<Data>(emptyData),
@@ -30,6 +39,15 @@ export function useChallengeData(uid: string | undefined) {
   const inflight = useRef<Promise<void> | null>(null),
     queued = useRef<{ sync: boolean } | null>(null),
     loadFailed = useRef(false);
+  // Where the loaded stretch of the journal starts (lib/journal.ts). The ref is what loads read;
+  // the state re-renders the journal when it moves.
+  const windowRef = useRef<JournalWindow>(null),
+    [journalWindow, setJournalWindow] = useState<JournalWindow>(null),
+    [loadingOlder, setLoadingOlder] = useState(false);
+  const moveWindow = useCallback((w: JournalWindow) => {
+    windowRef.current = w;
+    setJournalWindow(w);
+  }, []);
   // Keyed on the user id, not the session object: token renewals must not restart the polling loop or trigger extra loads.
   const refresh = useCallback(
     (sync = true) => {
@@ -44,8 +62,13 @@ export function useChallengeData(uid: string | undefined) {
         while (next) {
           queued.current = null;
           try {
-            const loaded = await loadChallenge(next.sync);
-            setData(loaded.data);
+            const asked = windowRef.current;
+            const loaded = await loadChallenge(next.sync, asked);
+            setData((d) => ({
+              ...loaded.data,
+              journals: landNotes(d.journals, loaded.data.journals, asked),
+            }));
+            if (windowRef.current === null) moveWindow(loaded.window);
             setFinalized(loaded.finalized);
             if (loadFailed.current) {
               loadFailed.current = false;
@@ -67,7 +90,7 @@ export function useChallengeData(uid: string | undefined) {
       })();
       return inflight.current;
     },
-    [uid],
+    [uid, moveWindow],
   );
   useEffect(() => {
     // Loading is external state: the first load starts as soon as the user is known.
@@ -102,5 +125,55 @@ export function useChallengeData(uid: string | undefined) {
       void supabase.removeChannel(channel);
     };
   }, [uid, refresh]);
-  return { data, finalized, loading, error, setError, refresh };
+  // Moving the window back: one step at a time, so two steps can never leave a gap between them.
+  const steps = useRef<Promise<void>>(Promise.resolve()),
+    olderStep = useRef<Promise<void> | null>(null);
+  const stepBack = useCallback(
+    (fetch: () => Promise<{ notes: Journal[]; to: JournalWindow } | null>) => {
+      const step = steps.current.then(async () => {
+        setLoadingOlder(true);
+        try {
+          const got = await fetch();
+          if (!got) return;
+          setData((d) => ({ ...d, journals: addOlder(d.journals, got.notes) }));
+          moveWindow(got.to);
+        } catch (e) {
+          setError(
+            e instanceof Error ? e.message : 'Could not load the journal.',
+          );
+        } finally {
+          setLoadingOlder(false);
+        }
+      });
+      steps.current = step;
+      return step;
+    },
+    [moveWindow],
+  );
+  /** Loads the next page of older notes; a call while one is on its way just waits for it. */
+  const loadOlder = useCallback(() => {
+    if (olderStep.current) return olderStep.current;
+    const step = stepBack(async () => {
+      const w = windowRef.current;
+      if (w === null || w === 'all') return null;
+      const notes = await olderNotes(w);
+      return { notes, to: startOf(notes) };
+    }).finally(() => {
+      olderStep.current = null;
+    });
+    olderStep.current = step;
+    return step;
+  }, [stepBack]);
+  /** Makes sure every note on `day` is loaded (opening an older day, or writing to one). */
+  const reach = useCallback(
+    (day: string) =>
+      stepBack(async () => {
+        const w = windowRef.current;
+        if (w === null || w === 'all' || covers(w, day)) return null;
+        return { notes: await notesSince(day, w), to: { day, at: null } };
+      }),
+    [stepBack],
+  );
+  const journal = { window: journalWindow, loadingOlder, loadOlder, reach };
+  return { data, finalized, loading, error, setError, refresh, journal };
 }

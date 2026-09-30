@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/dates';
 import { activeRules } from '@/lib/rules';
 import { entriesOn, nameOf } from '@/lib/selectors';
 
-/** One person's day: each habit's answer and their journal. On your own day, a shortcut to log or edit it. */
+/** One person's day: each habit's answer, then the day's shared journal (both people's notes). On your own day, a shortcut to log or edit it. */
 export function DayView({ d, uid }: { d: string; uid: string }) {
   const { data, me, finalized, go, log, dialogs } = useChallenge();
   const name = nameOf(data, uid),
@@ -54,14 +54,16 @@ export function DayView({ d, uid }: { d: string; uid: string }) {
                   </button>
                 );
               })}
-              <p className="eyebrow journal-label">
-                <NotebookPen size={13} />
-                Journal
-              </p>
-              <DayJournal uid={p.id} day={d} />
             </section>
           );
         })}
+      <section className="day-person day-journal">
+        <p className="eyebrow journal-label">
+          <NotebookPen size={14} />
+          Journal · both of you
+        </p>
+        <DayJournal day={d} />
+      </section>
       {!finalized && uid === me.id && (
         <div className="dialog-actions">
           <button

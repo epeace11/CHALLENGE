@@ -40,6 +40,11 @@
   --text-detail-note: #33384a;
   --text-journal: #2b3040;
   --text-journal-hover: #000;
+  --journal-erin: #8a72d6;
+  --journal-kazzy: #d9668f;
+  --journal-date-bg: #ffffffe0;
+  --journal-date-border: #e3e6f0;
+  --journal-date-shadow: 0 4px 14px #23285c14;
   --text-warn: #9a6408;
   --link: #7863a7;
   --accent-text: #5b47a8;

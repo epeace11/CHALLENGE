@@ -1,7 +1,7 @@
 'use client';
 import { useChallenge } from '@/components/app/challenge-context';
 import { END, START, dayOfWeek, days, formatDate } from '@/lib/dates';
-import { dayTone, entriesOn, notesOf } from '@/lib/selectors';
+import { dayTone, entriesOn } from '@/lib/selectors';
 
 /** Leading blanks so the first day sits under its weekday, then every day. */
 const CELLS: (string | null)[] = [
@@ -16,7 +16,7 @@ export function MonthCalendar() {
     if (
       uid !== me.id ||
       entriesOn(data, me.id, d).length ||
-      notesOf(data, me.id, d).length
+      data.journals.some((n) => n.day === d)
     )
       dialogs.openDay(d, uid);
     else {
