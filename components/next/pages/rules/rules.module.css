@@ -179,29 +179,6 @@
     color: var(--nx-accent);
   }
 
-  /* Little facts about a rule on its card: days, how you answer, screenshot. */
-  .facts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .fact {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 32px;
-    padding: 4px 12px 4px 10px;
-    border-radius: 999px;
-    background: var(--nx-sunken);
-    color: var(--nx-ink-2);
-    font-size: 15px;
-    line-height: 1.3;
-  }
-  .fact > svg {
-    flex-shrink: 0;
-    color: var(--nx-accent);
-  }
-
   .groupIcon {
     display: grid;
     place-items: center;
@@ -211,12 +188,5 @@
     border-radius: 12px;
     background: var(--nx-accent-soft);
     color: var(--nx-accent);
-  }
-
-  /* Around a Glide: the slide never widens the page. Reaches into the gutters so shadows stay. */
-  .clipX {
-    margin-inline: calc(-1 * var(--nx-gutter));
-    padding-inline: var(--nx-gutter);
-    overflow-x: clip;
   }
 }

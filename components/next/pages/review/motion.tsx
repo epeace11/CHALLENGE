@@ -132,63 +132,6 @@ export function ClearList({
   );
 }
 
-const SPACE = {
-  none: ['', 'bottom-0'],
-  sm: ['pb-3', 'bottom-3'],
-  md: ['pb-4', 'bottom-4'],
-  lg: ['pb-7', 'bottom-7'],
-} as const;
-
-/**
- * One item of a ClearList. The space under it is part of the item, so folding it closes the gap
- * too. `id` must match the key and the id its outcome is recorded under.
- */
-export function ClearItem({
-  id,
-  space = 'md',
-  radius = 'lg',
-  children,
-}: {
-  id: string;
-  space?: keyof typeof SPACE;
-  /** The card's corner radius, so the stamp matches it. */
-  radius?: 'lg' | 'md';
-  children: ReactNode;
-}) {
-  const present = useIsPresent();
-  const still = useReducedMotion();
-  const outcome = useContext(OutcomeContext)[id];
-  const [pad, inset] = SPACE[space];
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{
-        opacity: outcome ? [1, 1, 0] : 0,
-        height: outcome ? [null, null, 0] : 0,
-        transition: {
-          duration: still ? 0 : DURATION.slow,
-          times: outcome ? [0, 0.55, 1] : undefined,
-          ease: EASE,
-        },
-      }}
-      transition={{ duration: still ? 0 : DURATION.base, ease: EASE }}
-      className={present ? undefined : 'pointer-events-none overflow-hidden'}
-      inert={!present}
-    >
-      <div className={cn('relative', pad)}>
-        {children}
-        {!present && outcome && !still && (
-          <Stamp
-            outcome={outcome}
-            className={cn(inset, radius === 'md' && 'rounded-nx')}
-          />
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
 type DeckCustom = { direction: 1 | -1; outcomes: Record<string, Outcome> };
 
 /**

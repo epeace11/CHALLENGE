@@ -95,7 +95,7 @@ export function KitGallery() {
   const gym = weekProgress(world, me, 'gym');
 
   return (
-    <main className="nx-main flex flex-col gap-10 pt-8 pb-16" data-wide>
+    <main className="nx-main flex flex-col gap-10 pt-8 pb-16">
       <PageTitle
         kicker="Kit"
         title="Every component"

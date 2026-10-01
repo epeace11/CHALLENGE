@@ -1,4 +1,4 @@
-// Version 1: the month calendar comes first, one person at a time (You or Jordan), with habits and badges beside it on a laptop.
+// The month calendar comes first, one person at a time (You or Jordan), then habits and badges.
 'use client';
 import { useState } from 'react';
 import { ArrowRight, Flame } from 'lucide-react';
@@ -59,7 +59,7 @@ export default function ProgressV1() {
   const open = openDay(world);
 
   return (
-    <AppFrame wide>
+    <AppFrame>
       <div className="flex flex-col gap-8 pb-6">
         <div className="flex flex-col gap-5">
           <PageTitle title="Progress" />
@@ -75,7 +75,7 @@ export default function ProgressV1() {
           />
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
+        <div className="grid gap-8">
           <Section
             title="Calendar"
             index={1}

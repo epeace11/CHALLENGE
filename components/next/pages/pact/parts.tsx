@@ -22,16 +22,10 @@ import {
   CountUp,
   DURATION,
   EASE,
-  PairAvatars,
   motion,
   useReducedMotion,
 } from '@/components/next/ui';
-import {
-  dayAndTime,
-  ruleDetail,
-  type RuleGroupView,
-  type Signer,
-} from './pact-data';
+import { dayAndTime, ruleDetail, type Signer } from './pact-data';
 
 /**
  * The action bar's glass shows the page through it when the browser skips its blur, so the bar
@@ -121,52 +115,7 @@ export function RuleLine({
   );
 }
 
-/** Who a group of rules is for: their avatars and "Both of you", "Only you" or "Only Maya". */
-export function GroupLabel({ group }: { group: RuleGroupView }) {
-  return (
-    <div className="flex items-center gap-3 pt-1 pb-1">
-      <span aria-hidden="true" className="flex">
-        {group.people.length > 1 ? (
-          <PairAvatars people={group.people} size="sm" />
-        ) : (
-          <Avatar person={group.people[0]} size="sm" decorative />
-        )}
-      </span>
-      <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
-        {group.title}
-      </h3>
-    </div>
-  );
-}
-
 /* ── Facts and terms ───────────────────────────────────────────────────── */
-
-/** A fact about the challenge ("Starts Monday, Nov 2") as a 44px pill that opens its details. */
-export function FactButton({
-  icon: Icon,
-  children,
-  onClick,
-}: {
-  icon: LucideIcon;
-  children: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="nx-press inline-flex min-h-11 items-center gap-2 rounded-full border border-nx-line-strong bg-nx-surface-2 py-2 pr-3 pl-3.5 text-left text-nx-2 font-semibold text-nx-ink hover:border-nx-accent-line hover:bg-nx-accent-soft"
-    >
-      <Icon size={18} aria-hidden="true" className="shrink-0 text-nx-accent" />
-      <span>{children}</span>
-      <ChevronRight
-        size={16}
-        aria-hidden="true"
-        className="shrink-0 text-nx-accent"
-      />
-    </button>
-  );
-}
 
 /** What signing means, one plain sentence each. */
 export function Terms({

@@ -1,16 +1,8 @@
-/* Settings: the reminder time picker (a native select dressed like the kit's fields) and the save bar
-   rising in. Motion is 220 ms and stops under prefers-reduced-motion. */
+/* Settings: the reminder time picker, a native select dressed like the kit's fields. */
 
 /* Tailwind's layer order, stated here too: if this file loads before app/globals.css, the kit's
    components layer still sits above base and below utilities. */
 @layer properties, theme, base, components, utilities;
-
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-}
 
 @layer components {
   /* The kit's SegmentedControl thumb also matches `.nx-seg-option > span`, which makes it relative
@@ -52,9 +44,5 @@
   .select:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  .rise {
-    animation: rise-in var(--nx-base) var(--nx-ease) backwards;
   }
 }

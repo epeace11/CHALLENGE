@@ -2,13 +2,7 @@
 import type { ReactNode } from 'react';
 import type { Person } from '@/lib/next/model';
 import { formatMoney, giftTotal, plural } from '@/lib/next/selectors';
-import {
-  Button,
-  CountUp,
-  NumberField,
-  Sheet,
-  Toggle,
-} from '@/components/next/ui';
+import { Button, NumberField, Sheet, Toggle } from '@/components/next/ui';
 import { StepPicker } from './fields';
 import { DEFAULT_CAP, STEPS, stepLine } from './draft';
 
@@ -83,25 +77,8 @@ export function StakesFields({
   );
 }
 
-/** The stakes preview as plain feedback, for inside a sheet where the step is being changed. */
-export function StakesReadout({ gift }: { gift: number }) {
-  return (
-    <div
-      className="flex flex-col gap-1 rounded-nx bg-nx-accent-soft px-5 py-4"
-      aria-live="polite"
-    >
-      <p className="text-nx-2 text-nx-ink-2">
-        Miss 1 in 10 check-ins and each gift will be about
-      </p>
-      <p className="font-nx-serif text-nx-num text-nx-accent">
-        <CountUp value={gift} format={formatMoney} />
-      </p>
-    </div>
-  );
-}
-
 /** How the stakes preview is worked out, in plain sentences. */
-export function StakesExplained({
+function StakesExplained({
   step,
   cap,
   stakes,

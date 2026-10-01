@@ -1,6 +1,6 @@
 # The new UI: a guide for page builders
 
-The Challenge for any couple is designed here, on sample data only, before any of it touches a database. Every page has 2 or 3 versions; Erin and Kazzy compare them at `/preview` with the 1 2 3 buttons, and Kazzy picks one per page.
+The Challenge for any couple is designed here, on sample data only, before any of it touches a database. A page in a design round has 2 or 3 versions; Erin and Kazzy compare them at `/preview` with the 1 2 3 buttons, and Kazzy picks one. The pick becomes the page's `v1.tsx` and the others are deleted, so a page that is not in a round has one version.
 
 Read this whole file before you start. Then build your versions and nothing else.
 
@@ -16,7 +16,7 @@ Read this whole file before you start. Then build your versions and nothing else
 
 ```
 components/next/pages/overview/
-  index.ts   the ordered list of versions (keep it: v1, v2, v3)
+  index.ts   the ordered list of versions (v1, v2, v3)
   v1.tsx     version 1
   v2.tsx     version 2
   v3.tsx     version 3 (only pages with 3 versions)
@@ -52,7 +52,7 @@ export default function OverviewV1() {
 }
 ```
 
-Keep `index.ts` exporting `versions` with exactly the planned number of versions. The registry imports it, so it never needs editing, and `tests/next.mjs` checks that every planned version file exists and starts with its one-line comment.
+Keep `index.ts` exporting `versions` with exactly the planned number of versions (`PLANNED` in `tests/next.mjs`; a new round raises the page's count there). In a new round, the current page stays `v1.tsx` and the new designs are `v2.tsx` and `v3.tsx`. The registry imports `index.ts`, so it never needs editing, and `tests/next.mjs` checks that every planned version file exists and starts with its one-line comment.
 
 The versions of one page should differ in a real way (what comes first, how much is on the screen, how the main action works), not in colours. Each must pass every one of Kazzy's rules on its own.
 
@@ -154,8 +154,10 @@ Page ids: `landing signup shared start say setup home invite pact practice overv
 
 Each version renders its frame (see `components/next/pages/meta.ts` for which one; the placeholder already uses it).
 
-- **`<AppFrame wide?>`** for pages inside the running challenge (Your challenges, Overview, Check in, Rules and help, Review, Gifts, Progress, Monday recap, Settings). It shows the challenge's name and "Day 19 of 30" (which opens Progress) and the navigation: Overview, Check in, Review (with the count of what waits), Progress, and More (Gifts, Rules and help, Monday recap, Settings, Your challenges). Bottom tab bar on phones, tabs in the top bar from 1024px. Content is 720px wide; `wide` allows 1080px for two columns on laptops.
-- **`<PlainFrame back? aside? width? center?>`** for everything before or outside a running challenge (Landing, Sign up, Shared link, Start, Say your rules, Set up, Invite, Pact, Practice, Verdict). A quiet top bar with "The Challenge", or a Back button with `back={{ to: 'start' }}`; `aside` for something small on the right; `width` 'narrow' (520px) | 'normal' (720px) | 'wide' (1080px); `center` centres short content vertically.
+- **`<AppFrame>`** for pages inside the running challenge (Your challenges, Overview, Check in, Rules and help, Review, Gifts, Progress, Monday recap, Settings). It shows the challenge's name and "Day 19 of 30" (which opens Progress) and the navigation: Overview, Check in, Review (with the count of what waits), Progress, and More (Gifts, Rules and help, Monday recap, Settings, Your challenges). Bottom tab bar on phones, tabs in the top bar from 1024px. Content is 720px wide.
+- **`<PlainFrame back? aside? center?>`** for everything before or outside a running challenge (Landing, Sign up, Shared link, Start, Say your rules, Set up, Invite, Pact, Practice, Verdict). A quiet top bar with "The Challenge", or a Back button with `back={{ to: 'start' }}`; `aside` for something small on the right; `center` centres short content vertically. Content is 720px wide.
+
+Every page, in either frame, is the same width (720px) with the same side margins, on phones and laptops (Kazzy's pick). There is no wider or narrower page and no two-column laptop layout.
 
 Never render a second frame or another `NxRoot`. For the main action on a long screen, use `ActionBar`, which sticks above the tab bar.
 

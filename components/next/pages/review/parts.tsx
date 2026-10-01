@@ -1,11 +1,5 @@
 'use client';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Check,
@@ -14,7 +8,6 @@ import {
   Expand,
   Undo2,
   X,
-  type LucideIcon,
 } from 'lucide-react';
 import type { Person, Proof, Rule, World } from '@/lib/next/model';
 import {
@@ -85,31 +78,6 @@ export function useSheetFor<T>(): SheetFor<T> {
       setOpen(true);
     },
   };
-}
-
-/**
- * When a decided item leaves while one of its buttons has keyboard focus, moves focus to the next
- * item's main button (marked data-review-main) instead of dropping it to the page. Runs only when
- * `key` changes, never on the first render.
- */
-export function useRefocus(ref: RefObject<HTMLElement | null>, key: unknown) {
-  const last = useRef(key);
-  useEffect(() => {
-    if (last.current === key) return;
-    last.current = key;
-    const frame = requestAnimationFrame(() => {
-      const active = document.activeElement;
-      const lost =
-        !active || active === document.body || !!active.closest('[inert]');
-      if (!lost) return;
-      const next = [
-        ...(ref.current?.querySelectorAll<HTMLElement>('[data-review-main]') ??
-          []),
-      ].find((el) => !el.closest('[inert]'));
-      next?.focus({ preventScroll: true });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [ref, key]);
 }
 
 /* ── Small pieces ──────────────────────────────────────────────────────── */
@@ -419,68 +387,6 @@ export function AnswerSummary({ item }: { item: AnswerItem | LateItem }) {
         {formatDay(item.entry.day)} ·{' '}
         {formatAnswer(item.rule, shownAnswer(item))}
       </p>
-    </div>
-  );
-}
-
-/** The day heading over the partner's answers for that day, with an action on the right ("Approve both"). */
-export function DayHeader({
-  world,
-  day,
-  action,
-}: {
-  world: World;
-  day: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-1">
-      <div className="flex flex-col gap-0.5">
-        <p className="nx-kicker">{world.partner.name}’s answers</p>
-        <h2 className="nx-section-title">{formatDay(day)}</h2>
-      </div>
-      {action}
-    </div>
-  );
-}
-
-type Choice = { label: string; icon?: LucideIcon; onClick: () => void };
-
-/**
- * An item's two buttons. On the item that comes next the main one is filled and the other
- * outlined; on the rest the main one is outlined and the other is plain text, so the screen has
- * one filled button.
- */
-export function Choices({
-  main,
-  alt,
-  next,
-  className,
-}: {
-  main: Choice;
-  alt: Choice;
-  next: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={cn('flex flex-wrap gap-3', className)}>
-      <Button
-        variant={next ? 'primary' : 'secondary'}
-        icon={main.icon}
-        onClick={main.onClick}
-        className="min-w-[8.5rem] flex-1 px-4"
-        data-review-main={next || undefined}
-      >
-        {main.label}
-      </Button>
-      <Button
-        variant={next ? 'secondary' : 'quiet'}
-        icon={alt.icon}
-        onClick={alt.onClick}
-        className="min-w-[8.5rem] flex-1 px-4"
-      >
-        {alt.label}
-      </Button>
     </div>
   );
 }

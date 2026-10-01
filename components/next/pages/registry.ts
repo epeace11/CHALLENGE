@@ -22,7 +22,7 @@ import { versions as verdict } from './verdict';
 import { versions as settings } from './settings';
 
 /**
- * Every page of the new product (19 pages, 43 versions): id, title, group, frame, how many versions,
+ * Every page of the new product (19 pages, one picked version each): id, title, group, frame, how many versions,
  * and the version components from each folder's index.ts. Workers edit only their own page folder;
  * this file never needs to change.
  */

@@ -8,7 +8,6 @@ import {
   Button,
   CountUp,
   NumberField,
-  ProgressBar,
   ProofStrip,
   Sheet,
   StatusPill,
@@ -17,7 +16,6 @@ import {
 import { useWorld } from '@/components/next/world';
 import { cn } from '@/lib/utils';
 import {
-  PHASES,
   answerText,
   ladderLine,
   needsShot,
@@ -40,57 +38,6 @@ export function PracticeBanner({ className }: { className?: string }) {
       <FlaskConical size={20} className="shrink-0" aria-hidden="true" />
       Practice. Nothing here is saved.
     </p>
-  );
-}
-
-/** Answer, Review, Gift: where the run is. Each bar fills as its part goes. */
-export function PhaseBar({
-  p,
-  className,
-}: {
-  p: Practice;
-  className?: string;
-}) {
-  const at = PHASES.findIndex((x) => x.id === p.phase);
-  const n = p.questions.length,
-    reviewed = p.result.reviewed.length;
-  const fill = (i: number) =>
-    i < at
-      ? 1
-      : i > at
-        ? 0
-        : p.phase === 'answer'
-          ? p.saved / n
-          : p.phase === 'review'
-            ? reviewed
-              ? p.revealed / reviewed
-              : 1
-            : 1;
-  return (
-    <ol className={cn('grid grid-cols-3 gap-2', className)}>
-      {PHASES.map((phase, i) => (
-        <li
-          key={phase.id}
-          className="flex flex-col gap-1.5"
-          aria-current={i === at ? 'step' : undefined}
-        >
-          <ProgressBar
-            value={fill(i)}
-            max={1}
-            size="sm"
-            label={`${phase.label}: ${i < at ? 'done' : i === at ? 'now' : 'next'}`}
-          />
-          <span
-            className={cn(
-              'text-nx-min font-semibold',
-              i === at ? 'text-nx-accent' : 'text-nx-ink-2',
-            )}
-          >
-            {phase.label}
-          </span>
-        </li>
-      ))}
-    </ol>
   );
 }
 

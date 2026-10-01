@@ -1,4 +1,4 @@
-// Version 1: one calm form in three sections (Details, Stakes, Rules), everything changed in place.
+// One calm form in three sections (Details, Stakes, Rules), everything changed in place.
 'use client';
 import { useState } from 'react';
 import { ArrowRight, PencilLine, Plus } from 'lucide-react';

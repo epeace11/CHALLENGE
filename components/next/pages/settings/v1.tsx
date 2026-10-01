@@ -1,4 +1,4 @@
-// Version 1: a calm list of grouped rows that show each setting's value; tapping one opens a sheet to change just that.
+// A calm list of grouped rows that show each setting's value; tapping one opens a sheet to change just that.
 'use client';
 import { useState } from 'react';
 import { Clock3, Download, LogOut, Trash2 } from 'lucide-react';

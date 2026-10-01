@@ -153,22 +153,3 @@ export function factsOf(
     { label: 'Screenshot', value: PROOF_WORD[rule.proof] },
   ];
 }
-
-/** The same facts as short pieces for one line in a compact row; `pending` marks days not set yet. */
-export function factsParts(w: World, rule: Rule, open: boolean) {
-  return [
-    { text: whoWord(w, rule.who) },
-    open
-      ? { text: 'Days not set yet', pending: true }
-      : { text: formatWeekdays(rule.days) },
-    { text: shortAnswer(rule) },
-    {
-      text:
-        rule.proof === 'none'
-          ? 'No screenshot'
-          : rule.proof === 'required'
-            ? 'Screenshot'
-            : 'Screenshot optional',
-    },
-  ];
-}

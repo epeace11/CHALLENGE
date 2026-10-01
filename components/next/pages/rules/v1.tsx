@@ -1,4 +1,4 @@
-// Version 1: one page. Rules as rows grouped by who, then the deadline and stakes, then short answers; Propose a change stays pinned.
+// One page. Rules as rows grouped by who, then the deadline and stakes, then short answers; Propose a change stays pinned.
 'use client';
 import { useState } from 'react';
 import { Plus } from 'lucide-react';

@@ -1,17 +1,10 @@
-/* The verdict: cards reveal one after another, amounts flip in, and marking a gift as given sets off a
+/* The verdict: amounts flip in, and marking a gift as given sets off a
    small burst. Every animation is 300 ms or less, never holds a tap, and stops under
    prefers-reduced-motion (styles/next.css switches .nx animations off; the burst then never shows). */
 
 /* Tailwind's layer order, stated here too: if this file loads before app/globals.css, the kit's
    components layer still sits above base and below utilities. */
 @layer properties, theme, base, components, utilities;
-
-@keyframes reveal-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.97);
-  }
-}
 
 @keyframes flip-in {
   from {
@@ -46,10 +39,6 @@
 }
 
 @layer components {
-  .reveal {
-    animation: reveal-in var(--nx-slow) var(--nx-ease) backwards;
-    animation-delay: var(--delay, 0ms);
-  }
   .flip {
     display: inline-block;
     transform-origin: 50% 60%;

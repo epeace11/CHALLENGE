@@ -1,49 +1,28 @@
-/* Start a challenge: the look-coloured parts of the choice cards. Colours come from the look's
-   tokens (--nx-primary, --nx-accent…), set by data-look on each card, so light, dark and every look
-   work without colours of their own. */
+/* Start a challenge: the look-coloured parts of the rows. Colours come from the look's tokens
+   (--nx-primary, --nx-accent…), set by data-look on each row, so light, dark and every look work
+   without colours of their own. */
 /* Tailwind's layer order, stated first: if this sheet is registered before app/globals.css, the
    components layer still sits between base (preflight) and utilities. */
 @layer properties, theme, base, components, utilities;
 
 @layer components {
-  /* The coloured band at the top of a theme card. */
-  .band {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    min-height: 64px;
-    padding: 14px 12px 12px 16px;
+  /* The page's main way to start: a row filled with the accent, like a primary button. */
+  .filled {
+    border-radius: var(--nx-r-lg);
+    border: 1px solid transparent;
     background: var(--nx-primary);
     color: var(--nx-on-accent);
+    box-shadow: var(--nx-primary-shadow);
   }
-  @media (min-width: 640px) {
-    .band {
-      min-height: 80px;
-      padding: 18px 16px 14px 20px;
-    }
+  .filled:hover:not(:disabled) {
+    background: var(--nx-primary-hover);
   }
-  .bandIcon {
-    transition: transform var(--nx-base) var(--nx-ease);
+  .filled :global(.nx-row-chevron) {
+    color: inherit;
   }
-  .card:hover .bandIcon {
-    transform: translateY(-2px) scale(1.06);
-  }
-  .card:hover .bandChevron {
-    transform: translateX(2px);
-  }
-  .bandChevron {
-    flex-shrink: 0;
-    transition: transform var(--nx-base) var(--nx-ease);
-  }
-
-  /* A card that is one button, laid out as a column (the kit's .nx-tappable is a row). */
-  .card {
-    flex-direction: column;
-    align-items: stretch;
-    height: 100%;
-    overflow: hidden;
+  .filled .dot {
+    background: color-mix(in srgb, var(--nx-on-accent) 22%, transparent);
+    color: inherit;
   }
 
   /* A small square in the look's colour, with the choice's icon. */
@@ -69,23 +48,27 @@
     display: grid;
     place-items: center;
     flex-shrink: 0;
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: var(--nx-accent-soft);
     color: var(--nx-accent-strong);
   }
 
-  /* The four themes' colours, overlapping, on the "A theme" tile. */
-  .stackDot {
-    width: 30px;
-    height: 30px;
+  /* The four themes' colours as a 2-by-2 square, the size of the other rows' icons. */
+  .dots {
+    display: grid;
+    grid-template-columns: repeat(2, 20px);
+    gap: 4px;
     flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    place-content: center;
+  }
+  .stackDot {
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: var(--nx-primary);
-    box-shadow: 0 0 0 2.5px var(--nx-surface);
-  }
-  .stackDot + .stackDot {
-    margin-left: -8px;
   }
 }

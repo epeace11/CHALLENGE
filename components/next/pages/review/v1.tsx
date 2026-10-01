@@ -1,169 +1,266 @@
-// Version 1: everything on one page, answers grouped by day; the first card has the filled button, "Approve both" sits in the day's heading.
+// One thing at a time on a big card with a large screenshot; its two buttons stay pinned at the bottom.
 'use client';
-import { useRef, type ReactElement } from 'react';
-import { Check, CheckCheck } from 'lucide-react';
+import { useState } from 'react';
+import { Check, CheckCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
-import { Button, Enter, GlassCard, PageTitle } from '@/components/next/ui';
-import { ClearItem, ClearList, OutcomeContext } from './motion';
 import {
-  AnswerBody,
+  ActionBar,
+  Avatar,
+  Button,
+  Enter,
+  GlassCard,
+  IconButton,
+  PageTitle,
+  RowButton,
+  Sheet,
+  StatusPill,
+} from '@/components/next/ui';
+import { formatDayShort, formatWeekday } from '@/lib/next/selectors';
+import { cn } from '@/lib/utils';
+import { Deck, OutcomeContext } from './motion';
+import {
   CaughtUp,
-  Choices,
-  DayHeader,
-  DisputeBody,
   DisputeSheet,
-  ForgivenessBody,
+  ItemBody,
   ReplySheet,
   WaitingForPartner,
-  useRefocus,
   useSheetFor,
 } from './parts';
 import {
   ACTIONS,
   approveAllLabel,
+  shortTitle,
   type AnswerItem,
   type DisputeItem,
+  type ReviewItem,
 } from './queue';
 import { useReview } from './use-review';
 
-/** Review, version 1. */
-export default function ReviewV1() {
+const KIND: Record<ReviewItem['kind'], string> = {
+  answer: 'Answer',
+  correction: 'Late answer',
+  forgiveness: 'Forgiveness',
+  dispute: 'Dispute on your answer',
+};
+
+const dayOf = (item: ReviewItem) =>
+  item.kind === 'forgiveness' ? item.point.day : item.entry.day;
+
+/** Review, version 2. */
+export default function ReviewV2() {
   const review = useReview();
   const { world, state } = review;
+  const todo = state.todo;
+  const ids = todo.map((i) => i.id);
+  const open = new Set(ids);
+
+  // Everything met on this visit, in order, so the steps show what is done and new items join the end.
+  const [order, setOrder] = useState<string[]>(ids);
+  const fresh = ids.filter((id) => !order.includes(id));
+  const known = fresh.length ? [...order, ...fresh] : order;
+  if (fresh.length) setOrder(known);
+
+  // The card on screen: the one picked, or once it is decided, the next one still open.
+  const [pick, setPick] = useState<string | null>(null);
+  const from = pick ? known.indexOf(pick) : -1;
+  const currentId =
+    (pick && open.has(pick) ? pick : undefined) ??
+    known.slice(from + 1).find((id) => open.has(id)) ??
+    known.find((id) => open.has(id)) ??
+    null;
+  const current = todo.find((i) => i.id === currentId) ?? null;
+  const index = currentId ? known.indexOf(currentId) : -1;
+  const prev = known
+    .slice(0, Math.max(0, index))
+    .reverse()
+    .find((id) => open.has(id));
+  const next = known.slice(index + 1).find((id) => open.has(id));
+
+  // Cards glide forward, or back when the new one comes earlier (Previous, or Undo).
+  const [shown, setShown] = useState<{ id: string | null; direction: 1 | -1 }>({
+    id: currentId,
+    direction: 1,
+  });
+  if (shown.id !== currentId) {
+    const back =
+      currentId !== null &&
+      shown.id !== null &&
+      known.indexOf(currentId) < known.indexOf(shown.id);
+    setShown({ id: currentId, direction: back ? -1 : 1 });
+  }
+
+  const [listOpen, setListOpen] = useState(false);
   const disputing = useSheetFor<AnswerItem>();
   const replying = useSheetFor<DisputeItem>();
-  const list = useRef<HTMLDivElement>(null);
-  useRefocus(list, state.todo.length);
 
-  // The one filled button belongs to whatever comes first; "Approve both" stays outlined in
-  // the day's heading, so both show on the first screen.
-  const next = state.todo[0]?.id;
+  /** Acts on the card on screen, remembering it so the next open one follows. */
+  const decide = (item: ReviewItem, main: boolean) => {
+    setPick(item.id);
+    if (item.kind === 'answer')
+      return main ? review.approve(item) : disputing.show(item);
+    if (item.kind === 'correction')
+      return main ? review.approve(item) : review.declineLate(item);
+    if (item.kind === 'forgiveness')
+      return main ? review.forgive(item) : review.decline(item);
+    return main ? review.concede(item) : replying.show(item);
+  };
 
-  const blocks: ReactElement[] = [];
-  for (const group of state.days) {
-    const several = group.items.length > 1;
-    blocks.push(
-      <ClearItem key={`day:${group.day}`} id={`day:${group.day}`} space="sm">
-        <DayHeader
-          world={world}
-          day={group.day}
-          action={
-            several ? (
-              <Button
-                icon={CheckCheck}
-                className="px-4"
-                onClick={() => review.approveAll(group.items)}
-              >
-                {approveAllLabel(group.items.length)}
-              </Button>
-            ) : undefined
-          }
-        />
-      </ClearItem>,
-    );
-    group.items.forEach((item, i) =>
-      blocks.push(
-        <ClearItem
-          key={item.id}
-          id={item.id}
-          space={i === group.items.length - 1 ? 'lg' : 'md'}
+  // "Approve both" on an answer card while its day has several answers waiting.
+  const day =
+    current?.kind === 'answer'
+      ? state.days.find((g) => g.day === current.entry.day)
+      : undefined;
+  const approveDay =
+    current && day && day.items.length > 1 ? (
+      <div className="mt-6 border-t border-nx-line pt-3">
+        <Button
+          variant="quiet"
+          icon={CheckCheck}
+          className="-ml-3"
+          onClick={() => {
+            setPick(current.id);
+            review.approveAll(day.items);
+          }}
         >
-          <GlassCard as="article">
-            <AnswerBody world={world} item={item} />
-            <Choices
-              className="mt-6"
-              next={next === item.id}
-              main={{
-                label: 'Approve',
-                icon: Check,
-                onClick: () => review.approve(item),
-              }}
-              alt={{ label: 'Dispute', onClick: () => disputing.show(item) }}
-            />
-          </GlassCard>
-        </ClearItem>,
-      ),
-    );
-  }
-  for (const item of state.late)
-    blocks.push(
-      <ClearItem key={item.id} id={item.id}>
-        <GlassCard as="article">
-          <AnswerBody world={world} item={item} />
-          <Choices
-            className="mt-6"
-            next={next === item.id}
-            main={{
-              label: ACTIONS.correction.main,
-              icon: Check,
-              onClick: () => review.approve(item),
-            }}
-            alt={{
-              label: ACTIONS.correction.alt,
-              onClick: () => review.declineLate(item),
-            }}
-          />
-        </GlassCard>
-      </ClearItem>,
-    );
-  for (const item of state.forgiveness)
-    blocks.push(
-      <ClearItem key={item.id} id={item.id}>
-        <GlassCard as="article">
-          <ForgivenessBody world={world} item={item} />
-          <Choices
-            className="mt-6"
-            next={next === item.id}
-            main={{
-              label: ACTIONS.forgiveness.main,
-              onClick: () => review.forgive(item),
-            }}
-            alt={{
-              label: ACTIONS.forgiveness.alt,
-              onClick: () => review.decline(item),
-            }}
-          />
-        </GlassCard>
-      </ClearItem>,
-    );
-  for (const item of state.disputes)
-    blocks.push(
-      <ClearItem key={item.id} id={item.id}>
-        <GlassCard as="article">
-          <DisputeBody world={world} item={item} />
-          <Choices
-            className="mt-6"
-            next={next === item.id}
-            main={{
-              label: ACTIONS.dispute.main,
-              onClick: () => review.concede(item),
-            }}
-            alt={{
-              label: ACTIONS.dispute.alt,
-              onClick: () => replying.show(item),
-            }}
-          />
-        </GlassCard>
-      </ClearItem>,
-    );
+          {approveAllLabel(day.items.length)} for {formatWeekday(day.day)}
+        </Button>
+      </div>
+    ) : null;
+
+  const position = `${index + 1} of ${known.length}`;
 
   return (
     <AppFrame>
       <OutcomeContext.Provider value={review.outcomes}>
-        <div className="flex flex-col gap-6 pb-4">
+        <div className="flex flex-col gap-5">
           <PageTitle title="Review" />
-          <div ref={list}>
-            <Enter index={1}>
-              <ClearList>{blocks}</ClearList>
-              {state.todo.length === 0 && <CaughtUp world={world} />}
+
+          {current && (
+            <Enter index={1} className="flex items-center gap-2">
+              <IconButton
+                icon={ChevronLeft}
+                label="Previous"
+                className="disabled:cursor-not-allowed disabled:opacity-35"
+                disabled={!prev}
+                onClick={() => prev && setPick(prev)}
+              />
+              <button
+                type="button"
+                className="nx-press flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-nx-sm px-2 py-1.5 hover:bg-nx-accent-soft"
+                onClick={() => setListOpen(true)}
+              >
+                <span className="flex w-full gap-1.5" aria-hidden="true">
+                  {known.map((id) => (
+                    <span
+                      key={id}
+                      className={cn(
+                        'h-2 flex-1 rounded-full transition-colors duration-300 ease-nx',
+                        !open.has(id)
+                          ? 'bg-nx-done-bar'
+                          : id === currentId
+                            ? 'bg-nx-accent'
+                            : 'bg-nx-sunken',
+                      )}
+                    />
+                  ))}
+                </span>
+                <span className="text-nx-2 font-semibold text-nx-accent">
+                  {position} · See all
+                </span>
+              </button>
+              <IconButton
+                icon={ChevronRight}
+                label="Next"
+                className="disabled:cursor-not-allowed disabled:opacity-35"
+                disabled={!next}
+                onClick={() => next && setPick(next)}
+              />
             </Enter>
-          </div>
+          )}
+
           <Enter index={2}>
+            <Deck id={current?.id ?? null} direction={shown.direction}>
+              {current && (
+                <GlassCard pad="lg" as="article">
+                  <ItemBody world={world} item={current} size="lg" showDay />
+                  {approveDay}
+                </GlassCard>
+              )}
+            </Deck>
+            {!current && <CaughtUp world={world} />}
+          </Enter>
+
+          <Enter index={3}>
             <WaitingForPartner review={review} />
           </Enter>
+
+          {current && (
+            <ActionBar className="flex-row-reverse items-stretch">
+              <Button
+                variant="primary"
+                size="lg"
+                icon={
+                  current.kind === 'answer' || current.kind === 'correction'
+                    ? Check
+                    : undefined
+                }
+                className="flex-1 px-3"
+                onClick={() => decide(current, true)}
+              >
+                {ACTIONS[current.kind].main}
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                className="flex-1 px-3"
+                onClick={() => decide(current, false)}
+              >
+                {ACTIONS[current.kind].alt}
+              </Button>
+            </ActionBar>
+          )}
         </div>
       </OutcomeContext.Provider>
 
+      <Sheet
+        open={listOpen}
+        onOpenChange={setListOpen}
+        title="Waiting for you"
+        footer={
+          <Button variant="primary" onClick={() => setListOpen(false)}>
+            Done
+          </Button>
+        }
+      >
+        <ul className="flex flex-col gap-2.5">
+          {todo.map((item) => (
+            <li key={item.id}>
+              <RowButton
+                glass={false}
+                leading={
+                  <Avatar
+                    person={item.kind === 'dispute' ? world.me : world.partner}
+                    size="sm"
+                    decorative
+                  />
+                }
+                title={shortTitle(item.rule)}
+                detail={`${KIND[item.kind]} · ${formatDayShort(dayOf(item))}`}
+                trailing={
+                  item.id === currentId ? (
+                    <StatusPill status="open" label="On screen" />
+                  ) : undefined
+                }
+                aria-current={item.id === currentId || undefined}
+                onClick={() => {
+                  setPick(item.id);
+                  setListOpen(false);
+                }}
+              />
+            </li>
+          ))}
+        </ul>
+      </Sheet>
       <DisputeSheet sheet={disputing} review={review} />
       <ReplySheet sheet={replying} review={review} />
     </AppFrame>

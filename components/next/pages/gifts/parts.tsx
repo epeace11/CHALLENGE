@@ -6,7 +6,7 @@ import {
   useIsPresent,
   useReducedMotion,
 } from 'motion/react';
-import { ChevronRight, CircleHelp, Plus } from 'lucide-react';
+import { ChevronRight, CircleHelp } from 'lucide-react';
 import type { Person, World } from '@/lib/next/model';
 import {
   dateIn,
@@ -348,86 +348,6 @@ export function PointRowButton({
         {formatMoney(row.cost)}
       </span>
       <ChevronRight className="nx-row-chevron" size={22} aria-hidden="true" />
-    </button>
-  );
-}
-
-/** A point as a receipt line: the rule, its day and why, and its price. */
-export function ReceiptLine({
-  row,
-  onOpen,
-  children,
-}: {
-  row: PointRow;
-  onOpen: () => void;
-  /** Shown under the line, such as a request to decide. */
-  children?: ReactNode;
-}) {
-  return (
-    <li className="border-b border-dashed border-nx-line-strong last:border-b-0">
-      <button
-        type="button"
-        className="nx-press -mx-2 flex min-h-14 w-[calc(100%+1rem)] items-center gap-3 rounded-nx-sm px-2 py-2.5 text-left hover:bg-nx-accent-soft"
-        onClick={onOpen}
-      >
-        <span className="flex min-w-0 flex-1 flex-col">
-          <Struck on={row.forgiven} className="text-nx-body">
-            {row.rule.title}
-          </Struck>
-          <span className="text-nx-2 text-nx-ink-2">
-            {formatDate(row.point.day)} ·{' '}
-            {row.forgiven
-              ? 'Forgiven'
-              : row.pending
-                ? `${row.why} · Forgiveness asked`
-                : row.why}
-          </span>
-        </span>
-        <span
-          className={cn(
-            'shrink-0 font-nx-serif text-nx-h3 tabular-nums',
-            row.forgiven && 'text-nx-ink-2',
-          )}
-        >
-          {formatMoney(row.cost)}
-        </span>
-        <ChevronRight className="nx-row-chevron" size={20} aria-hidden="true" />
-      </button>
-      {children}
-    </li>
-  );
-}
-
-/** The last, dashed line of a receipt: what the payer's next miss would add. */
-export function NextMissLine({
-  world,
-  gift,
-  onClick,
-}: {
-  world: World;
-  gift: Gift;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className="nx-press mt-3 flex min-h-14 w-full items-center gap-3 rounded-nx-sm border-2 border-dashed border-nx-line-strong px-3 py-2 text-left hover:border-nx-accent-line hover:bg-nx-accent-soft"
-      onClick={onClick}
-    >
-      <Plus
-        size={18}
-        strokeWidth={2.4}
-        className="shrink-0 text-nx-ink-2"
-        aria-hidden="true"
-      />
-      <span className="min-w-0 flex-1 text-nx-body text-nx-ink-2">
-        {gift.nextMiss > 0
-          ? `${whose(world, gift.payer)} next miss`
-          : `At the ${formatMoney(world.challenge.cap ?? 0)} cap`}
-      </span>
-      <span className="shrink-0 font-nx-serif text-nx-h3 text-nx-ink-2 tabular-nums">
-        +{formatMoney(gift.nextMiss)}
-      </span>
     </button>
   );
 }

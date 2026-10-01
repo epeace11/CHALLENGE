@@ -37,9 +37,9 @@ import {
 } from './ui';
 
 /**
- * The design preview at /preview: every page of the new product on sample data, with 2 or 3
- * versions each. Without a page it lists them all; with one it shows the page under a slim version
- * bar (All pages, the page's name, 1 2 3, light/dark and the look). Page and version live in the
+ * The design preview at /preview: every page of the new product on sample data; a page in a design
+ * round has 2 or 3 versions. Without a page it lists them all; with one it shows the page under a
+ * slim bar (All pages, the page's name, 1 2 3 when it has versions, light/dark and the look). Page and version live in the
  * URL (?page=overview&v=2); each page remembers its last version in this browser. ?kit shows every
  * kit component.
  */
@@ -299,18 +299,19 @@ function VersionBar({
       <span className="nx-pb-sep hidden sm:block" aria-hidden="true" />
       <span className="nx-pb-title">{title}</span>
       <div className="flex gap-1">
-        {Array.from({ length: count }, (_, i) => i + 1).map((v) => (
-          <button
-            key={v}
-            type="button"
-            className="nx-pb-btn nx-pb-version"
-            aria-pressed={v === version}
-            aria-label={`Version ${v}`}
-            onClick={() => onVersion(v)}
-          >
-            {v}
-          </button>
-        ))}
+        {count > 1 &&
+          Array.from({ length: count }, (_, i) => i + 1).map((v) => (
+            <button
+              key={v}
+              type="button"
+              className="nx-pb-btn nx-pb-version"
+              aria-pressed={v === version}
+              aria-label={`Version ${v}`}
+              onClick={() => onVersion(v)}
+            >
+              {v}
+            </button>
+          ))}
       </div>
       <span className="nx-pb-sep hidden sm:block" aria-hidden="true" />
       <ThemeButton className="nx-pb-btn" />
@@ -432,7 +433,7 @@ function PageIndex({
   look: Look;
   onLook: (look: Look) => void;
 }) {
-  const total = PAGES.reduce((s, p) => s + p.components.length, 0);
+  const choosing = PAGES.some((p) => p.components.length > 1);
   return (
     <main className="nx-main pt-6 pb-16 sm:pt-10">
       <header className="nx-enter">
@@ -446,8 +447,8 @@ function PageIndex({
           />
         </div>
         <p className="mt-3 text-nx-body text-nx-ink-2">
-          {PAGES.length} pages, {total} versions, all on sample data. Open a
-          page, then switch versions with 1, 2 and 3.
+          {PAGES.length} pages, all on sample data.
+          {choosing && ' Pages with versions switch with 1, 2 and 3.'}
         </p>
       </header>
       {PAGE_GROUPS.map((group, g) => (
@@ -457,7 +458,11 @@ function PageIndex({
               <li key={p.id}>
                 <RowButton
                   title={p.title}
-                  detail={`${p.components.length} versions`}
+                  detail={
+                    p.components.length > 1
+                      ? `${p.components.length} versions`
+                      : undefined
+                  }
                   onClick={() => onOpen(p.id)}
                 />
               </li>

@@ -567,32 +567,29 @@ assert.deepEqual(openCheckins(w, MAYA).length, 3);
 
 /* ── Pages: every planned version exists, and the rules for all new UI hold ─ */
 
+// Kazzy picked one version of every page (components/next/DESIGN-LOG.md); a new design round raises a count.
 const PLANNED = {
-  landing: 2,
-  signup: 2,
-  shared: 2,
-  start: 3,
-  say: 2,
-  setup: 2,
-  home: 2,
-  invite: 3,
-  pact: 2,
-  practice: 2,
-  overview: 3,
-  log: 3,
-  rules: 2,
-  review: 3,
-  gifts: 2,
-  progress: 2,
-  recap: 2,
-  verdict: 2,
-  settings: 2,
+  landing: 1,
+  signup: 1,
+  shared: 1,
+  start: 1,
+  say: 1,
+  setup: 1,
+  home: 1,
+  invite: 1,
+  pact: 1,
+  practice: 1,
+  overview: 1,
+  log: 1,
+  rules: 1,
+  review: 1,
+  gifts: 1,
+  progress: 1,
+  recap: 1,
+  verdict: 1,
+  settings: 1,
 };
 assert.equal(Object.keys(PLANNED).length, 19);
-assert.equal(
-  Object.values(PLANNED).reduce((s, v) => s + v, 0),
-  43,
-);
 const pagesDir = join(root, 'components/next/pages');
 const registry = readFileSync(join(pagesDir, 'registry.ts'), 'utf8');
 for (const [id, count] of Object.entries(PLANNED)) {

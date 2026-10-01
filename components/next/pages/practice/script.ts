@@ -25,12 +25,6 @@ export type Answer = {
 };
 
 export type Phase = 'answer' | 'review' | 'gift';
-export const PHASES: { id: Phase; label: string }[] = [
-  { id: 'answer', label: 'Answer' },
-  { id: 'review', label: 'Review' },
-  { id: 'gift', label: 'Gift' },
-];
-
 /** "Social media and games" from "Social media and games, 60 min or less". */
 export const shortTitle = (rule: Pick<Rule, 'title'>) =>
   rule.title.split(', ')[0];
@@ -115,8 +109,6 @@ export function outcomes(w: World, answers: Answer[]) {
     example: questions.find((q) => q.rule.id === miss.ruleId)?.rule ?? null,
   };
 }
-
-export type Outcomes = ReturnType<typeof outcomes>;
 
 /** "See what the miss costs", worded for how many misses there are. */
 export const costButton = (misses: number) =>

@@ -7,8 +7,6 @@ import {
   BookOpen,
   CalendarDays,
   Cannabis,
-  Dumbbell,
-  Flame,
   Footprints,
   GlassWater,
   House,
@@ -91,26 +89,6 @@ export function LookLabel({
       {lookName(look)} look
     </p>
   );
-}
-
-const LOOK_ICON: Record<Look, LucideIcon> = {
-  classic: ListChecks,
-  'seventy-five': Flame,
-  sleep: MoonStar,
-  dry: WineOff,
-  fitness: Dumbbell,
-};
-
-/** The look's picture, drawn large and faint on a cover. Decorative. */
-export function LookIcon({
-  look,
-  className,
-}: {
-  look: Look;
-  className?: string;
-}) {
-  const Icon = LOOK_ICON[look] ?? ListChecks;
-  return <Icon className={className} strokeWidth={1.5} aria-hidden="true" />;
 }
 
 /* ── Rows ──────────────────────────────────────────────────────────────── */

@@ -1,26 +1,26 @@
-// Version 1: the winner as the headline, then one tappable line per result with both of you side by side; this week and the Monday notification follow.
+// The Monday notification comes first, as it arrived, then the score and the gifts as four big numbers and one card for each result.
 'use client';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import {
   ArrowRight,
   CalendarCheck,
-  ChevronRight,
+  CalendarDays,
   Dumbbell,
   Flame,
-  Gift,
   Trophy,
 } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
+  ActionBar,
   Button,
   EmptyState,
   GlassCard,
   PageTitle,
-  RowButton,
   Section,
-  Stagger,
+  StatButton,
+  TapCard,
 } from '@/components/next/ui';
 import { formatMoney, plural } from '@/lib/next/selectors';
 import {
@@ -33,9 +33,10 @@ import {
 } from './data';
 import { NotificationCard, NotificationSheet } from './notification';
 import { IconBubble, WeekBar } from './parts';
+import styles from './recap.module.css';
 
-/** Monday recap, version 1. */
-export default function RecapV1() {
+/** Monday recap, version 2. */
+export default function RecapV2() {
   const world = useWorld();
   const { navigate } = useNav();
   const [notify, setNotify] = useState(true);
@@ -64,156 +65,141 @@ export default function RecapV1() {
 
   const action = recapAction(world);
   const note = notification(world, v);
-  const won = (personId: string) => v.winner === personId;
-  const sameStreak =
-    v.streaks.me &&
-    v.streaks.partner &&
-    v.streaks.me.rule.id === v.streaks.partner.rule.id;
+  const points = (n: number) => plural(Math.round(n), 'point');
+  const wonHint = (
+    <span className="inline-flex items-center gap-1.5 font-semibold text-nx-accent">
+      <Trophy size={16} className={styles.pop} aria-hidden="true" />
+      Won the week
+    </span>
+  );
 
   return (
     <AppFrame>
-      <div className="flex flex-col gap-10 pb-4">
-        <PageTitle
-          kicker={`Monday recap · ${v.range}`}
-          title={headline(world, v)}
-          detail="Fewer points wins the week."
-        />
-
-        <Section index={1} className="-mt-2">
-          <Stagger className="flex flex-col gap-2.5">
-            <RowButton
-              leading={<IconBubble icon={Trophy} />}
-              title="Points added"
-              detail={
-                <Pair
-                  me={{
-                    value: plural(v.mine.points, 'point'),
-                    strong: won(world.me.id),
-                  }}
-                  partner={{
-                    label: partner,
-                    value: plural(v.theirs.points, 'point'),
-                    strong: won(world.partner.id),
-                  }}
-                />
-              }
-              onClick={() => navigate('gifts')}
-            />
-            <RowButton
-              leading={<IconBubble icon={Gift} />}
-              title="Gifts now"
-              detail={
-                <Pair
-                  me={{ label: 'You get', value: formatMoney(v.gifts.me) }}
-                  partner={{
-                    label: `${partner} gets`,
-                    value: formatMoney(v.gifts.partner),
-                  }}
-                />
-              }
-              onClick={() => navigate('gifts')}
-            />
-            {v.weekly.map(({ rule, me, partner: them }) => (
-              <RowButton
-                key={rule.id}
-                leading={<IconBubble icon={Dumbbell} />}
-                title={shortTitle(rule)}
-                detail={
-                  <Pair
-                    me={{
-                      value: `${me.have} of ${me.need}`,
-                      strong: me.have >= me.need,
-                    }}
-                    partner={{
-                      label: partner,
-                      value: them ? `${them.have} of ${them.need}` : 'None',
-                      strong: !!them && them.have >= them.need,
-                    }}
-                  />
-                }
-                onClick={() => navigate('progress')}
-              />
-            ))}
-            {(v.streaks.me || v.streaks.partner) && (
-              <RowButton
-                leading={<IconBubble icon={Flame} />}
-                title="Longest streaks"
-                detail={
-                  <>
-                    {sameStreak && v.streaks.me && (
-                      <span className="block">{v.streaks.me.rule.title}</span>
-                    )}
-                    <Pair
-                      me={{
-                        value: v.streaks.me
-                          ? plural(v.streaks.me.days, 'day')
-                          : 'None',
-                        note: streakNote(v.streaks.me, !sameStreak),
-                      }}
-                      partner={{
-                        label: partner,
-                        value: v.streaks.partner
-                          ? plural(v.streaks.partner.days, 'day')
-                          : 'None',
-                        note: streakNote(v.streaks.partner, !sameStreak),
-                      }}
-                    />
-                  </>
-                }
-                onClick={() => navigate('progress')}
-              />
-            )}
-          </Stagger>
-        </Section>
-
-        {v.thisWeek.length > 0 && (
-          <Section title="This week" index={2}>
-            <GlassCard className="flex flex-col gap-4">
-              {v.thisWeek.map(({ rule, me, partner: them }) => (
-                <button
-                  key={rule.id}
-                  type="button"
-                  className="nx-card nx-tappable flex-col items-stretch gap-3 p-4"
-                  onClick={() => navigate('progress')}
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="flex-1 text-nx-body font-semibold">
-                      {shortTitle(rule)}, {me.need} times each
-                    </span>
-                    <ChevronRight
-                      className="nx-row-chevron"
-                      size={22}
-                      aria-hidden="true"
-                    />
-                  </span>
-                  <WeekBar name="You" have={me.have} need={me.need} />
-                  {them && (
-                    <WeekBar name={partner} have={them.have} need={them.need} />
-                  )}
-                </button>
-              ))}
-              <Button
-                variant="primary"
-                size="lg"
-                full
-                iconEnd={ArrowRight}
-                onClick={() => navigate(action.page)}
-              >
-                {action.label}
-              </Button>
-            </GlassCard>
-          </Section>
-        )}
-
-        <Section title="Monday notification" index={3}>
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-5">
+          <PageTitle kicker={v.range} title="Monday recap" />
           <NotificationCard
             title={note.title}
             body={note.body}
             on={notify}
             onOpen={() => setSheet(true)}
           />
+        </div>
+
+        <Section title={headline(world, v)} index={1}>
+          <div className="grid grid-cols-2 gap-3">
+            <StatButton
+              label="You added"
+              value={v.mine.points}
+              format={points}
+              tone={v.winner === world.me.id ? 'accent' : 'default'}
+              hint={v.winner === world.me.id ? wonHint : undefined}
+              onClick={() => navigate('gifts')}
+            />
+            <StatButton
+              label={`${partner} added`}
+              value={v.theirs.points}
+              format={points}
+              tone={v.winner === world.partner.id ? 'accent' : 'default'}
+              hint={v.winner === world.partner.id ? wonHint : undefined}
+              onClick={() => navigate('gifts')}
+            />
+            <StatButton
+              label="You get"
+              value={v.gifts.me}
+              format={formatMoney}
+              hint={`Up ${formatMoney(v.theirs.dollars)} last week`}
+              onClick={() => navigate('gifts')}
+            />
+            <StatButton
+              label={`${partner} gets`}
+              value={v.gifts.partner}
+              format={formatMoney}
+              hint={`Up ${formatMoney(v.mine.dollars)} last week`}
+              onClick={() => navigate('gifts')}
+            />
+          </div>
         </Section>
+
+        <Section title="Gym and streaks" index={2}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {v.weekly.map(({ rule, me, partner: them }) => (
+              <TapCard
+                key={rule.id}
+                className="h-full"
+                onClick={() => navigate('progress')}
+              >
+                <span className="flex flex-col gap-3">
+                  <span className="flex items-center gap-3">
+                    <IconBubble icon={Dumbbell} size={40} />
+                    <span className="text-nx-body font-semibold">
+                      {shortTitle(rule)}
+                    </span>
+                  </span>
+                  <WeekBar name="You" have={me.have} need={me.need} />
+                  {them && (
+                    <WeekBar name={partner} have={them.have} need={them.need} />
+                  )}
+                </span>
+              </TapCard>
+            ))}
+            {(v.streaks.me || v.streaks.partner) && (
+              <TapCard className="h-full" onClick={() => navigate('progress')}>
+                <span className="flex flex-col gap-3">
+                  <span className="flex items-center gap-3">
+                    <IconBubble icon={Flame} size={40} />
+                    <span className="text-nx-body font-semibold">
+                      Longest streaks
+                    </span>
+                  </span>
+                  <StreakLine name="You" streak={v.streaks.me} />
+                  <StreakLine name={partner} streak={v.streaks.partner} />
+                </span>
+              </TapCard>
+            )}
+          </div>
+        </Section>
+
+        {v.thisWeek.length > 0 && (
+          <Section title="This week" index={3}>
+            {v.thisWeek.map(({ rule, me, partner: them }) => (
+              <TapCard key={rule.id} onClick={() => navigate('progress')}>
+                <span className="flex flex-col gap-3">
+                  <span className="flex items-center gap-3">
+                    <IconBubble icon={CalendarDays} size={40} />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-nx-body font-semibold">
+                        {shortTitle(rule)}, {me.need} times each
+                      </span>
+                      <span className="text-nx-2 text-nx-ink-2">
+                        {me.met
+                          ? 'You are done for the week'
+                          : `You need ${me.left} more, ${plural(me.daysLeft, 'day')} left`}
+                      </span>
+                    </span>
+                  </span>
+                  <WeekBar name="You" have={me.have} need={me.need} />
+                  {them && (
+                    <WeekBar name={partner} have={them.have} need={them.need} />
+                  )}
+                </span>
+              </TapCard>
+            ))}
+          </Section>
+        )}
       </div>
+
+      <ActionBar>
+        <Button
+          variant="primary"
+          size="lg"
+          full
+          iconEnd={ArrowRight}
+          onClick={() => navigate(action.page)}
+        >
+          {action.label}
+        </Button>
+      </ActionBar>
       <NotificationSheet
         open={sheet}
         onOpenChange={setSheet}
@@ -224,40 +210,34 @@ export default function RecapV1() {
   );
 }
 
-/** Under a streak: its habit when the two differ, and whether it is still going. */
-function streakNote(
-  s: RecapView['streaks']['me'],
-  withRule: boolean,
-): string | undefined {
-  if (!s) return undefined;
-  const going = s.now ? `Still going: ${plural(s.now, 'day')}` : undefined;
-  return withRule ? [s.rule.title, going].filter(Boolean).join('. ') : going;
-}
-
-type Side = {
-  label?: string;
-  value: ReactNode;
-  /** The better result of the two. */
-  strong?: boolean;
-  /** One short line under the value. */
-  note?: string;
-};
-
-/** You and your partner side by side inside a row. */
-function Pair({ me, partner }: { me: Side; partner: Side }) {
+/** One person's longest streak at the week's end, its habit, and whether it is still going. */
+function StreakLine({
+  name,
+  streak,
+}: {
+  name: string;
+  streak: RecapView['streaks']['me'];
+}) {
   return (
-    <span className="mt-1.5 grid grid-cols-2 gap-3">
-      {[{ label: 'You', ...me }, partner].map((s, i) => (
-        <span key={i} className="flex min-w-0 flex-col">
-          <span className="text-nx-2 text-nx-ink-2">{s.label}</span>
-          <span
-            className={`font-nx-serif text-nx-h3 ${s.strong ? 'text-nx-accent' : 'text-nx-ink'}`}
-          >
-            {s.value}
+    <span className="flex items-baseline gap-3">
+      <span className="w-[4.5rem] shrink-0 text-nx-2 text-nx-ink-2">
+        {name}
+      </span>
+      {streak ? (
+        <span className="flex min-w-0 flex-col">
+          <span className="text-nx-body">
+            <span className="font-semibold">{plural(streak.days, 'day')}</span>{' '}
+            · {streak.rule.title}
           </span>
-          {s.note && <span className="text-nx-2 text-nx-ink-2">{s.note}</span>}
+          {streak.now && (
+            <span className="text-nx-2 text-nx-accent">
+              Still going: {plural(streak.now, 'day')}
+            </span>
+          )}
         </span>
-      ))}
+      ) : (
+        <span className="text-nx-body text-nx-ink-2">None</span>
+      )}
     </span>
   );
 }

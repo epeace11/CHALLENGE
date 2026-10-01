@@ -1,6 +1,5 @@
 'use client';
-import type { ReactNode } from 'react';
-import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { GROUP_ICON, keepTogether, type Choice } from './choices';
 import styles from './start.module.css';
 import { cx } from './cx';
@@ -73,44 +72,6 @@ export function SampleRule({
 }
 
 /**
- * A theme as a card in its look colour: a coloured band with its icon, then the name, days and
- * number of rules, and one sample rule. The whole card is one button that opens the theme's sheet.
- */
-export function ThemeCard({
-  choice,
-  onOpen,
-}: {
-  choice: Choice;
-  onOpen: () => void;
-}) {
-  const Icon = choice.icon;
-  return (
-    <button
-      type="button"
-      data-look={choice.look}
-      className={cx('nx-glass nx-tappable', styles.card)}
-      aria-haspopup="dialog"
-      onClick={onOpen}
-    >
-      <span className={styles.band} aria-hidden="true">
-        <Icon className={styles.bandIcon} size={30} strokeWidth={1.9} />
-        <ChevronRight className={styles.bandChevron} size={22} />
-      </span>
-      <span className="flex flex-1 flex-col gap-1.5 p-4 sm:p-5">
-        <span className="font-nx-serif text-nx-h3 text-nx-ink">
-          {choice.name}
-        </span>
-        <Facts
-          items={choice.facts}
-          className="text-nx-2 font-semibold text-nx-accent-strong"
-        />
-        <SampleRule choice={choice} className="mt-auto pt-2" />
-      </span>
-    </button>
-  );
-}
-
-/**
  * A theme or saved challenge as one wide row: the look swatch, the name, days and number of rules,
  * and one sample rule. Opens the sheet.
  */
@@ -155,41 +116,6 @@ export function ChoiceRow({
           className="text-nx-2 text-nx-ink-2"
         />
         <SampleRule choice={choice} className="mt-0.5" />
-      </span>
-      <ChevronRight className="nx-row-chevron" size={22} aria-hidden="true" />
-    </button>
-  );
-}
-
-/** "Say your rules" and "Start blank": an icon, a title and one line, as one button. */
-export function OwnCard({
-  icon: Icon,
-  title,
-  detail,
-  onClick,
-  className,
-}: {
-  icon: LucideIcon;
-  title: ReactNode;
-  detail: ReactNode;
-  onClick: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      className={cx(
-        'nx-glass nx-tappable nx-row h-full items-center',
-        className,
-      )}
-      onClick={onClick}
-    >
-      <span className={styles.dot} aria-hidden="true">
-        <Icon size={22} />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-nx-body font-semibold text-nx-ink">{title}</span>
-        <span className="text-nx-2 text-nx-ink-2">{detail}</span>
       </span>
       <ChevronRight className="nx-row-chevron" size={22} aria-hidden="true" />
     </button>

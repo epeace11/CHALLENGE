@@ -41,15 +41,9 @@ export const MORE_PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
  * waits) and Progress, plus More for Gifts, Rules and help, Monday recap, Settings and Your
  * challenges. A tab bar at the bottom on phones, tabs in the top bar from 1024px.
  *
- * `wide` lets the content use up to 1080px on laptops (two columns); the default is 720px.
+ * Every page, in both frames, is the same width (720px) with the same side margins.
  */
-export function AppFrame({
-  children,
-  wide,
-}: {
-  children: ReactNode;
-  wide?: boolean;
-}) {
+export function AppFrame({ children }: { children: ReactNode }) {
   const world = useWorld();
   const { page, navigate } = useNav();
   const c = world.challenge;
@@ -113,7 +107,7 @@ export function AppFrame({
   return (
     <div className="nx-frame" data-frame="app">
       <header className="nx-app-header">
-        <div className="nx-main nx-topbar" data-wide={wide || undefined}>
+        <div className="nx-main nx-topbar">
           <div className="flex min-w-0 flex-col">
             <p className="nx-brand truncate">{c.name}</p>
             <button
@@ -130,9 +124,7 @@ export function AppFrame({
           </nav>
         </div>
       </header>
-      <main className="nx-main nx-fade-in pt-2" data-wide={wide || undefined}>
-        {children}
-      </main>
+      <main className="nx-main nx-fade-in pt-2">{children}</main>
       <nav className="nx-tabbar" aria-label="Main">
         {tabs('bottom')}
       </nav>

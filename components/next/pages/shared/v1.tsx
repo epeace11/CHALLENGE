@@ -1,4 +1,4 @@
-// Version 1: the whole page wears the challenge's own look; its length and what misses cost come first as two big numbers, then the rules, with Start pinned to the bottom.
+// The whole page wears the challenge's own look; its length and what misses cost come first as two big numbers, then the rules, with Start pinned to the bottom.
 'use client';
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';

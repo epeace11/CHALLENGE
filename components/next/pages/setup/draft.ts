@@ -89,11 +89,6 @@ export const STEPS = [0.25, 0.5, 1, 2, 5];
 export const stepLine = (step: number) =>
   `The first point costs ${formatMoney(step)}, the second ${formatMoney(step * 2)}, the third ${formatMoney(step * 3)}, and so on.`;
 
-/** "First point $1, then $2, $3…" for a summary row. */
-export const stepShort = (step: number, cap: number | null) =>
-  `First point ${formatMoney(step)}, then ${formatMoney(step * 2)}, ${formatMoney(step * 3)}…` +
-  (cap === null ? ' · No cap' : ` · Capped at ${formatMoney(cap)}`);
-
 /** The cap suggested when the cap is switched on, until it is changed. */
 export const DEFAULT_CAP = 100;
 

@@ -1,4 +1,4 @@
-// Version 1: both gifts side by side first; tap one to see the points behind it, newest first.
+// Both gifts side by side first; tap one to see the points behind it, newest first.
 'use client';
 import { useState } from 'react';
 import { useReducedMotion } from 'motion/react';

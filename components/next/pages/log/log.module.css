@@ -96,12 +96,7 @@
     height: 88px;
   }
 
-  /* Day chips: the days still open, side by side (they wrap on narrow phones). */
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
+  /* The day chip: one open day, as a row. */
   .chip {
     display: inline-flex;
     flex-direction: column;
@@ -132,68 +127,10 @@
   .chip[aria-pressed='true'] .chipTitle {
     color: var(--nx-accent);
   }
-  .chipDetail {
-    font-size: 15px;
-    line-height: 1.3;
-    color: var(--nx-ink-2);
-  }
   .chipRow {
     flex-direction: row;
     align-items: center;
     gap: 8px;
-  }
-
-  /* One check-in in the day's list (version 3): a header row, and the question when open. */
-  .item {
-    overflow: clip;
-  }
-  .itemHead {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    min-height: 64px;
-    padding: 12px 16px 12px 18px;
-    color: inherit;
-    text-align: left;
-    transition: background var(--nx-base) var(--nx-ease);
-  }
-  button.itemHead:hover {
-    background: var(--nx-glass-hover);
-  }
-  button.itemHead:hover :global(.nx-row-chevron) {
-    transform: translateX(2px);
-  }
-  /* The card clips its corners, so the focus ring sits inside. */
-  button.itemHead:focus-visible {
-    outline-offset: -3px;
-    border-radius: var(--nx-r-lg);
-  }
-  .itemIcon {
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: var(--nx-accent-soft);
-    color: var(--nx-accent);
-  }
-  .itemIcon[data-tone='done'] {
-    background: var(--nx-done-soft);
-    color: var(--nx-done);
-  }
-  .itemIcon[data-tone='missed'] {
-    background: var(--nx-missed-soft);
-    color: var(--nx-missed);
-  }
-  .itemIcon[data-tone='review'] {
-    background: var(--nx-wait-soft);
-    color: var(--nx-wait);
-  }
-  .itemIcon[data-tone='none'] {
-    background: var(--nx-sunken);
-    color: var(--nx-ink-2);
   }
 
   /* Around a Glide: the slide never widens the page. Reaches into the gutters so shadows stay. */

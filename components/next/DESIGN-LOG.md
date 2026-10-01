@@ -4,7 +4,7 @@ Kazzy picks one version of every page at `/preview` with the 1 2 3 buttons. Writ
 
 ## Decisions, October 1, 2026
 
-Picked, nothing built yet. The other versions stay in the code until building starts.
+Built on October 1, 2026 (see "What's built" below). Each page's pick is now its only version, `v1.tsx` in its folder.
 
 - **Every page takes up the same amount of the screen.** The same content width and side margins on every page, on phones and laptops. As said: "The pages need to be consistent with how much of the page they take up."
 - **Picked as they are:** Landing 2, Sign up and sign in 2, Shared challenge link 1, Say your rules 1, Your challenges 2, Invite 2, Sign the pact 2, Practice day 2, Overview 1, Check in 2, Rules and help 1, Review 2, Monday recap 2, The verdict 2, Settings 1.
@@ -13,6 +13,14 @@ Picked, nothing built yet. The other versions stay in the code until building st
   - Set up and rules (version 1): neither version is good.
   - Gifts (version 1): neither version is great.
   - Progress (version 1): neither version is right.
+
+## What's built, October 1, 2026
+
+- **The picks are the pages.** Every version that wasn't picked is deleted, with the helpers only it used. Each page is now `v1.tsx` in its folder, so `/preview` shows one design per page and hides the 1 2 3 buttons. Set up and rules, Gifts and Progress keep their version 1 until their next round, which adds `v2.tsx` and `v3.tsx` beside it (and raises their count in `tests/next.mjs`).
+- **One width for every page.** Both frames use the same 720px column with the same side margins (20px on phones and tablets, 32px on laptops), and the laptop top bar lines up with it. The frames' `wide` and `width` options are gone. Landing, Your challenges, Overview and Progress lost their side-by-side laptop layouts and read top to bottom like every other page.
+- **Start a challenge** is four long rows the full width of the page: Create new challenge (filled in the accent colour; opens a blank Set up), Say your rules, Saved challenges, Themes. The last two glide to their list, and each item there opens its details.
+- **Fixed on the way:** in dark mode a switched-on toggle (Settings reminders) used the classic look's violet on every look; it now uses the look's own colour.
+- Checked at 375px and 1280px, in light and dark, on all 19 pages: same width and margins everywhere, no sideways scrolling, no text under 14px.
 
 ## First day
 
@@ -43,7 +51,7 @@ Pick: 1
 2. Say first: Say your rules is the one filled button at the top, then saved challenges and themes as compact rows to compare, and a plain Start blank last.
 3. Two steps: pick how to start from four big tiles (a theme, a saved challenge, say your rules, start blank), then glide to the themes or saved challenges.
 
-Pick: a mix of 2 and 3. Version 3's four options, as long full-width rows stacked on top of each other, in this order: Create new challenge (replaces "Start blank"; the one highlighted, filled row), Say your rules, Saved challenges, Themes.
+Pick: a mix of 2 and 3. Version 3's four options, as long full-width rows stacked on top of each other, in this order: Create new challenge (replaces "Start blank"; the one highlighted, filled row), Say your rules, Saved challenges, Themes. Built.
 
 ### Say your rules (`say`)
 

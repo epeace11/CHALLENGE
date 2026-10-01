@@ -120,7 +120,6 @@
   /* Layout */
   --nx-gutter: 20px;
   --nx-page-max: 720px;
-  --nx-page-wide: 1080px;
   --nx-r-sm: 12px;
   --nx-r: 18px;
   --nx-r-lg: 24px;
@@ -1311,8 +1310,9 @@
   [aria-checked='true'] > .nx-switch {
     background: var(--nx-accent);
   }
+  /* In dark the accent is a light tint, so a white knob needs the look's deeper primary fill. */
   [data-theme='dark'] [aria-checked='true'] > .nx-switch {
-    background: #7456e0;
+    background: var(--nx-primary);
   }
   [aria-checked='true'] > .nx-switch::after {
     transform: translateX(20px);
@@ -1612,17 +1612,12 @@
     min-height: calc(100dvh - var(--nx-top-inset));
     padding-bottom: calc(var(--nx-nav-h) + 40px);
   }
+  /* Every page, in both frames, is the same width with the same side margins. */
   .nx-main {
     width: 100%;
     max-width: calc(var(--nx-page-max) + 2 * var(--nx-gutter));
     margin: 0 auto;
     padding: 0 var(--nx-gutter);
-  }
-  .nx-main[data-wide] {
-    max-width: calc(var(--nx-page-wide) + 2 * var(--nx-gutter));
-  }
-  .nx-main[data-narrow] {
-    max-width: calc(520px + 2 * var(--nx-gutter));
   }
   .nx-topbar {
     display: flex;
@@ -1753,10 +1748,6 @@
     .nx-topnav .nx-tab .nx-count {
       position: static;
       box-shadow: none;
-    }
-    /* The header spans the wide width, so the name and the tabs never squeeze each other. */
-    .nx-app-header .nx-topbar {
-      max-width: calc(var(--nx-page-wide) + 2 * var(--nx-gutter));
     }
     .nx-app-header {
       position: sticky;

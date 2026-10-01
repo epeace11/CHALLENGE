@@ -139,13 +139,6 @@ export function giftSum(points: number, step: number, cap: number | null) {
   return `${shown.join(' + ')} = ${formatMoney(total)}${capped ? ' (the cap)' : ''}`;
 }
 
-/** "You won Summer Sprint", "Jordan won Summer Sprint", or a tie. */
-export function winnerLine(w: World, v: VerdictView) {
-  if (v.winner === w.me.id) return `You won ${v.name}`;
-  if (v.winner === w.partner.id) return `${w.partner.name} won ${v.name}`;
-  return `${v.name} ended in a tie`;
-}
-
 const slug = (s: string) =>
   s
     .toLowerCase()

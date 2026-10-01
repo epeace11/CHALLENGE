@@ -1,5 +1,5 @@
 'use client';
-import { useId, type ReactNode, type Ref } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { Weekday } from '@/lib/next/model';
 import { formatMoney } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
@@ -46,56 +46,6 @@ export function DateField({
           {hint}
         </p>
       )}
-    </div>
-  );
-}
-
-/** A labelled one-line text field like the kit's TextField, whose input a sheet can focus when it opens. */
-export function TextInput({
-  label,
-  value,
-  onChange,
-  error,
-  hint,
-  maxLength,
-  inputRef,
-}: {
-  label: ReactNode;
-  value: string;
-  onChange: (value: string) => void;
-  error?: ReactNode;
-  hint?: ReactNode;
-  maxLength?: number;
-  inputRef?: Ref<HTMLInputElement>;
-}) {
-  const id = useId();
-  const note = error || hint;
-  return (
-    <div className="nx-field">
-      <label htmlFor={id} className="nx-field-label">
-        {label}
-      </label>
-      <input
-        ref={inputRef}
-        id={id}
-        type="text"
-        className="nx-input"
-        value={value}
-        maxLength={maxLength}
-        autoComplete="off"
-        aria-invalid={error ? true : undefined}
-        aria-describedby={note ? `${id}-note` : undefined}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {error ? (
-        <p id={`${id}-note`} className="nx-field-error" role="alert">
-          {error}
-        </p>
-      ) : hint ? (
-        <p id={`${id}-note`} className="nx-field-hint">
-          {hint}
-        </p>
-      ) : null}
     </div>
   );
 }

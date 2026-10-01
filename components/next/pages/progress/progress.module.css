@@ -12,13 +12,6 @@
   }
 }
 
-@keyframes glow-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
 @layer components {
   /* The kit's SegmentedControl thumb also matches `.nx-seg-option > span`, which makes it relative
      and 0 by 0, so the selection never shows. Put it back behind the chosen option, here only. */
@@ -105,10 +98,5 @@
     color: var(--nx-ink-2);
     box-shadow: none;
     border: 1.5px dashed var(--nx-line-strong);
-  }
-
-  /* The big streak number rises in once. */
-  .rise {
-    animation: glow-in var(--nx-slow) var(--nx-ease) backwards;
   }
 }

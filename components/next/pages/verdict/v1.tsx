@@ -1,10 +1,11 @@
-// Version 1: the two gifts are revealed first as big cards, each with its own button ("Mark gift as given", or "Mark as received" for yours); best streaks, badges and what next follow.
+// A side-by-side scoreboard flips both gifts in at once, then a short checklist and one sticky button mark them given, one after the other.
 'use client';
 import { useState, type CSSProperties } from 'react';
 import {
   BookmarkPlus,
   Check,
   ChevronRight,
+  Crown,
   Flame,
   Gift as GiftIcon,
   Plus,
@@ -15,12 +16,15 @@ import { PlainFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
 import { useDemo, useWorld } from '@/components/next/world';
 import {
+  ActionBar,
+  Avatar,
   Button,
   EmptyState,
   GlassCard,
   PageTitle,
   RowButton,
   Section,
+  TapCard,
   useToast,
 } from '@/components/next/ui';
 import { formatMoney, plural } from '@/lib/next/selectors';
@@ -30,7 +34,6 @@ import {
   saveAs,
   suggestName,
   verdictOf,
-  winnerLine,
   type Gift,
   type VerdictView,
 } from './data';
@@ -44,13 +47,15 @@ import {
 } from './sheets';
 import styles from './verdict.module.css';
 
-/** The verdict, version 1. */
-export default function VerdictV1() {
+/** The verdict, version 2. */
+export default function VerdictV2() {
   const world = useWorld();
   const { navigate } = useNav();
   const { update, undo } = useDemo();
   const toast = useToast();
   const [given, setGiven] = useState<Record<string, boolean>>({});
+  // The gift just marked, and a count so its burst plays again each time.
+  const [burst, setBurst] = useState<{ id: string; n: number } | null>(null);
   const [sheet, setSheet] = useState<VerdictSheet>(null);
   const v = verdictOf(world);
 
@@ -80,8 +85,11 @@ export default function VerdictV1() {
     setGiven((s) => ({ ...s, [id]: value }));
   const mark = (g: Gift) => {
     setOne(g.id, true);
+    setBurst((b) => ({ id: g.id, n: (b?.n ?? 0) + 1 }));
     toast({
-      text: `${giftName(g)} marked as ${g.to.isMe ? 'received' : 'given'}`,
+      text: g.to.isMe
+        ? `The ${formatMoney(g.amount)} gift is marked as received`
+        : `Your ${formatMoney(g.amount)} gift is marked as given`,
       action: { label: 'Undo', onClick: () => setOne(g.id, false) },
     });
   };
@@ -90,71 +98,177 @@ export default function VerdictV1() {
   };
 
   return (
-    <PlainFrame back={{ to: 'home', label: 'Your challenges' }}>
-      <div className="flex flex-col gap-10 pb-10">
-        <PageTitle
-          kicker={`${v.name} · ${v.range}`}
-          title={winnerLine(world, v)}
-        />
+    <PlainFrame
+      back={{ to: 'home', label: 'Your challenges' }}
+      aside={
+        <Button
+          variant="quiet"
+          icon={BookmarkPlus}
+          onClick={() => setSheet('save')}
+        >
+          Save as…
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-8">
+        <PageTitle kicker={`Finished · ${v.range}`} title={v.name} />
 
-        <div className="-mt-4 flex flex-col gap-4">
-          {gifts.map((g, i) => (
-            <GiftCard
-              key={g.id}
-              gift={g}
-              index={i}
-              given={!!given[g.id]}
-              primary={next?.id === g.id}
-              onMark={() => mark(g)}
-              onUndo={() => setOne(g.id, false)}
-              onOpen={() => setSheet('gifts')}
-            />
-          ))}
-        </div>
+        <GlassCard pad="none" className="nx-enter overflow-hidden">
+          <div className="grid grid-cols-2 divide-x divide-nx-line">
+            {[v.me, v.partner].map((s, i) => (
+              <ScoreColumn
+                key={s.person.id}
+                side={s}
+                won={v.winner === s.person.id}
+                index={i}
+                onOpen={() => setSheet('gifts')}
+              />
+            ))}
+          </div>
+        </GlassCard>
 
-        <Section title="Best streaks" index={3}>
-          {[v.me, v.partner].map((s) => (
-            <RowButton
-              key={s.person.id}
-              leading={
-                <span className="grid size-11 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
-                  <Flame size={22} aria-hidden="true" />
+        <Section title="Gifts" index={2}>
+          {gifts.map((g) => {
+            const done = !!given[g.id];
+            return (
+              <RowButton
+                key={g.id}
+                leading={
+                  <span
+                    className={
+                      done
+                        ? 'relative grid size-11 place-items-center rounded-full bg-nx-done-soft text-nx-done'
+                        : 'relative grid size-11 place-items-center rounded-full border-2 border-dashed border-nx-accent-line text-nx-accent'
+                    }
+                  >
+                    {done ? (
+                      <Check
+                        size={22}
+                        strokeWidth={2.6}
+                        className={styles.pop}
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <GiftIcon size={20} aria-hidden="true" />
+                    )}
+                    {done && burst?.id === g.id && <Burst key={burst.n} />}
+                  </span>
+                }
+                title={
+                  g.to.isMe
+                    ? `${g.from.person.name} gives you a ${formatMoney(g.amount)} gift`
+                    : `You give ${g.to.person.name} a ${formatMoney(g.amount)} gift`
+                }
+                detail={
+                  done
+                    ? g.to.isMe
+                      ? 'Received'
+                      : 'Given'
+                    : g.to.isMe
+                      ? 'Not received yet'
+                      : 'Not given yet'
+                }
+                onClick={() => setSheet('gifts')}
+              />
+            );
+          })}
+        </Section>
+
+        <Section title="Streaks and badges" index={3}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TapCard className="h-full" onClick={() => setSheet('streaks')}>
+              <span className="flex flex-col gap-3">
+                <span className="flex items-center gap-3">
+                  <span className="grid size-10 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
+                    <Flame size={20} aria-hidden="true" />
+                  </span>
+                  <span className="text-nx-body font-semibold">
+                    Best streaks
+                  </span>
                 </span>
-              }
-              title={s.streak.title}
-              detail={`${s.isMe ? 'You' : s.person.name} · ${s.streak.all ? `all ${s.streak.days} days` : `${s.streak.days} days in a row`}`}
-              onClick={() => setSheet('streaks')}
-            />
-          ))}
+                {[v.me, v.partner].map((s) => (
+                  <span key={s.person.id} className="flex flex-col">
+                    <span className="text-nx-body">
+                      <span className="font-semibold">
+                        {s.isMe ? 'You' : s.person.name}:
+                      </span>{' '}
+                      {s.streak.all
+                        ? `all ${s.streak.days} days`
+                        : `${s.streak.days} days in a row`}
+                    </span>
+                    <span className="text-nx-2 text-nx-ink-2">
+                      {s.streak.title}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            </TapCard>
+            <TapCard className="h-full" onClick={() => setSheet('badges')}>
+              <span className="flex flex-col gap-3">
+                <span className="flex items-center gap-3">
+                  <span className="grid size-10 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
+                    <Trophy size={20} aria-hidden="true" />
+                  </span>
+                  <span className="text-nx-body font-semibold">
+                    Badges earned
+                  </span>
+                </span>
+                {[v.me, v.partner].map((s) => (
+                  <span key={s.person.id} className="flex items-center gap-3">
+                    <MedalStack side={s} />
+                    <span className="text-nx-body">
+                      <span className="font-semibold">
+                        {s.isMe ? 'You' : s.person.name}:
+                      </span>{' '}
+                      {plural(s.badges.length, 'badge')}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            </TapCard>
+          </div>
         </Section>
 
-        <Section title="Badges earned" index={4}>
-          {[v.me, v.partner].map((s) => (
-            <RowButton
-              key={s.person.id}
-              leading={<MedalStack side={s} />}
-              title={`${s.isMe ? 'You' : s.person.name}: ${plural(s.badges.length, 'badge')}`}
-              detail={s.badges
-                .slice(0, 3)
-                .map((b) => b.title)
-                .join(', ')
-                .concat(s.badges.length > 3 ? ' and more' : '')}
-              onClick={() => setSheet('badges')}
-            />
-          ))}
-        </Section>
+        {next && (
+          <Button
+            variant="quiet"
+            icon={Plus}
+            className="-mt-2 self-start"
+            onClick={() => navigate('start')}
+          >
+            Start something new
+          </Button>
+        )}
+      </div>
 
-        <Section title="What next" index={5}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      <ActionBar>
+        {next ? (
+          <>
             <Button
-              variant={next ? 'secondary' : 'primary'}
+              variant="primary"
+              size="lg"
+              full
+              icon={Check}
+              onClick={() => mark(next)}
+            >
+              {next.to.isMe
+                ? `Mark the ${formatMoney(next.amount)} gift as received`
+                : `Mark your ${formatMoney(next.amount)} gift as given`}
+            </Button>
+            <Button icon={RotateCcw} onClick={() => navigate('setup')}>
+              Run it again
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="primary"
+              size="lg"
+              full
               icon={RotateCcw}
               onClick={() => navigate('setup')}
             >
               Run it again
-            </Button>
-            <Button icon={BookmarkPlus} onClick={() => setSheet('save')}>
-              Save as…
             </Button>
             <Button
               variant="quiet"
@@ -163,9 +277,9 @@ export default function VerdictV1() {
             >
               Start something new
             </Button>
-          </div>
-        </Section>
-      </div>
+          </>
+        )}
+      </ActionBar>
 
       <GiftsSheet v={v} open={sheet === 'gifts'} onOpenChange={close} />
       <StreaksSheet
@@ -192,112 +306,81 @@ export default function VerdictV1() {
   );
 }
 
-/** "Your $28 gift", "Jordan’s $10 gift". */
-const giftName = (g: Gift) =>
-  `${g.to.isMe ? 'Your' : `${g.to.person.name}’s`} ${formatMoney(g.amount)} gift`;
-
 /**
- * One gift, revealed: who gets it and how much (the amount counts up once the card is in), who gives
- * it, and the button that marks it given (or, for the gift you get, received). The amount opens how it was set.
+ * One person on the scoreboard: who, their points, whether they won, and the gift they get, which
+ * flips in and counts up. The whole column opens how the gifts were set.
  */
-function GiftCard({
-  gift,
+function ScoreColumn({
+  side: s,
+  won,
   index,
-  given,
-  primary,
-  onMark,
-  onUndo,
   onOpen,
 }: {
-  gift: Gift;
+  side: VerdictView['me'];
+  won: boolean;
   index: number;
-  given: boolean;
-  primary: boolean;
-  onMark: () => void;
-  onUndo: () => void;
   onOpen: () => void;
 }) {
-  const delay = 140 + index * 160;
-  const { to, from } = gift;
+  const delay = 180 + index * 140;
   return (
-    <GlassCard
-      as="section"
-      pad="lg"
-      aria-label={giftName(gift)}
-      className={styles.reveal}
-      style={{ ['--delay' as string]: `${delay}ms` } as CSSProperties}
+    <button
+      type="button"
+      className="nx-press relative flex min-w-0 flex-col items-center gap-1.5 px-3 pt-6 pb-7 text-center transition-colors hover:bg-nx-accent-soft"
+      onClick={onOpen}
     >
-      <button
-        type="button"
-        className="nx-press group flex w-full items-start gap-4 rounded-nx text-left"
-        onClick={onOpen}
-      >
-        <span className="grid size-12 shrink-0 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
-          <GiftIcon size={24} aria-hidden="true" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-nx-body font-semibold text-nx-ink">
-            {to.isMe ? 'You get a gift of' : `${to.person.name} gets a gift of`}
-          </span>
-          <span className="font-nx-serif text-nx-num-xl text-nx-ink">
-            <RevealAmount amount={gift.amount} delay={delay + 200} />
-          </span>
-          <span className="text-nx-2 text-nx-ink-2">
-            From {from.isMe ? 'you' : from.person.name} ·{' '}
-            {plural(from.points, 'point')}
-            {from.forgiven > 0 ? ` (${from.forgiven} forgiven)` : ''}
-          </span>
-        </span>
-        <ChevronRight
-          className="nx-row-chevron mt-1 transition-transform group-hover:translate-x-0.5"
-          size={22}
-          aria-hidden="true"
-        />
-      </button>
-      <div className="mt-6 border-t border-nx-line pt-5">
-        {given ? (
-          <div className="flex min-h-12 items-center gap-3">
-            <span className="relative inline-flex items-center gap-2 text-nx-body font-semibold text-nx-done">
-              <span
-                className={`grid size-8 place-items-center rounded-full bg-nx-done-soft ${styles.pop}`}
-              >
-                <Check size={18} strokeWidth={2.6} aria-hidden="true" />
-              </span>
-              {gift.to.isMe ? 'Received' : 'Given'}
-              <Burst />
-            </span>
-            <Button variant="quiet" className="ml-auto" onClick={onUndo}>
-              Undo
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant={primary ? 'primary' : 'secondary'}
-            size={primary ? 'lg' : 'md'}
-            full
-            icon={Check}
-            onClick={onMark}
+      <ChevronRight
+        className="nx-row-chevron absolute top-4 right-3"
+        size={20}
+        aria-hidden="true"
+      />
+      <span className="relative mb-1">
+        <Avatar person={s.person} size="lg" decorative />
+        {won && (
+          <span
+            className="absolute -top-2 -right-2 grid size-7 place-items-center rounded-full text-nx-on-accent shadow-nx-glass"
+            style={{ background: 'var(--nx-primary)' }}
+            aria-hidden="true"
           >
-            {gift.to.isMe ? 'Mark as received' : 'Mark gift as given'}
-          </Button>
+            <Crown size={15} strokeWidth={2.4} />
+          </span>
         )}
-      </div>
-    </GlassCard>
+      </span>
+      <span className="text-nx-body font-semibold text-nx-ink">
+        {s.isMe ? 'You' : s.person.name}
+      </span>
+      <span className="flex min-h-7 flex-wrap items-center justify-center gap-2 text-nx-2 text-nx-ink-2">
+        {plural(s.points, 'point')}
+        {won && (
+          <span className="rounded-full bg-nx-accent-soft px-2.5 py-0.5 text-nx-min font-semibold text-nx-accent">
+            Won
+          </span>
+        )}
+      </span>
+      <span className="mt-4 text-nx-2 text-nx-ink-2">
+        {s.isMe ? 'You get' : `${s.person.name} gets`}
+      </span>
+      <span
+        className={`${styles.flip} font-nx-serif text-nx-num-lg text-nx-ink`}
+        style={{ ['--delay' as string]: `${delay}ms` } as CSSProperties}
+      >
+        <RevealAmount amount={s.gets} delay={delay + 120} />
+      </span>
+    </button>
   );
 }
 
-/** Up to three of a person's badges, overlapping. Decorative; the row says how many. */
+/** Up to three of a person's badges, overlapping. Decorative; the line says how many. */
 function MedalStack({ side }: { side: VerdictView['me'] }) {
   return (
-    <span className="flex -space-x-3" aria-hidden="true">
+    <span className="flex shrink-0 -space-x-3" aria-hidden="true">
       {side.badges.slice(0, 3).map((b) => {
         const Icon = BADGE_ICON[b.id] ?? Trophy;
         return (
           <span
             key={b.id}
-            className="grid size-10 place-items-center rounded-full bg-nx-accent-soft text-nx-accent ring-2 ring-nx-surface"
+            className="grid size-9 place-items-center rounded-full bg-nx-accent-soft text-nx-accent ring-2 ring-nx-surface"
           >
-            <Icon size={18} />
+            <Icon size={16} />
           </span>
         );
       })}

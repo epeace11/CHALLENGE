@@ -6,7 +6,6 @@ import {
   entryPill,
   formatAnswer,
   formatDay,
-  formatDayShort,
   formatWeekday,
   isClosed,
   lastDay,
@@ -18,7 +17,6 @@ import { useNav } from '@/components/next/nav';
 import { RowButton, Sheet, StatusPill } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import type { Checkin } from './use-checkin';
-import styles from './log.module.css';
 
 /** Closed days before today, most recent first: days a late answer can still change. */
 export function recentClosedDays(world: World, count = 7): DateString[] {
@@ -249,63 +247,5 @@ export function DayListSheet({
         )}
       </div>
     </Sheet>
-  );
-}
-
-/**
- * The switcher as chips on the page: each day still open with what is left, a closed day being
- * changed, and "Earlier days" for the rest.
- */
-export function DayChips({
-  ci,
-  onEarlier,
-  onCurrent,
-}: {
-  ci: Checkin;
-  onEarlier: () => void;
-  /** Tapping the day already on screen: jump to its next open check-in. */
-  onCurrent: () => void;
-}) {
-  const { world, me, day, late } = ci;
-  return (
-    <fieldset className={cn(styles.chips, 'm-0 min-w-0 border-0 p-0')}>
-      <legend className="sr-only">Day</legend>
-      {ci.loggable.map((d) => {
-        const on = d === day;
-        return (
-          <button
-            key={d}
-            type="button"
-            className={cn(styles.chip, 'nx-press')}
-            aria-pressed={on}
-            onClick={() => (on ? onCurrent() : ci.pickDay(d))}
-          >
-            <span className={styles.chipTitle}>{formatDayShort(d)}</span>
-            <span className={styles.chipDetail}>
-              {leftText(openCheckins(world, me, d).length)}
-            </span>
-          </button>
-        );
-      })}
-      {late && day && (
-        <button
-          type="button"
-          className={cn(styles.chip, 'nx-press')}
-          aria-pressed="true"
-          onClick={onEarlier}
-        >
-          <span className={styles.chipTitle}>{formatDayShort(day)}</span>
-          <span className={styles.chipDetail}>Closed</span>
-        </button>
-      )}
-      <button
-        type="button"
-        className={cn(styles.chip, styles.chipRow, 'nx-press')}
-        onClick={onEarlier}
-      >
-        <CalendarDays size={20} aria-hidden="true" className="text-nx-accent" />
-        <span className={styles.chipTitle}>Earlier days</span>
-      </button>
-    </fieldset>
   );
 }

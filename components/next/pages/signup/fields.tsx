@@ -130,17 +130,3 @@ export function CodeField({
     </FieldFrame>
   );
 }
-
-/** A thin "or" between the main action and the other way in. */
-export function OrDivider() {
-  return (
-    <div
-      className="flex items-center gap-3 text-nx-2 text-nx-ink-2"
-      aria-hidden="true"
-    >
-      <span className="h-px flex-1 bg-nx-line" />
-      or
-      <span className="h-px flex-1 bg-nx-line" />
-    </div>
-  );
-}

@@ -30,11 +30,9 @@ import {
   EASE,
   Item,
   Menu,
-  PairAvatars,
   motion,
   useReducedMotion,
 } from '@/components/next/ui';
-import { ruleDetail, type RuleGroupView } from './invite-data';
 import type { InviteFlow, Suggestion } from './use-invite';
 
 /* ── Rules ──────────────────────────────────────────────────────────────── */
@@ -64,101 +62,7 @@ export function RuleIcon({ rule }: { rule: Rule }) {
   );
 }
 
-/**
- * One rule as a row of a list inside a card: icon, title, when it is asked, chevron. The whole row
- * opens the rule's details.
- */
-export function RuleRow({
-  rule,
-  onOpen,
-  className,
-}: {
-  rule: Rule;
-  onOpen: (ruleId: string) => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(rule.id)}
-      className={cn(
-        'nx-press group flex min-h-16 w-full items-center gap-3.5 px-4 py-3 text-left hover:bg-nx-accent-soft/60 focus-visible:-outline-offset-2 sm:px-5',
-        className,
-      )}
-    >
-      <RuleIcon rule={rule} />
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-nx-body leading-snug font-semibold text-nx-ink">
-          {rule.title}
-        </span>
-        <span className="text-nx-2 text-nx-ink-2">{ruleDetail(rule)}</span>
-      </span>
-      <ChevronRight
-        size={20}
-        aria-hidden="true"
-        className="shrink-0 text-nx-accent transition-transform duration-200 ease-nx group-hover:translate-x-0.5"
-      />
-    </button>
-  );
-}
-
-/** Who a group of rules is for: their avatars and "Both of you", "Only you" or "Only Maya". */
-export function GroupLabel({
-  group,
-  className,
-}: {
-  group: RuleGroupView;
-  className?: string;
-}) {
-  return (
-    <div className={cn('flex items-center gap-3', className)}>
-      <span aria-hidden="true" className="flex">
-        {group.people.length > 1 ? (
-          <PairAvatars people={group.people} size="sm" />
-        ) : (
-          <Avatar person={group.people[0]} size="sm" decorative />
-        )}
-      </span>
-      <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
-        {group.title}
-      </h3>
-    </div>
-  );
-}
-
 /* ── Small facts that open their details ───────────────────────────────── */
-
-/** A fact about the challenge ("Starts Monday, Nov 2 · 30 days") as a 44px pill that opens its sheet. */
-export function FactButton({
-  icon: Icon,
-  children,
-  onClick,
-  className,
-}: {
-  icon: LucideIcon;
-  children: ReactNode;
-  onClick: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'nx-press inline-flex min-h-11 items-center gap-2 rounded-full border border-nx-line-strong bg-nx-surface-2 py-2 pr-3 pl-3.5 text-left text-nx-2 font-semibold text-nx-ink hover:border-nx-accent-line hover:bg-nx-accent-soft',
-        className,
-      )}
-    >
-      <Icon size={18} aria-hidden="true" className="shrink-0 text-nx-accent" />
-      <span>{children}</span>
-      <ChevronRight
-        size={16}
-        aria-hidden="true"
-        className="shrink-0 text-nx-accent"
-      />
-    </button>
-  );
-}
 
 /**
  * The two short lines on how it works. Each is a row that opens its details: checking in and
@@ -300,37 +204,6 @@ export function SentCard({
 }
 
 /* ── Signed in ──────────────────────────────────────────────────────────── */
-
-/** Who is about to accept: Jordan's avatar, name and email, and Switch account under them. */
-export function SignedIn({
-  flow,
-  className,
-}: {
-  flow: InviteFlow;
-  className?: string;
-}) {
-  const { you } = flow;
-  return (
-    <div className={cn('flex items-start gap-3.5', className)}>
-      <Avatar person={you} decorative />
-      <div className="min-w-0 flex-1">
-        <p className="text-nx-2 leading-snug">
-          <span className="block font-semibold text-nx-ink">
-            Signed in as {you.name}
-          </span>
-          <span className="block break-all text-nx-ink-2">{you.email}</span>
-        </p>
-        <Button
-          variant="quiet"
-          className="mt-1 -ml-3"
-          onClick={flow.switchAccount}
-        >
-          Switch account
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 /**
  * The action bar's glass shows the page through it when the browser skips its blur, so the bar

@@ -1,5 +1,6 @@
-// Version 1: a Sign up / Sign in switch at the top of the form; "Email me a sign-in link" is the outlined button under the main one.
+// No tabs: the title says which form it is, with Sign in or Sign up at the top right; a two-way choice picks a password or an emailed link.
 'use client';
+import { useState } from 'react';
 import { ArrowRight, Mail } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
 import {
@@ -15,28 +16,48 @@ import {
   motion,
   useReducedMotion,
 } from '@/components/next/ui';
-import { OrDivider, PasswordField } from './fields';
-import { MIN_PASSWORD } from './form';
-import type { SignupMode } from './mode';
+import { PasswordField } from './fields';
+import { MIN_PASSWORD, type Method } from './form';
 import { SentPanel } from './sent';
 import { useSignupForm } from './use-signup-form';
 
-const MODES: { value: SignupMode; label: string }[] = [
-  { value: 'signup', label: 'Sign up' },
-  { value: 'signin', label: 'Sign in' },
+const METHODS: { value: Method; label: string }[] = [
+  { value: 'password', label: 'Use a password' },
+  { value: 'link', label: 'Email me a link' },
 ];
 
-/** Sign up and sign in, version 1. */
-export default function SignupV1() {
+/** Sign up and sign in, version 2. */
+export default function SignupV2() {
   const f = useSignupForm();
   const still = useReducedMotion();
+  const [method, setMethod] = useState<Method>('password');
   const signup = f.mode === 'signup';
   const slide = { duration: still ? 0 : DURATION.base, ease: EASE };
+  const action =
+    method === 'link'
+      ? 'Email me a sign-in link'
+      : signup
+        ? 'Create account'
+        : 'Sign in';
 
   return (
-    <PlainFrame back={{ to: 'landing' }} width="narrow" center>
+    <PlainFrame
+      back={{ to: 'landing' }}
+      center
+      aside={
+        f.sentTo ? undefined : (
+          <Button
+            variant="quiet"
+            className="-mr-3"
+            onClick={() => f.setMode(signup ? 'signin' : 'signup')}
+          >
+            {signup ? 'Sign in' : 'Sign up'}
+          </Button>
+        )
+      }
+    >
       <div className="pt-2 pb-10">
-        <Glide id={f.sentTo ? 'sent' : 'form'} direction={f.direction}>
+        <Glide id={f.sentTo ? 'sent' : f.mode} direction={f.direction}>
           {f.sentTo ? (
             <SentPanel
               email={f.sentTo}
@@ -46,113 +67,110 @@ export default function SignupV1() {
             />
           ) : (
             <div className="flex flex-col gap-6">
-              <SegmentedControl
-                label="Sign up or sign in"
-                value={f.mode}
-                onChange={f.setMode}
-                options={MODES}
-                className="nx-enter"
-              />
-              <Glide id={f.mode} direction={f.direction}>
-                <header className="flex flex-col gap-2">
-                  <h1 className="nx-page-title">
-                    {signup ? 'Create your account' : 'Sign in'}
-                  </h1>
-                  {signup && (
-                    <p className="text-nx-body text-nx-ink-2">
-                      Then pick a challenge and invite your partner.
-                    </p>
-                  )}
-                </header>
-              </Glide>
+              <header className="nx-enter flex flex-col gap-2">
+                <h1 className="nx-page-title">
+                  {signup ? 'Create your account' : 'Sign in'}
+                </h1>
+                {signup && (
+                  <p className="text-nx-body text-nx-ink-2">
+                    Then pick a challenge and invite your partner.
+                  </p>
+                )}
+              </header>
               <Enter index={1}>
                 <GlassCard>
                   <form
                     noValidate
-                    className="flex flex-col"
+                    className="flex flex-col gap-5"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      f.submit('password', e.currentTarget);
+                      f.submit(method, e.currentTarget);
                     }}
                   >
+                    {signup && (
+                      <div onBlur={f.leave('name')}>
+                        <TextField
+                          name="name"
+                          label="First name"
+                          autoComplete="given-name"
+                          value={f.draft.name}
+                          onChange={f.set('name')}
+                          error={f.errorFor('name')}
+                        />
+                      </div>
+                    )}
+                    <div onBlur={f.leave('email')}>
+                      <TextField
+                        name="email"
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        label="Email"
+                        value={f.draft.email}
+                        onChange={f.set('email')}
+                        error={f.errorFor('email')}
+                      />
+                    </div>
+                    <SegmentedControl
+                      label={signup ? 'How you will sign in' : 'How to sign in'}
+                      value={method}
+                      onChange={setMethod}
+                      options={METHODS}
+                    />
                     <Presence initial={false}>
-                      {signup && (
+                      {method === 'password' && (
                         <motion.div
-                          key="name"
+                          key="password"
                           initial={{
                             height: 0,
                             opacity: 0,
+                            marginTop: -20,
                             overflow: 'hidden',
                           }}
                           animate={{
                             height: 'auto',
                             opacity: 1,
+                            marginTop: 0,
                             transitionEnd: { overflow: 'visible' },
                           }}
-                          exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
+                          exit={{
+                            height: 0,
+                            opacity: 0,
+                            marginTop: -20,
+                            overflow: 'hidden',
+                          }}
                           transition={slide}
                         >
-                          <div className="pb-5" onBlur={f.leave('name')}>
-                            <TextField
-                              name="name"
-                              label="First name"
-                              autoComplete="given-name"
-                              value={f.draft.name}
-                              onChange={f.set('name')}
-                              error={f.errorFor('name')}
-                            />
-                          </div>
+                          <PasswordField
+                            label={signup ? 'Choose a password' : 'Password'}
+                            autoComplete={
+                              signup ? 'new-password' : 'current-password'
+                            }
+                            value={f.draft.password}
+                            onChange={f.set('password')}
+                            onBlur={f.leave('password')}
+                            hint={
+                              signup
+                                ? `At least ${MIN_PASSWORD} characters.`
+                                : undefined
+                            }
+                            error={f.errorFor('password')}
+                          />
                         </motion.div>
                       )}
                     </Presence>
-                    <div className="flex flex-col gap-5">
-                      <div onBlur={f.leave('email')}>
-                        <TextField
-                          name="email"
-                          type="email"
-                          inputMode="email"
-                          autoComplete="email"
-                          label="Email"
-                          value={f.draft.email}
-                          onChange={f.set('email')}
-                          error={f.errorFor('email')}
-                        />
-                      </div>
-                      <PasswordField
-                        label="Password"
-                        autoComplete={
-                          signup ? 'new-password' : 'current-password'
-                        }
-                        value={f.draft.password}
-                        onChange={f.set('password')}
-                        onBlur={f.leave('password')}
-                        hint={
-                          signup
-                            ? `At least ${MIN_PASSWORD} characters.`
-                            : undefined
-                        }
-                        error={f.errorFor('password')}
-                      />
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        size="lg"
-                        full
-                        loading={f.busy}
-                        iconEnd={ArrowRight}
-                        className="mt-1"
-                      >
-                        {signup ? 'Create account' : 'Sign in'}
-                      </Button>
-                      <OrDivider />
-                      <Button
-                        icon={Mail}
-                        full
-                        onClick={(e) => f.submit('link', e.currentTarget.form)}
-                      >
-                        Email me a sign-in link
-                      </Button>
-                    </div>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="lg"
+                      full
+                      loading={f.busy}
+                      icon={method === 'link' ? Mail : undefined}
+                      iconEnd={method === 'link' ? undefined : ArrowRight}
+                      className="mt-1"
+                    >
+                      {action}
+                    </Button>
                   </form>
                 </GlassCard>
               </Enter>

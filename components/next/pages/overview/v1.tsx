@@ -1,4 +1,4 @@
-// Version 1: numbers first. Thursday's check-ins as one big number above the Log button, then number buttons for review, gym and both gifts, then the week (two columns on laptops).
+// Numbers first. Thursday's check-ins as one big number above the Log button, then number buttons for review, gym and both gifts, then the week.
 'use client';
 import { useMemo, useState } from 'react';
 import { ArrowRight, CircleCheck, Clock3 } from 'lucide-react';
@@ -29,18 +29,14 @@ export default function OverviewV1() {
   const gym = o.gym;
 
   return (
-    <AppFrame wide>
+    <AppFrame>
       <div className="flex flex-col gap-8 pb-4">
         <PageTitle title={o.today} />
 
-        {/* Phones: one column in order of what matters now. Laptops: the main action and the
-            week on the left, the numbers stacked on the right. */}
-        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:gap-x-6">
+        {/* One column in order of what matters now. */}
+        <div className="flex flex-col gap-8">
           {/* What matters now: logging Thursday, or reviewing once it is logged. */}
-          <Enter
-            index={1}
-            className="flex flex-col gap-3 lg:col-start-1 lg:row-start-1"
-          >
+          <Enter index={1} className="flex flex-col gap-3">
             {o.left > 0 ? (
               <>
                 <StatButton
@@ -124,7 +120,7 @@ export default function OverviewV1() {
             )}
           </Enter>
 
-          <div className="-mt-5 flex flex-col gap-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 lg:self-start">
+          <div className="-mt-5 flex flex-col gap-8">
             <Enter index={2} className="grid gap-3 sm:grid-cols-2">
               <StatButton
                 label="Waiting for you"
@@ -206,11 +202,7 @@ export default function OverviewV1() {
             </Section>
           </div>
 
-          <Section
-            title="This week"
-            index={4}
-            className="lg:col-start-1 lg:row-start-2"
-          >
+          <Section title="This week" index={4}>
             <GlassCard pad="sm" className="flex flex-col gap-3">
               <WeekStrip days={o.week} onOpen={setDay} />
               <WeekLegend days={o.week} className="px-1 pb-1" />

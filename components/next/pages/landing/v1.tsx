@@ -1,16 +1,23 @@
-// Version 1: one column: what it is in two plain sentences, the main action right under them, then the four themes as a grid of cards.
+// How it works as four short lines with icons, then the main action; then the themes as rows.
 'use client';
 import { ArrowRight, CircleHelp, Ticket } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
 import { useWorld } from '@/components/next/world';
-import { Button, Enter, Section, Stagger } from '@/components/next/ui';
+import {
+  Button,
+  Enter,
+  RowButton,
+  Section,
+  Stagger,
+} from '@/components/next/ui';
+import { STEPS, themeFacts } from './content';
 import { HeroTitle } from './hero-title';
 import { HowItWorksSheet } from './how-it-works';
-import { ThemeTile } from './themes';
+import { ThemeIcon } from './themes';
 import { useLanding } from './use-landing';
 
-/** Landing page, version 1. */
-export default function LandingV1() {
+/** Landing page, version 2. */
+export default function LandingV2() {
   const world = useWorld();
   const { start, signIn, invite, how, setHow } = useLanding();
 
@@ -22,49 +29,67 @@ export default function LandingV1() {
         </Button>
       }
     >
-      <div className="flex flex-col gap-9 pt-4 pb-6 sm:pt-12">
-        <header className="flex flex-col gap-5">
+      <div className="grid gap-10 pt-4 pb-6 sm:pt-10">
+        <div className="flex flex-col gap-7">
           <Enter>
             <HeroTitle>A habit challenge for couples</HeroTitle>
           </Enter>
-          <Enter index={1}>
-            <p className="max-w-[34em] text-nx-lead text-nx-ink-2">
-              Set rules together and check in every day. Your partner checks
-              your answers, and each miss adds to the gift you owe them.
-            </p>
-          </Enter>
-          <Enter index={2} className="mt-2 flex flex-col gap-2">
-            <Button
-              variant="primary"
-              size="lg"
-              iconEnd={ArrowRight}
-              className="w-full sm:w-auto sm:self-start"
-              onClick={start}
-            >
-              Start a challenge
-            </Button>
-            <div className="-ml-3 flex flex-wrap gap-x-2">
-              <Button variant="quiet" icon={Ticket} onClick={invite}>
-                I have an invite
-              </Button>
+          <div className="flex flex-col gap-2">
+            <Stagger as="ul" className="flex flex-col gap-3 sm:gap-4" start={1}>
+              {STEPS.map(({ icon: Icon, title }) => (
+                <span key={title} className="flex items-center gap-4">
+                  <span
+                    className="grid size-10 shrink-0 place-items-center rounded-nx-sm bg-nx-accent-soft text-nx-accent sm:size-11"
+                    aria-hidden="true"
+                  >
+                    <Icon size={20} />
+                  </span>
+                  <span className="text-nx-body text-nx-ink sm:text-nx-lead">
+                    {title}
+                  </span>
+                </span>
+              ))}
+            </Stagger>
+            <Enter index={5}>
               <Button
                 variant="quiet"
                 icon={CircleHelp}
+                className="-ml-3"
                 onClick={() => setHow(true)}
               >
                 How it works
               </Button>
-            </div>
-          </Enter>
-        </header>
-
-        <Section title="Or start from a theme" index={3}>
-          <Stagger
-            className="grid auto-rows-fr grid-cols-2 gap-3 md:grid-cols-4"
-            start={4}
+            </Enter>
+          </div>
+          <Enter
+            index={6}
+            className="flex flex-col gap-3 sm:flex-row sm:items-center"
           >
+            <Button
+              variant="primary"
+              size="lg"
+              iconEnd={ArrowRight}
+              onClick={start}
+            >
+              Start a challenge
+            </Button>
+            <Button size="lg" icon={Ticket} onClick={invite}>
+              I have an invite
+            </Button>
+          </Enter>
+        </div>
+
+        <Section title="Or start from a theme" index={4}>
+          <Stagger className="flex flex-col gap-2.5" start={5}>
             {world.themes.map((theme) => (
-              <ThemeTile key={theme.id} theme={theme} onClick={start} />
+              <RowButton
+                key={theme.id}
+                data-look={theme.look}
+                leading={<ThemeIcon theme={theme} />}
+                title={theme.name}
+                detail={themeFacts(theme)}
+                onClick={start}
+              />
             ))}
           </Stagger>
         </Section>
