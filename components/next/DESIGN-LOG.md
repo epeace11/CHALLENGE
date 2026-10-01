@@ -8,7 +8,7 @@ Picked, nothing built yet. The other versions stay in the code until building st
 
 - **Every page takes up the same amount of the screen.** The same content width and side margins on every page, on phones and laptops. As said: "The pages need to be consistent with how much of the page they take up."
 - **Picked as they are:** Landing 2, Sign up and sign in 2, Shared challenge link 1, Say your rules 1, Your challenges 2, Invite 2, Sign the pact 2, Practice day 2, Overview 1, Check in 2, Rules and help 1, Review 2, Monday recap 2, The verdict 2, Settings 1.
-- **A mix:** Start a challenge combines versions 2 and 3. Which parts come from each is still to decide.
+- **A mix:** Start a challenge keeps version 3's four options, but as long rows the full width of the page, stacked on top of each other, in this order: Start blank, Say your rules, Saved challenges, Themes.
 - **Kept for now, but they need another design round:**
   - Set up and rules (version 1): neither version is good.
   - Gifts (version 1): neither version is great.
@@ -43,7 +43,7 @@ Pick: 1
 2. Say first: Say your rules is the one filled button at the top, then saved challenges and themes as compact rows to compare, and a plain Start blank last.
 3. Two steps: pick how to start from four big tiles (a theme, a saved challenge, say your rules, start blank), then glide to the themes or saved challenges.
 
-Pick: a combination of 2 and 3. Which parts come from each is still to decide.
+Pick: a mix of 2 and 3. Version 3's four options, as long full-width rows stacked on top of each other, in this order: Start blank, Say your rules, Saved challenges, Themes.
 
 ### Say your rules (`say`)
 
