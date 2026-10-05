@@ -999,6 +999,29 @@ textarea {
   padding-top: 25px;
   border-top: 1px solid var(--line-finalize);
 }
+.finalize-left {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.finalize-left li:not(.eyebrow)::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: var(--line-finalize);
+  vertical-align: middle;
+}
+.finalize-left li.mine {
+  font-weight: 600;
+}
+.finalize-left li.mine::before {
+  background: var(--accent-text);
+}
 .ledger {
   margin-top: 15px;
   padding: 12px 24px;
@@ -1311,4 +1334,18 @@ a:hover {
   .app-shell {
     padding-top: 35px;
   }
+}
+
+/* Demo mode (hooks/use-demo.ts): a plain strip so a screenshot never passes for the real thing. */
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  background: #f4d35e;
+  color: #222;
 }

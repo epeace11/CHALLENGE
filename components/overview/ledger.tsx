@@ -6,6 +6,7 @@ import { END, closed } from '@/lib/dates';
 import { locked } from '@/lib/progress';
 import { titleFor } from '@/lib/rules';
 import {
+  finalizeBlockers,
   ledgerPoints,
   nameOf,
   pointDollars,
@@ -44,8 +45,13 @@ function PointAction({ p }: { p: Point }) {
 
 /** Penalty history (toggled) and the finalize card. */
 export function MoneyBlock() {
-  const { data, me, now, busy, finalized, run, ui } = useChallenge();
-  const confirmed = data.finalizations.some((f) => f.user_id === me.id);
+  const { data, me, now, busy, finalized, run, ui, go } = useChallenge();
+  const confirmed = data.finalizations.some((f) => f.user_id === me.id),
+    blockers = finalized ? [] : finalizeBlockers(data, now),
+    // The first Review tab with something I can settle.
+    myTab = blockers.find(
+      (b) => b.tab && (b.waitingOn === me.id || b.waitingOn === null),
+    )?.tab;
   return (
     <div className="money-block">
       <button
@@ -95,6 +101,30 @@ export function MoneyBlock() {
                 ? 'You’ve confirmed. Waiting for your partner.'
                 : 'Both people confirm once all reviews are resolved.'}
           </p>
+          {blockers.length > 0 && (
+            <ul className="finalize-left">
+              <li className="eyebrow">Still to do</li>
+              {blockers.map((b) => (
+                <li
+                  key={b.key}
+                  className={b.waitingOn === me.id ? 'mine' : undefined}
+                >
+                  {b.text}
+                </li>
+              ))}
+            </ul>
+          )}
+          {myTab && (
+            <button
+              onClick={() => {
+                ui.setReviewTab(myTab);
+                go('Review');
+              }}
+            >
+              Open Review
+              <ArrowRight size={16} />
+            </button>
+          )}
         </div>
         <button
           className="primary"

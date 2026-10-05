@@ -1,18 +1,46 @@
 'use client';
 import { useChallenge } from '@/components/app/challenge-context';
-import { costByHabit, money, perfectDays } from '@/lib/progress';
+import { END, TOTAL_DAYS, closed } from '@/lib/dates';
+import {
+  costByHabit,
+  money,
+  perfectDays,
+  weeklyDone,
+  weeklyForgiven,
+} from '@/lib/progress';
 import { titleFor } from '@/lib/rules';
+import { targetFor } from '@/lib/weeks';
 import { activePointCount, forgivenCount } from '@/lib/selectors';
+import type { Data } from '@/lib/types';
 
-/** Side-by-side totals for both people; the final word once the challenge is finalized. */
+/** Gym visits over the whole challenge: done, forgiven, and the sum of the weekly targets. */
+function gymTotals(data: Data, uid: string) {
+  const t = { done: 0, forgiven: 0, target: 0 };
+  for (const w of data.weeks) {
+    if (!targetFor(w, 'gym')) continue;
+    t.done += weeklyDone(data, uid, 'gym', w);
+    t.forgiven += weeklyForgiven(data, uid, 'gym', w).forgiven;
+    t.target += targetFor(w, 'gym');
+  }
+  return t;
+}
+
+/** Side-by-side totals for both people: a recap once the last day has locked, and the final word once the challenge is finalized. */
 export function SummaryCard() {
   const { data, now, finalized, stats } = useChallenge();
+  const over = closed(END, now);
   return (
     <section className="glass summary">
       <p className="eyebrow">
-        {finalized ? 'Final summary' : 'Summary so far'}
+        {finalized ? 'Final summary' : over ? 'Recap' : 'Summary so far'}
       </p>
-      <h2>{finalized ? 'That’s a wrap.' : 'Where things stand.'}</h2>
+      <h2>
+        {finalized
+          ? 'That’s a wrap.'
+          : over
+            ? `${TOTAL_DAYS} days, done.`
+            : 'Where things stand.'}
+      </h2>
       <div className="summary-grid">
         {data.profiles.map((p) => {
           const other = data.profiles.find((o) => o.id !== p.id),
@@ -23,7 +51,11 @@ export function SummaryCard() {
             cost = costByHabit(data, p.id)[0],
             all = stats.earned[p.id] ?? [],
             got = all.filter((b) => b.earned),
-            forgiven = forgivenCount(data, p.id);
+            forgiven = forgivenCount(data, p.id),
+            gym = gymTotals(data, p.id),
+            lastNote = data.journals
+              .filter((j) => j.user_id === p.id)
+              .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
           return (
             <div key={p.id} className="summary-col">
               <h3>{p.name}</h3>
@@ -67,6 +99,24 @@ export function SummaryCard() {
                 {got.length}
                 <small> of {all.length}</small>
               </Stat>
+              {gym.target > 0 && (
+                <Stat label="Gym visits">
+                  {gym.forgiven > 0 && (
+                    <small>{gym.forgiven} forgiven · </small>
+                  )}
+                  {gym.done + gym.forgiven}
+                  <small> of {gym.target}</small>
+                </Stat>
+              )}
+              {over && lastNote && (
+                <blockquote className="summary-note">
+                  “
+                  {lastNote.text.length > 160
+                    ? `${lastNote.text.slice(0, 160).trimEnd()}…`
+                    : lastNote.text}
+                  ”<span className="muted">Latest journal note</span>
+                </blockquote>
+              )}
             </div>
           );
         })}

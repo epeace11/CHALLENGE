@@ -3,7 +3,7 @@ import { NotebookPen } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
 import { SummaryCard } from '@/components/progress/summary-card';
 import { JournalFeed } from '@/components/shared/journal';
-import { challengeRange, clampDate, daysLeft } from '@/lib/dates';
+import { END, challengeRange, clampDate, closed, daysLeft } from '@/lib/dates';
 import { GiftCards } from './gift-cards';
 import { LinkCards } from './link-cards';
 import { MoneyBlock } from './ledger';
@@ -14,7 +14,7 @@ import { ReminderCard } from './reminder-card';
 import { TodayCards } from './today-cards';
 
 export function OverviewPage() {
-  const { today, finalized } = useChallenge();
+  const { today, now, finalized } = useChallenge();
   const left = daysLeft(today),
     journalDay = clampDate(today);
   return (
@@ -27,7 +27,7 @@ export function OverviewPage() {
         </span>
       </div>
       <GiftCards />
-      {finalized ? <SummaryCard /> : <ProgressStrip />}
+      {finalized || closed(END, now) ? <SummaryCard /> : <ProgressStrip />}
       <TodayCards />
       <ReminderCard />
       <section className="glass journal" id="journal">

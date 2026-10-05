@@ -1,5 +1,7 @@
+import { END, closed, formatDate, formatShortDate, shift } from './dates.ts';
 import {
   ruleIndex,
+  titleFor,
   weeklyRuleIds,
   dailyRules,
   type Person,
@@ -64,12 +66,16 @@ export const activePointCount = (data: Data, uid: string) => {
   return data.points.filter((p) => p.user_id === uid && costsMoney(p, asked))
     .length;
 };
+/** A weekly day's forgiveness ask: it holds the request but is never a miss (lib/progress.ts weeklyForgiven). */
+const isDayAsk = (p: Point) => p.reason === 'day_forgiveness';
 /** Every miss that became a point, forgiven ones included. */
 export const missedTotal = (data: Data, uid: string) =>
-  data.points.filter((p) => p.user_id === uid && !p.voided).length;
-export const forgivenCount = (data: Data, uid: string) =>
-  data.points.filter((p) => p.user_id === uid && !p.voided && p.forgiven)
+  data.points.filter((p) => p.user_id === uid && !p.voided && !isDayAsk(p))
     .length;
+export const forgivenCount = (data: Data, uid: string) =>
+  data.points.filter(
+    (p) => p.user_id === uid && !p.voided && p.forgiven && !isDayAsk(p),
+  ).length;
 
 /** The entry's point that still counts, if any. */
 export const activePointOf = (data: Data, entryId: string | undefined) =>
@@ -83,6 +89,24 @@ export const forgivenessOf = (data: Data, e: Entry) => {
   const point = activePointOf(data, e.id);
   return point ? requestFor(data, point.id)?.status : undefined;
 };
+
+/** What denying the forgiveness request on `p` leads to, said plainly for the confirm dialog. `name` is the person who asked. */
+export function denyOutcome(data: Data, p: Point, now: number, name: string) {
+  const what = `${titleFor(p.rule_id)} for ${formatDate(p.day)}`,
+    until = `They can ask again until ${formatShortDate(shift(p.day, 1))} at 11:59 pm.`,
+    past = 'Its deadline has passed, so they can’t ask again.';
+  if (isDayAsk(p))
+    return `${name}’s No on ${what} won’t count toward the week. ${closed(p.day, now) ? past : until}`;
+  const e = data.entries.find((x) => x.id === p.entry_id);
+  // Unlogged misses and weekly shortfalls stay open to new requests; a logged No locks at its deadline.
+  const again =
+    !e || e.status === 'unlogged'
+      ? 'They can ask again with a new reason.'
+      : closed(p.day, now)
+        ? past
+        : until;
+  return `${name}’s miss on ${what} stays a point. ${again} You can still forgive it later from the penalty history.`;
+}
 
 /** Points shown in the penalty history, oldest first. */
 export const ledgerPoints = (data: Data) =>
@@ -205,3 +229,71 @@ export const weekForgiven = (
   uid: string,
   rule = 'gym',
 ) => (w ? weeklyForgiven(data, uid, rule, w).forgiven : 0);
+
+/* ── Finalizing ─────────────────────────────────────── */
+
+export type Blocker = {
+  key: string;
+  text: string;
+  /** Who has to act: a member id, or null when either can (or nobody, for the clock). */
+  waitingOn: string | null;
+  /** The Review tab that settles it. */
+  tab?: 'entries' | 'forgiveness' | 'disputes';
+};
+
+/** Everything that still stops the challenge being finalized, mirroring challenge_finalize: the last day's deadline, then every review, correction, forgiveness request and dispute, then each person's confirmation. */
+export function finalizeBlockers(data: Data, now: number): Blocker[] {
+  const out: Blocker[] = [],
+    count = (n: number, one: string, many = `${one}s`) =>
+      `${n} ${n === 1 ? one : many}`;
+  if (!closed(END, now))
+    out.push({
+      key: 'clock',
+      text: `The last day locks on ${formatShortDate(shift(END, 1))} at 11:59 pm.`,
+      waitingOn: null,
+    });
+  for (const reviewer of data.profiles) {
+    const owner =
+        data.profiles.find((p) => p.id !== reviewer.id)?.name ?? 'your partner',
+      q = reviewQueue(data, reviewer.id),
+      answers = q.plain.filter((e) => e.proposed_done === null).length,
+      fixes = q.plain.length - answers;
+    if (answers)
+      out.push({
+        key: `answers-${reviewer.id}`,
+        text: `${reviewer.name} to review ${answers} of ${owner}’s answers`,
+        waitingOn: reviewer.id,
+        tab: 'entries',
+      });
+    if (fixes)
+      out.push({
+        key: `fixes-${reviewer.id}`,
+        text: `${reviewer.name} to review ${count(fixes, 'late correction')} from ${owner}`,
+        waitingOn: reviewer.id,
+        tab: 'entries',
+      });
+    if (q.requests.length)
+      out.push({
+        key: `asks-${reviewer.id}`,
+        text: `${reviewer.name} to decide ${count(q.requests.length, 'forgiveness request')} from ${owner}`,
+        waitingOn: reviewer.id,
+        tab: 'forgiveness',
+      });
+  }
+  const disputes = data.disputes.filter((d) => d.status === 'open').length;
+  if (disputes)
+    out.push({
+      key: 'disputes',
+      text: `${count(disputes, 'open dispute')} to settle`,
+      waitingOn: null,
+      tab: 'disputes',
+    });
+  for (const p of data.profiles)
+    if (!data.finalizations.some((f) => f.user_id === p.id))
+      out.push({
+        key: `confirm-${p.id}`,
+        text: `${p.name} to confirm`,
+        waitingOn: p.id,
+      });
+  return out;
+}

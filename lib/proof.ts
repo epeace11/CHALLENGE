@@ -1,5 +1,5 @@
 import { parse as parseExif } from 'exifr';
-import { supabase } from '@/lib/supabase';
+import { OFFLINE, isOffline, supabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 
 export const PROOF_BUCKET = 'challenge-proof';
@@ -35,6 +35,7 @@ export async function uploadProof(userId: string, file: File) {
     exif?.DateTimeOriginal instanceof Date
       ? exif.DateTimeOriginal.toISOString()
       : null;
+  if (isOffline()) throw new Error(OFFLINE);
   const blob = await compress(file);
   const path = `${userId}/${crypto.randomUUID()}.jpg`;
   const { error } = await supabase.storage

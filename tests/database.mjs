@@ -852,6 +852,54 @@ assert.equal(await gymShort(), 1);
 console.log(
   'PASS: gym-day forgiveness — asked before the deadline, counts as a forgiven visit while waiting and once approved, voided by a denial, an undo or a Yes.',
 );
+// Re-saving a forgiven No (to edit its note) keeps it excused.
+await actor(kazzy);
+await db.exec(
+  `select challenge_checkin('prayer',${T},false,'',null,'Sick in bed')`,
+);
+await actor(erin);
+await db.exec(
+  `select challenge_decide((select r.id from challenge_requests r join challenge_points p on p.id=r.point_id where p.user_id='${kazzy}' and p.rule_id='prayer' and p.day=${T}),true)`,
+);
+await actor(kazzy);
+await db.exec(
+  `select challenge_checkin('prayer',${T},false,'Edited',null,null)`,
+);
+assert.deepEqual(
+  (({ status, note }) => ({ status, note }))(await checkinOf('prayer', T)),
+  { status: 'excused', note: 'Edited' },
+);
+// Weekly reminders: with two days of the week left, whoever is still short of a weekly target is due.
+await db.exec(
+  `update challenge_weeks set end_date=${T}+1 where start_date=${T}-3`,
+);
+const weeklyDue = async () => {
+  await db.exec(`set role service_role`);
+  const rows = (
+    await db.query(
+      `select name,rule_id,have,target,days_left from challenge_weekly_reminders() order by name`,
+    )
+  ).rows;
+  await db.exec(`reset role`);
+  return rows;
+};
+assert.deepEqual(await weeklyDue(), [
+  { name: 'Erin', rule_id: 'gym', have: 0, target: 2, days_left: 2 },
+  { name: 'Kazzy', rule_id: 'gym', have: 1, target: 2, days_left: 2 },
+]);
+await db.exec(
+  `update challenge_weeks set end_date=${T}+3 where start_date=${T}-3`,
+);
+assert.deepEqual(await weeklyDue(), []); // four days left: too early
+await db.exec(`set role authenticated`);
+await assert.rejects(
+  () => db.query(`select * from challenge_weekly_reminders()`),
+  /permission denied/,
+);
+await db.exec(`reset role`);
+console.log(
+  'PASS: a forgiven No stays excused when re-saved; weekly reminders go to whoever is short with two days left, service role only.',
+);
 console.log(
   'PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.',
 );

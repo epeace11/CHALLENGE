@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/dates';
 import { titleFor } from '@/lib/rules';
-import { reviewQueue } from '@/lib/selectors';
+import { denyOutcome, reviewQueue } from '@/lib/selectors';
 
 const Empty = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="glass empty">
@@ -22,7 +22,7 @@ const Empty = ({ title, children }: { title: string; children: ReactNode }) => (
 
 /** The partner's answers to approve, forgiveness requests to decide, and open disputes. */
 export function ReviewPage() {
-  const { data, me, partner, busy, loading, refresh, run, ui, dialogs } =
+  const { data, me, partner, now, busy, loading, refresh, run, ui, dialogs } =
     useChallenge();
   const { plain, requests, disputes, entryOfAsk } = reviewQueue(data, me.id);
   // Denying forgiveness and conceding a miss cannot be taken back, so each asks once.
@@ -159,10 +159,9 @@ export function ReviewPage() {
                     onClick={() =>
                       setConfirm({
                         title: 'Deny forgiveness?',
-                        description:
-                          p?.reason === 'day_forgiveness'
-                            ? `${partner?.name}’s No on ${titleFor(p.rule_id)} for ${formatDate(p.day)} won’t count toward the week. Before its deadline they can ask again.`
-                            : `${partner?.name}’s miss on ${titleFor(p?.rule_id ?? '')}${p?.day ? ` for ${formatDate(p.day)}` : ''} stays a point. Once its deadline has passed they can’t ask again, though you can still forgive it later from the penalty history.`,
+                        description: p
+                          ? denyOutcome(data, p, now, partner?.name ?? 'They')
+                          : '',
                         label: 'Deny',
                         action: () => decide(false),
                       })

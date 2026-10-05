@@ -1,5 +1,6 @@
 'use client';
 import { useChallenge } from '@/components/app/challenge-context';
+import { END, closed } from '@/lib/dates';
 import { money, nextMissCost } from '@/lib/progress';
 import {
   activePointCount,
@@ -11,7 +12,9 @@ import {
 
 /** Each person's gift so far: the partner's points decide its value. */
 export function GiftCards() {
-  const { data, finalized } = useChallenge();
+  const { data, now, finalized } = useChallenge();
+  // Once the last day has locked there are no more misses to price.
+  const over = finalized || closed(END, now);
   const leader = leaderOf(data);
   return (
     <div className="gift-grid">
@@ -42,7 +45,7 @@ export function GiftCards() {
               {misses} {misses === 1 ? 'miss' : 'misses'} in total
               {forgiven > 0 ? ` · ${forgiven} forgiven` : ''}
             </p>
-            {other && !finalized && (
+            {other && !over && (
               <p className="next-miss">
                 {other.name}’s next miss adds{' '}
                 <b>${nextMissCost(data, other.id)}</b>

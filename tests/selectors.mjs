@@ -20,6 +20,8 @@ import {
   dayTone,
   weekCount,
   weekForgiven,
+  denyOutcome,
+  finalizeBlockers,
 } from '../lib/selectors.ts';
 import { dailyRules } from '../lib/rules.ts';
 
@@ -335,6 +337,60 @@ const gymForgiven = {
 assert.equal(weekCount(gymForgiven, weeks[0], 'k'), 1);
 assert.equal(weekForgiven(gymForgiven, weeks[0], 'k'), 1);
 assert.equal(weekForgiven(data, weeks[0], 'e'), 0);
+// A gym day's ask is a forgiven visit, not a miss.
+assert.deepEqual(
+  [missedTotal(gymForgiven, 'k'), forgivenCount(gymForgiven, 'k')],
+  [0, 0],
+); // its points are all gym-day asks
+
+// What denying a request leads to, said plainly. Sunday Sep 20, noon Toronto: Sep 19 is still open.
+const noon20 = Date.parse('2026-09-20T16:00:00Z'),
+  pt = (id) => data.points.find((q) => q.id === id);
+assert.match(
+  denyOutcome(data, pt('p3'), noon20, 'Kazzy'),
+  /^Kazzy’s miss on .* stays a point\. Its deadline has passed, so they can’t ask again\. You can still forgive/,
+); // a logged No locks at its deadline
+assert.match(
+  denyOutcome(data, pt('p4'), noon20, 'Kazzy'),
+  /They can ask again with a new reason\./,
+); // an unlogged miss stays open
+assert.equal(
+  denyOutcome(data, dayPoint('g9', '2026-09-19'), noon20, 'Kazzy'),
+  'Kazzy’s No on Go to gym for Saturday, Sep 19 won’t count toward the week. They can ask again until Sep 20 at 11:59 pm.',
+);
+
+// What still stops finalizing, and who has to act.
+const left = finalizeBlockers(data, noon20);
+assert.deepEqual(
+  left.map((b) => b.key),
+  [
+    'clock',
+    'answers-e',
+    'asks-e', // Kazzy's late correction came with an ask, so deciding the ask settles it
+    'answers-k',
+    'disputes',
+    'confirm-e',
+    'confirm-k',
+  ],
+);
+assert.equal(
+  left.find((b) => b.key === 'asks-e').text,
+  'Erin to decide 2 forgiveness requests from Kazzy',
+);
+assert.equal(left[0].text, 'The last day locks on Oct 15 at 11:59 pm.');
+assert.deepEqual(
+  finalizeBlockers(
+    {
+      ...data,
+      entries: [],
+      requests: [],
+      disputes: [],
+      finalizations: [{ user_id: 'e' }],
+    },
+    Date.parse('2026-10-17T12:00:00Z'),
+  ).map((b) => [b.key, b.waitingOn]),
+  [['confirm-k', 'k']],
+);
 
 console.log(
   'PASS: selectors — lookups, history order, points and forgiveness, position-based costs, standings, the review queue from both sides, calendar colours, weekly counts.',

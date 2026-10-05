@@ -15,6 +15,7 @@ import { RulesPage } from '@/components/rules/rules-page';
 import { Loading } from '@/components/shared/loading';
 import { useAuth } from '@/hooks/use-auth';
 import { useChallengeData } from '@/hooks/use-challenge-data';
+import { useDemo, useDemoStore, type Demo } from '@/hooks/use-demo';
 import { usePageTool } from '@/hooks/use-page-tool';
 import { reviewQueue } from '@/lib/selectors';
 import {
@@ -36,8 +37,27 @@ const PAGE_COMPONENTS: Record<Page, () => React.JSX.Element> = {
   Rules: RulesPage,
 };
 
-/** Signs the user in, loads the challenge, and shows the current page. */
+/** The live app, or on localhost with ?demo the same pages over made-up data (hooks/use-demo.ts). */
 export function App() {
+  const demo = useDemo();
+  if (demo === undefined) return <Loading />;
+  return demo ? <DemoApp demo={demo} /> : <LiveApp />;
+}
+
+function DemoApp({ demo }: { demo: Demo }) {
+  const store = useDemoStore();
+  const [page, setPage] = useState<Page>('Overview');
+  const me = store.data.profiles.find((p) => p.name === demo.as)!;
+  return (
+    <ChallengeProvider me={me} store={store} page={page} setPage={setPage}>
+      <p className="demo-banner">Demo data as {me.name} · nothing is saved</p>
+      <ChallengeApp />
+    </ChallengeProvider>
+  );
+}
+
+/** Signs the user in, loads the challenge, and shows the current page. */
+function LiveApp() {
   const auth = useAuth();
   const uid = auth.session?.user.id;
   const store = useChallengeData(uid);
