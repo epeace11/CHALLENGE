@@ -19,6 +19,7 @@ import {
   reviewQueue,
   dayTone,
   weekCount,
+  weekForgiven,
 } from '../lib/selectors.ts';
 import { dailyRules } from '../lib/rules.ts';
 
@@ -301,6 +302,39 @@ assert.equal(tone('k', 'Kazzy', '2026-09-16'), 'open'); // one late correction, 
 assert.equal(weekCount(data, weeks[0], 'e'), 2);
 assert.equal(weekCount(data, weeks[0], 'k'), 0);
 assert.equal(weekCount(data, undefined, 'e'), 0);
+// A forgiven gym day counts as a forgiven visit; a still-asked or voided one does not count yet.
+const dayPoint = (id, day, o = {}) => ({
+  id,
+  user_id: 'k',
+  rule_id: 'gym',
+  day,
+  reason: 'day_forgiveness',
+  forgiven: false,
+  voided: false,
+  entry_id: `e${id}`,
+  created_at: `${day}T20:00:00Z`,
+  ...o,
+});
+const gymForgiven = {
+  ...data,
+  points: [
+    dayPoint('g1', '2026-09-16', { forgiven: true }),
+    dayPoint('g2', '2026-09-17'),
+    dayPoint('g3', '2026-09-18', { voided: true }),
+  ],
+  requests: [
+    {
+      id: 'rg2',
+      point_id: 'g2',
+      requester_id: 'k',
+      reason: 'x',
+      status: 'pending',
+    },
+  ],
+};
+assert.equal(weekCount(gymForgiven, weeks[0], 'k'), 1);
+assert.equal(weekForgiven(gymForgiven, weeks[0], 'k'), 1);
+assert.equal(weekForgiven(data, weeks[0], 'e'), 0);
 
 console.log(
   'PASS: selectors — lookups, history order, points and forgiveness, position-based costs, standings, the review queue from both sides, calendar colours, weekly counts.',

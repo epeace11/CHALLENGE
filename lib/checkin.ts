@@ -60,9 +60,18 @@ export function askOption(
   day: string,
   now: number,
 ): AskOption {
-  // Weekly habits have no miss per day; their shortfall is counted when the week closes.
-  if (rule.weekly) return { kind: 'none' };
   const point = e && data.points.find((p) => p.entry_id === e.id);
+  // Weekly habits have no miss per day; a No can still ask, before its deadline, for the day to count as a forgiven visit. A denied ask voids its point.
+  if (rule.weekly) {
+    const live = !!point && !point.voided,
+      request = point && data.requests.find((r) => r.point_id === point.id);
+    if (live && point.forgiven) return { kind: 'sent', status: 'forgiven' };
+    if (live && request?.status === 'pending')
+      return { kind: 'sent', status: 'pending' };
+    return closed(day, now)
+      ? { kind: 'none' }
+      : { kind: 'ask', again: request?.status === 'denied' };
+  }
   if (point?.forgiven) return { kind: 'sent', status: 'forgiven' };
   const request =
     point && data.requests.find((r) => r.point_id === point.id)?.status;

@@ -218,6 +218,44 @@ assert.equal(
   total(bar) + 2 * weekendDays + 7,
   total(personBar(data, kazzy, now)),
 ); // plus his weekly steps targets, 3+3+1 (none before Sep 28)
+// Gym days asked or forgiven count toward the open week: one forgiven visit is excused, one still asked is under review, the rest stay ahead.
+const gymAsk = (id, day, forgiven) => ({
+  id,
+  user_id: 'e',
+  rule_id: 'gym',
+  day,
+  reason: 'day_forgiveness',
+  forgiven,
+  voided: false,
+  entry_id: null,
+  created_at: day,
+});
+const gbar = personBar(
+  {
+    ...data,
+    points: [
+      ...data.points,
+      gymAsk('ga', '2026-09-16', true),
+      gymAsk('gb', '2026-09-17', false),
+    ],
+    requests: [
+      ...data.requests,
+      {
+        id: 'rgb',
+        point_id: 'gb',
+        requester_id: 'e',
+        reason: 'x',
+        status: 'pending',
+      },
+    ],
+  },
+  erin,
+  now,
+);
+assert.deepEqual(
+  [gbar.excused - bar.excused, gbar.review - bar.review, total(gbar)],
+  [1, 1, total(bar)],
+);
 const kbar = personBar(data, kazzy, now);
 assert.equal(kbar.done, 0);
 assert.equal(kbar.review, 0);

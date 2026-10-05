@@ -134,6 +134,39 @@ export const weeklyDone = (
       !['conceded', 'missed', 'unlogged'].includes(e.status),
   ).length;
 
+/** Days in week `w` whose No carries a day forgiveness point (slot 0, 'day_forgiveness'): `forgiven` ones count toward the target as forgiven visits, and `asking` ones too while the request waits, as the database counts them. */
+export const weeklyForgiven = (
+  data: Data,
+  uid: string,
+  rule: string,
+  w: { start: string; end: string },
+  asked = askedPoints(data),
+) => {
+  let forgiven = 0,
+    asking = 0;
+  for (const q of data.points)
+    if (
+      q.user_id === uid &&
+      q.rule_id === rule &&
+      q.reason === 'day_forgiveness' &&
+      !q.voided &&
+      q.day >= w.start &&
+      q.day <= w.end
+    ) {
+      if (q.forgiven) forgiven++;
+      else if (asked.has(q.id)) asking++;
+    }
+  return { forgiven, asking };
+};
+/** Visits that count toward a weekly target: done days plus forgiven ones. */
+export const weeklyCredit = (
+  data: Data,
+  uid: string,
+  rule: string,
+  w: { start: string; end: string },
+) =>
+  weeklyDone(data, uid, rule, w) + weeklyForgiven(data, uid, rule, w).forgiven;
+
 /** Every habit-day of the challenge plus the weekly targets (gym, Kazzy's steps), bucketed by colour. Weekly days count as done when logged and otherwise stay ahead until their week closes. */
 export function personBar(
   data: Data,
@@ -152,15 +185,22 @@ export function personBar(
     for (const w of data.weeks) {
       const t = targetFor(w, r.id);
       if (!t) continue;
-      const v = Math.min(t, weeklyDone(data, p.id, r.id, w));
+      const v = Math.min(t, weeklyDone(data, p.id, r.id, w)),
+        f = weeklyForgiven(data, p.id, r.id, w, askedP),
+        fx = Math.min(t - v, f.forgiven),
+        fa = Math.min(t - v - fx, f.asking),
+        left = t - v - fx - fa;
       c.done += v;
-      if (w.start > maxDate) c.future += t;
+      c.excused += fx;
+      c.review += fa;
+      if (w.start > maxDate) c.future += left;
       else if (closed(w.end, now)) {
-        const short = t - v,
+        const short = left,
           slots = data.points.filter(
             (q) =>
               q.user_id === p.id &&
               q.rule_id === r.id &&
+              q.reason === 'weekly_shortfall' &&
               q.day === w.end &&
               !q.voided,
           ),
@@ -172,7 +212,7 @@ export function personBar(
         c.excused += ex;
         c.review += asking;
         c.missed += short - ex - asking;
-      } else c.future += t - v;
+      } else c.future += left;
     } // A week in progress is not 'open': the remaining days only resolve when the week is assessed.
   return c;
 }
@@ -409,7 +449,7 @@ export function badges(
       (w) => targetFor(w, 'gym') > 0 && closed(w.end, now),
     ),
     gymShort = gymWeeks.some(
-      (w) => weeklyDone(data, p.id, 'gym', w) < targetFor(w, 'gym'),
+      (w) => weeklyCredit(data, p.id, 'gym', w) < targetFor(w, 'gym'),
     );
   const b = (
     id: string,
@@ -436,7 +476,7 @@ export function badges(
   }
   // First closed week where the gym target was met.
   const ironWeek = gymWeeks.find(
-    (w) => weeklyDone(data, p.id, 'gym', w) >= targetFor(w, 'gym'),
+    (w) => weeklyCredit(data, p.id, 'gym', w) >= targetFor(w, 'gym'),
   )?.end;
   // Progress toward the badges that build up: the longest streak still going, and this week's gym visits.
   const streakNow = Math.max(0, ...stats.map((s) => s.streak)),
@@ -447,7 +487,7 @@ export function badges(
     });
   const thisWeek = weekOf(data.weeks, toronto(new Date(now))),
     gymTarget = targetFor(thisWeek, 'gym'),
-    gymNow = thisWeek ? weeklyDone(data, p.id, 'gym', thisWeek) : 0;
+    gymNow = thisWeek ? weeklyCredit(data, p.id, 'gym', thisWeek) : 0;
   // The last seven days all clean.
   const finish = days(shift(END, -6), END),
     strongFinish = over && finish.every((d) => perfect.list.includes(d)) && END;

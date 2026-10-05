@@ -1,6 +1,7 @@
 'use client';
 import { Check, X } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
+import { weeklyRuleIds } from '@/lib/rules';
 import { forgivenessOf } from '@/lib/selectors';
 import type { Entry } from '@/lib/types';
 
@@ -13,7 +14,15 @@ export function entryStatus(
 ): { label: string; tone: PillTone } {
   if (entry.proposed_done !== null)
     return { label: 'Correction pending', tone: 'pending' };
-  if (entry.status === 'excused') return { label: 'Excused', tone: 'excused' };
+  if (entry.status === 'excused')
+    return {
+      label: weeklyRuleIds.includes(entry.rule_id)
+        ? entry.rule_id === 'gym'
+          ? 'Forgiven visit'
+          : 'Forgiven day'
+        : 'Excused',
+      tone: 'excused',
+    };
   if (entry.status === 'disputed')
     return { label: 'Disputed', tone: 'disputed' };
   if (entry.status === 'pending')

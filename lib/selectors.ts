@@ -7,7 +7,13 @@ import {
 } from './rules.ts';
 import type { Week } from './weeks.ts';
 import type { Data, Entry, Point } from './types.ts';
-import { askedPoints, costsMoney, pointCosts, weeklyDone } from './progress.ts';
+import {
+  askedPoints,
+  costsMoney,
+  pointCosts,
+  weeklyCredit,
+  weeklyForgiven,
+} from './progress.ts';
 
 /** Small read-only queries over the loaded data, shared by the pages and dialogs. */
 
@@ -185,10 +191,17 @@ export function dayTone(
   return 'good';
 }
 
-/** Days `uid` logged a Yes for a weekly rule in week `w`, as the database counts them (conceded ones excluded). */
+/** Days that count toward `uid`'s weekly rule in week `w`, as the database counts them: Yes answers (conceded ones excluded) plus forgiven days. */
 export const weekCount = (
   data: Data,
   w: Week | undefined,
   uid: string,
   rule = 'gym',
-) => (w ? weeklyDone(data, uid, rule, w) : 0);
+) => (w ? weeklyCredit(data, uid, rule, w) : 0);
+/** Of those, the days that were forgiven rather than done. */
+export const weekForgiven = (
+  data: Data,
+  w: Week | undefined,
+  uid: string,
+  rule = 'gym',
+) => (w ? weeklyForgiven(data, uid, rule, w).forgiven : 0);

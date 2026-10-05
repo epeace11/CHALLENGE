@@ -24,7 +24,7 @@ import { closed } from '@/lib/dates';
 import { locked } from '@/lib/progress';
 import { MAX_PROOFS, uploadProof } from '@/lib/proof';
 import type { Rule } from '@/lib/rules';
-import { findEntry, weekCount } from '@/lib/selectors';
+import { findEntry, weekCount, weekForgiven } from '@/lib/selectors';
 import { targetFor, weekOf } from '@/lib/weeks';
 import { ForgivenessField } from './forgiveness-ask';
 
@@ -127,7 +127,7 @@ export function QuestionCard({
       <h2>{rule.question}</h2>
       <p className="muted">
         {rule.weekly
-          ? `${weekCount(data, w, me.id, rule.id)} of ${targetFor(w, rule.id)} ${rule.id === 'gym' ? 'visits' : 'days'} this week.`
+          ? `${weekCount(data, w, me.id, rule.id)} of ${targetFor(w, rule.id)} ${rule.id === 'gym' ? 'visits' : 'days'} this week${weekForgiven(data, w, me.id, rule.id) ? ` (${weekForgiven(data, w, me.id, rule.id)} forgiven)` : ''}.`
           : rule.description}
       </p>
       <RadioGroup
@@ -224,6 +224,9 @@ export function QuestionCard({
           checked={draft.forgive}
           reason={draft.reason}
           partnerName={them}
+          weekly={
+            rule.weekly ? (rule.id === 'gym' ? 'visit' : 'day') : undefined
+          }
           disabled={busy}
           onCheck={(forgive) => set({ forgive })}
           onReason={(reason) => set({ reason })}

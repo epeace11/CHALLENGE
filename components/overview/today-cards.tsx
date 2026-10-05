@@ -3,7 +3,12 @@ import { ArrowRight } from 'lucide-react';
 import { useChallenge } from '@/components/app/challenge-context';
 import { clampDate, formatDate, formatShortDate, untilLock } from '@/lib/dates';
 import { activeRules, weeklyLabel, weeklyRules } from '@/lib/rules';
-import { entriesOn, firstUnanswered, weekCount } from '@/lib/selectors';
+import {
+  entriesOn,
+  firstUnanswered,
+  weekCount,
+  weekForgiven,
+} from '@/lib/selectors';
 import { targetFor, weekOf } from '@/lib/weeks';
 
 /** The day being logged (with a shortcut into Log) and this week's weekly targets. */
@@ -66,6 +71,8 @@ export function TodayCards() {
                       <b key={r.id}>
                         {weeklyLabel[r.id] ?? r.title}{' '}
                         {weekCount(data, w, p.id, r.id)} / {targetFor(w, r.id)}
+                        {weekForgiven(data, w, p.id, r.id) > 0 &&
+                          ` (${weekForgiven(data, w, p.id, r.id)} forgiven)`}
                       </b>
                     ))}
                 </span>

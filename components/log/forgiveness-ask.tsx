@@ -8,6 +8,7 @@ export function ForgivenessField({
   checked,
   reason,
   partnerName,
+  weekly,
   disabled,
   onCheck,
   onReason,
@@ -16,6 +17,8 @@ export function ForgivenessField({
   checked: boolean;
   reason: string;
   partnerName: string;
+  /** For a weekly habit, what a forgiven day counts as: a 'visit' (gym) or a 'day' (steps). */
+  weekly?: 'visit' | 'day';
   disabled: boolean;
   onCheck: (on: boolean) => void;
   onReason: (reason: string) => void;
@@ -27,6 +30,10 @@ export function ForgivenessField({
         {option.status === 'pending'
           ? `Forgiveness requested · waiting for ${partnerName}.`
           : `Forgiven by ${partnerName}.`}
+        {weekly &&
+          (option.status === 'pending'
+            ? ` If they agree, this day counts as a forgiven ${weekly}.`
+            : ` This day counts as a forgiven ${weekly}.`)}
       </p>
     );
   return (
@@ -44,6 +51,12 @@ export function ForgivenessField({
         />
         {option.again ? 'Ask again for forgiveness' : 'Request forgiveness'}
       </label>
+      {weekly && (
+        <p className="muted">
+          If {partnerName} agrees, this day counts toward this week’s target as
+          a forgiven {weekly}.
+        </p>
+      )}
       {checked && (
         <textarea
           aria-label="Why should this be forgiven? (required)"

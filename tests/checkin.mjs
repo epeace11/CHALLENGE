@@ -107,7 +107,35 @@ assert.deepEqual(
 // What a No can carry.
 const none = { kind: 'none' },
   fresh = { kind: 'ask', again: false };
-assert.deepEqual(askOption(data(), undefined, gym, open, now), none); // weekly: the shortfall is counted per week
+// Weekly: a No can ask, before its deadline, for the day to count as a forgiven visit.
+assert.deepEqual(askOption(data(), undefined, gym, open, now), fresh);
+assert.deepEqual(askOption(data(), undefined, gym, late, now), none);
+const gymNo = entry(open, { rule_id: 'gym', done: false, status: 'missed' }),
+  gymPoint = point(gymNo, { reason: 'day_forgiveness' });
+assert.deepEqual(
+  askOption(
+    data([gymPoint], [ask('pending', gymPoint)]),
+    gymNo,
+    gym,
+    open,
+    now,
+  ),
+  { kind: 'sent', status: 'pending' },
+);
+assert.deepEqual(
+  askOption(
+    data([{ ...gymPoint, voided: true }], [ask('denied', gymPoint)]),
+    gymNo,
+    gym,
+    open,
+    now,
+  ),
+  { kind: 'ask', again: true },
+); // a denial voids the day's point
+assert.deepEqual(
+  askOption(data([{ ...gymPoint, forgiven: true }]), gymNo, gym, late, now),
+  { kind: 'sent', status: 'forgiven' },
+);
 assert.deepEqual(askOption(data(), undefined, prayer, open, now), fresh); // on time, a No always makes a miss
 const no = entry(open, { done: false, status: 'missed' }),
   noPoint = point(no);

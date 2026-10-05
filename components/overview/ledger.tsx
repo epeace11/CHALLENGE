@@ -63,7 +63,11 @@ export function MoneyBlock() {
                 <b>{nameOf(data, p.user_id)}</b> · {titleFor(p.rule_id)}
                 <p className="muted">
                   {p.day} ·{' '}
-                  {p.forgiven ? 'Forgiven' : p.reason.replaceAll('_', ' ')}
+                  {p.forgiven
+                    ? 'Forgiven'
+                    : p.reason === 'day_forgiveness'
+                      ? 'forgiveness asked'
+                      : p.reason.replaceAll('_', ' ')}
                 </p>
               </div>
               <span>

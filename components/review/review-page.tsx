@@ -159,7 +159,10 @@ export function ReviewPage() {
                     onClick={() =>
                       setConfirm({
                         title: 'Deny forgiveness?',
-                        description: `${partner?.name}’s miss on ${titleFor(p?.rule_id ?? '')}${p?.day ? ` for ${formatDate(p.day)}` : ''} stays a point. Once its deadline has passed they can’t ask again, though you can still forgive it later from the penalty history.`,
+                        description:
+                          p?.reason === 'day_forgiveness'
+                            ? `${partner?.name}’s No on ${titleFor(p.rule_id)} for ${formatDate(p.day)} won’t count toward the week. Before its deadline they can ask again.`
+                            : `${partner?.name}’s miss on ${titleFor(p?.rule_id ?? '')}${p?.day ? ` for ${formatDate(p.day)}` : ''} stays a point. Once its deadline has passed they can’t ask again, though you can still forgive it later from the penalty history.`,
                         label: 'Deny',
                         action: () => decide(false),
                       })

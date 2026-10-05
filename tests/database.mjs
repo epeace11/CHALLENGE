@@ -755,6 +755,103 @@ await assert.rejects(
 console.log(
   'PASS: one Save per check-in — answer, note and forgiveness request in one transaction; a Yes cannot ask and withdraws a pending ask; a failed ask saves nothing.',
 );
+// Forgiveness on a gym day: a No can carry a request before its deadline; while it waits and once approved the day counts toward the week as a forgiven visit; a denial or a Yes voids it.
+await db.exec(
+  `delete from challenge_requests where point_id in (select id from challenge_points where rule_id='gym');delete from challenge_points where rule_id='gym';delete from challenge_entries where rule_id='gym';delete from challenge_weekly_targets where true;delete from challenge_weeks where true;insert into challenge_weeks values(${T}-10,${T}-4),(${T}-3,${T}+3);insert into challenge_weekly_targets values('gym',${T}-10,2),('gym',${T}-3,2)`,
+);
+const gymDay = async (day) =>
+  (
+    await db.query(
+      `select e.status,p.id point,p.voided,p.forgiven,p.reason,r.id req,r.status ask from challenge_entries e left join challenge_points p on p.entry_id=e.id and p.slot=0 left join challenge_requests r on r.point_id=p.id where e.user_id='${kazzy}' and e.rule_id='gym' and e.day=${day}`,
+    )
+  ).rows[0];
+await actor(kazzy);
+await db.exec(`select challenge_checkin('gym',${T},false,'',null,'Fever')`);
+assert.deepEqual(
+  (({ status, voided, forgiven, reason, ask }) => ({
+    status,
+    voided,
+    forgiven,
+    reason,
+    ask,
+  }))(await gymDay(T)),
+  {
+    status: 'missed',
+    voided: false,
+    forgiven: false,
+    reason: 'day_forgiveness',
+    ask: 'pending',
+  },
+);
+await assert.rejects(
+  () => db.exec(`select challenge_checkin('gym',${T}-3,false,'',null,'Late')`),
+  /before its deadline/,
+);
+// Denied: the point is voided and costs nothing; asking again revives it.
+await actor(erin);
+await db.exec(`select challenge_decide('${(await gymDay(T)).req}',false)`);
+assert.deepEqual((({ voided, ask }) => ({ voided, ask }))(await gymDay(T)), {
+  voided: true,
+  ask: 'denied',
+});
+await actor(kazzy);
+await db.exec(
+  `select challenge_checkin('gym',${T},false,'',null,'Still sick')`,
+);
+assert.deepEqual((({ voided, ask }) => ({ voided, ask }))(await gymDay(T)), {
+  voided: false,
+  ask: 'pending',
+});
+// Approved: a forgiven visit; editing the No's note keeps it; a Yes withdraws it.
+await actor(erin);
+await db.exec(`select challenge_decide('${(await gymDay(T)).req}',true)`);
+assert.deepEqual(
+  (({ status, forgiven }) => ({ status, forgiven }))(await gymDay(T)),
+  { status: 'excused', forgiven: true },
+);
+await actor(kazzy);
+await db.exec(`select challenge_checkin('gym',${T},false,'Rested',null,null)`);
+assert.equal((await gymDay(T)).status, 'excused');
+await assert.rejects(
+  () => db.exec(`select challenge_checkin('gym',${T},false,'',null,'Again')`),
+  /already forgiven/,
+);
+await db.exec(`select challenge_checkin('gym',${T},true,'',null,null)`);
+assert.deepEqual(
+  (({ status, voided, forgiven, req }) => ({ status, voided, forgiven, req }))(
+    await gymDay(T),
+  ),
+  { status: 'pending', voided: true, forgiven: false, req: null },
+);
+// A closed week counts forgiven and still-asked days toward its target.
+const gymShort = async () =>
+  (
+    await db.query(
+      `select count(*)::int n from challenge_points where user_id='${kazzy}' and rule_id='gym' and reason='weekly_shortfall' and day=${T}-4 and not voided`,
+    )
+  ).rows[0].n;
+await db.exec(`select challenge_sync()`);
+assert.equal(await gymShort(), 2);
+await db.exec(
+  `insert into challenge_entries(user_id,rule_id,day,done,status) values('${kazzy}','gym',${T}-8,false,'excused'),('${kazzy}','gym',${T}-7,false,'missed');insert into challenge_points(user_id,rule_id,day,reason,entry_id,forgiven) select user_id,rule_id,day,'day_forgiveness',id,day=${T}-8 from challenge_entries where user_id='${kazzy}' and rule_id='gym' and day<${T}-4;insert into challenge_requests(point_id,requester_id,reason) select id,'${kazzy}','Sick' from challenge_points where rule_id='gym' and day=${T}-7`,
+);
+await db.exec(`select challenge_sync()`);
+assert.equal(await gymShort(), 0);
+// Undoing the forgiveness voids the day point and the week falls short again.
+await actor(erin);
+await db.exec(
+  `select challenge_partner_forgive((select id from challenge_points where rule_id='gym' and day=${T}-8),false)`,
+);
+assert.deepEqual(
+  (({ status, voided, forgiven }) => ({ status, voided, forgiven }))(
+    await gymDay(`${T}-8`),
+  ),
+  { status: 'missed', voided: true, forgiven: false },
+);
+assert.equal(await gymShort(), 1);
+console.log(
+  'PASS: gym-day forgiveness — asked before the deadline, counts as a forgiven visit while waiting and once approved, voided by a denial, an undo or a Yes.',
+);
 console.log(
   'PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.',
 );
