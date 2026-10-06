@@ -34,7 +34,7 @@ assert.deepEqual(await stepsTargets(), [
   ['2026-10-12', 1],
 ]);
 await db.exec(
-  `insert into challenge_weekly_targets values('steps_weekly','2026-09-21',1);insert into challenge_entries(user_id,rule_id,day,done,status) values('${kazzy}','steps_weekly','2026-09-23',false,'missed');insert into challenge_disputes(entry_id,raised_by,comment) select id,'${erin}','x' from challenge_entries where rule_id='steps_weekly';insert into challenge_points(user_id,rule_id,day,reason,slot) values('${kazzy}','steps_weekly','2026-09-27','weekly_shortfall',1);insert into challenge_requests(point_id,requester_id,reason) select id,'${kazzy}','Rained all week' from challenge_points where rule_id='steps_weekly'`,
+  `insert into challenge_weekly_targets values('steps_weekly','2026-09-21',1);insert into challenge_entries(user_id,rule_id,day,done,status) values('${kazzy}','steps_weekly','2026-09-23',false,'missed');insert into challenge_disputes(entry_id,raised_by,comment) select id,'${erin}','x' from challenge_entries where rule_id='steps_weekly';insert into challenge_points(user_id,rule_id,day,reason,slot) values('${kazzy}','steps_weekly','2026-09-27','weekly_shortfall',1);insert into challenge_requests(point_id,requester_id,reason) select id,'${kazzy}','Rained all week' from challenge_points where rule_id='steps_weekly' and day='2026-09-27'`,
 );
 await db.exec(
   readFileSync(
@@ -458,7 +458,7 @@ await db.exec(`select challenge_review('${stepEntry.id}','approve')`);
 await actor(kazzy);
 const stepPoints = (
   await db.query(
-    `select user_id,slot,voided from challenge_points where rule_id='steps_weekly' order by slot`,
+    `select user_id,slot,voided from challenge_points where rule_id='steps_weekly' and day=${T}-3 order by slot`,
   )
 ).rows;
 assert.deepEqual(
@@ -577,7 +577,7 @@ await db.exec(
 const dailyCount = async (name) =>
   (
     await db.query(
-      `select count(*)::int n from challenge_rules where not weekly and (person is null or person='${name}') and (not weeknights or extract(dow from ${T}-1)<=4) and (not weekends or extract(dow from ${T}-1)>4)`,
+      `select count(*)::int n from challenge_rules where not weekly and (person is null or person='${name}') and (not weeknights or extract(dow from ${T}-1)<=4) and (not weekends or extract(dow from ${T}-1)>4) and (not sundays or extract(dow from ${T}-1)=0) and (starts is null or ${T}-1>=starts)`,
     )
   ).rows[0].n;
 const due = async () =>
@@ -899,6 +899,44 @@ await assert.rejects(
 await db.exec(`reset role`);
 console.log(
   'PASS: a forgiven No stays excused when re-saved; weekly reminders go to whoever is short with two days left, service role only.',
+);
+// Erin's Sunday hands photo: Sundays only, nothing before it starts, Erin only, a photo for a Yes.
+const sun = `(${T}-1-extract(dow from ${T}-1)::int)`; // the latest Sunday that can be logged
+await db.exec(
+  `update challenge_config set start_date=${T}-20 where id=1;update challenge_rules set starts=${sun} where id='hands'`,
+);
+await actor(erin);
+await assert.rejects(
+  () => db.exec(`select challenge_checkin('hands',${sun}-7,false)`),
+  /not available/,
+); // before it starts
+await assert.rejects(
+  () => db.exec(`select challenge_checkin('hands',${sun}-6,false)`),
+  /not available/,
+); // a Monday
+await assert.rejects(
+  () => db.exec(`select challenge_checkin('hands',${sun},true)`),
+  /screenshot/,
+);
+await db.exec(
+  `insert into storage.objects values('challenge-proof','${erin}/hands.jpg');select challenge_checkin('hands',${sun},true,'Oil every night',$$${erin}/hands.jpg$$)`,
+);
+await db.exec(`select challenge_sync()`);
+assert.deepEqual(
+  (
+    await db.query(
+      `select day=${sun} sunday,coalesce(proposed_done,done) done from challenge_entries where rule_id='hands' order by day`,
+    )
+  ).rows,
+  [{ sunday: true, done: true }],
+); // a late Yes waits as a correction; the hourly job adds no misses for earlier Sundays or other days
+await actor(kazzy);
+await assert.rejects(
+  () => db.exec(`select challenge_checkin('hands',${sun},false)`),
+  /not available/,
+);
+console.log(
+  'PASS: Sunday hands photo — Sundays only from its start, Erin only, a photo for a Yes, no misses before it starts.',
 );
 console.log(
   'PASS: partner forgive/undo, re-ask after denial; late corrections, no double gym penalties, direct writes blocked; schema, automatic assessment, edits, partner-only review, forgiveness, proof requirement, person-specific habits, outsider rejection.',

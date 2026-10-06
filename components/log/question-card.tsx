@@ -173,8 +173,8 @@ export function QuestionCard({
               {uploading
                 ? 'Uploading…'
                 : draft.proofs.length
-                  ? 'Add another screenshot'
-                  : 'Attach screenshot'}
+                  ? `Add another ${rule.proofName ?? 'screenshot'}`
+                  : `Attach ${rule.proofName ?? 'screenshot'}`}
               {!draft.proofs.length && !uploading && (
                 <small className="muted">needed for a Yes</small>
               )}

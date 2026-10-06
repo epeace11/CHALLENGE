@@ -33,6 +33,45 @@ const blank: Draft = {
   reason: '',
 };
 
+/** Unsaved check-ins as kept on the phone across reloads, by `${day}|${rule}`; each remembers the saved answer version (`base`) it started from. */
+export type SavedDrafts = Record<string, { base: string; draft: Draft }>;
+
+/** Reads drafts kept on the phone, dropping anything that is not a well-formed draft (an older app version, a hand edit). */
+export function readDrafts(raw: string | null): SavedDrafts {
+  let parsed: unknown;
+  try {
+    parsed = raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+  if (!parsed || typeof parsed !== 'object') return {};
+  const out: SavedDrafts = {};
+  for (const [key, v] of Object.entries(parsed as Record<string, unknown>)) {
+    const { base, draft: d } = (v ?? {}) as { base?: unknown; draft?: Draft };
+    if (
+      typeof base === 'string' &&
+      d &&
+      (d.done === null || typeof d.done === 'boolean') &&
+      typeof d.note === 'string' &&
+      Array.isArray(d.proofs) &&
+      d.proofs.every((x) => typeof x === 'string') &&
+      typeof d.forgive === 'boolean' &&
+      typeof d.reason === 'string'
+    )
+      out[key] = {
+        base,
+        draft: {
+          done: d.done,
+          note: d.note,
+          proofs: d.proofs,
+          forgive: d.forgive,
+          reason: d.reason,
+        },
+      };
+  }
+  return out;
+}
+
 /** What a check-in starts from: the saved answer, or the late correction waiting on it. A miss that was never logged starts with nothing chosen. */
 export function savedDraft(e: Entry | undefined): Draft {
   if (!e) return blank;
@@ -87,7 +126,7 @@ export function askOption(
 export function draftProblem(d: Draft, rule: Rule, ask: AskOption) {
   if (d.done === null) return 'Choose Yes or No first.';
   if (d.done && rule.proof && !d.proofs.length)
-    return 'Attach a screenshot to save a Yes.';
+    return `Attach a ${rule.proofName ?? 'screenshot'} to save a Yes.`;
   if (!d.done && d.forgive && ask.kind === 'ask' && !d.reason.trim())
     return 'Say why it should be forgiven, or untick the request.';
   return null;

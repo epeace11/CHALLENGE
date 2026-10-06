@@ -3,6 +3,7 @@ import { Flame } from 'lucide-react';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useChallenge } from '@/components/app/challenge-context';
 import { percent } from '@/components/progress/habit-list';
+import { HandsHistory } from '@/components/shared/hands-history';
 import { EntryPill } from '@/components/shared/status-pill';
 import { days, formatDate, formatShortDate } from '@/lib/dates';
 import { entryKey, tone } from '@/lib/progress';
@@ -60,6 +61,7 @@ export function HabitView({ ruleId }: { ruleId: string }) {
                   );
                 })}
             </div>
+            {r.id === 'hands' && <HandsHistory uid={p.id} />}
             <div className="habit-facts">
               <span>
                 <Flame size={13} />

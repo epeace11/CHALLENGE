@@ -1,6 +1,7 @@
 'use client';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useChallenge } from '@/components/app/challenge-context';
+import { HandsHistory } from '@/components/shared/hands-history';
 import { Proofs } from '@/components/shared/proofs';
 import { EntryPill } from '@/components/shared/status-pill';
 import { api } from '@/lib/api';
@@ -43,6 +44,9 @@ export function EntryView({ entry }: { entry: Entry }) {
         {entry.note && <p className="detail-note">“{entry.note}”</p>}
       </div>
       <Proofs proof={entry.proof} />
+      {entry.rule_id === 'hands' && (
+        <HandsHistory uid={entry.user_id} current={entry.id} />
+      )}
       {data.disputes
         .filter((d) => d.entry_id === entry.id)
         .map((d) => (

@@ -431,3 +431,33 @@
     display: inline-flex !important;
   }
 }
+
+/* Erin's Sunday hands photos, week by week (components/shared/hands-history.tsx). */
+.hands-history {
+  margin-top: 16px;
+}
+.hands-history h3 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+.hands-weeks {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.hands-week {
+  flex: 0 0 auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.hands-week > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.hands-week.current {
+  border-color: var(--accent-text);
+}

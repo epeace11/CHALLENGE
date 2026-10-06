@@ -15,6 +15,7 @@ import {
   locked,
 } from '../lib/progress.ts';
 import { days, START, END } from '../lib/dates.ts';
+import { activeRules } from '../lib/rules.ts';
 import { toWeeks } from '../lib/weeks.ts';
 import { readFileSync } from 'node:fs';
 // Weeks and targets exactly as the database defines them, so the app and supabase/setup.sql cannot drift apart.
@@ -215,9 +216,9 @@ const weekendDays = days().filter(
   (d) => new Date(d + 'T12:00Z').getUTCDay() > 4,
 ).length;
 assert.equal(
-  total(bar) + 2 * weekendDays + 7,
+  total(bar) - 1 + 2 * weekendDays + 7,
   total(personBar(data, kazzy, now)),
-); // plus his weekly steps targets, 3+3+1 (none before Sep 28)
+); // plus his weekly steps targets, 3+3+1 (none before Sep 28); Erin's one is her Sunday hands photo, asked from Oct 11 only
 // Gym days asked or forgiven count toward the open week: one forgiven visit is excused, one still asked is under review, the rest stay ahead.
 const gymAsk = (id, day, forgiven) => ({
   id,
@@ -396,12 +397,13 @@ assert.deepEqual(get(badges(gymData, erin, now), 'iron_week'), {
     note: 'Counts once the week is over',
   },
 });
-// The bar's denominator is every habit-day of the challenge, so Erin's 8 daily rules over 30 days plus 16 gym visits.
+// The bar's denominator is every habit-day of the challenge, so Erin's 8 daily rules over 30 days plus 16 gym visits, plus her one Sunday hands photo (Oct 11).
 assert.equal(
   total(bar),
   5 * 30 +
     3 * days().filter((d) => new Date(d + 'T12:00Z').getUTCDay() <= 4).length +
-    16,
+    16 +
+    1,
 );
 
 // A miss waiting on a forgiveness request is under review: no point, no dollars, and its day is neither won, lost nor tied until the partner decides.
@@ -462,6 +464,18 @@ assert.equal(
   assert.equal(nextMissCost(denied, erin.id), 2);
 }
 
+// Erin's hands photo is asked on Sundays only, from Oct 11.
+const asksHands = (who, d) =>
+  activeRules(who, d, weeks).some((r) => r.id === 'hands');
+assert.deepEqual(
+  [
+    asksHands('Erin', '2026-10-11'),
+    asksHands('Erin', '2026-10-04'),
+    asksHands('Erin', '2026-10-12'),
+    asksHands('Kazzy', '2026-10-11'),
+  ],
+  [true, false, false, false],
+);
 console.log(
   'PASS: progress stats — tones, bars, streaks (excused keeps them), worst-first order, days won (pending forgiveness undecided), perfect days, costs, badges.',
 );

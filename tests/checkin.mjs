@@ -5,6 +5,7 @@ import {
   draftProblem,
   joinProofs,
   proofPaths,
+  readDrafts,
   savedDraft,
   submission,
 } from '../lib/checkin.ts';
@@ -244,6 +245,33 @@ assert.equal(
   null,
 );
 
+// Drafts kept on the phone come back as they were; anything malformed is dropped, never a crash.
+const kept = {
+  '2026-09-27|prayer': {
+    base: 'x1|2026-09-27T12:00:00Z',
+    draft: {
+      done: false,
+      note: 'n',
+      proofs: ['a.jpg'],
+      forgive: true,
+      reason: 'r',
+    },
+  },
+};
+assert.deepEqual(readDrafts(JSON.stringify(kept)), kept);
+assert.deepEqual(readDrafts(null), {});
+assert.deepEqual(readDrafts('not json'), {});
+assert.deepEqual(readDrafts('[1,2]'), {});
+assert.deepEqual(
+  readDrafts(
+    JSON.stringify({
+      ...kept,
+      bad: { base: 'b', draft: { done: 'yes', note: '', proofs: [] } },
+      worse: null,
+    }),
+  ),
+  kept,
+);
 console.log(
   'PASS: check-ins — drafts from saved answers and late corrections, what a No can carry, validation, changes, and what one Save sends.',
 );

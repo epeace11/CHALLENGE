@@ -16,13 +16,17 @@ export type Rule = {
   /** Asked on the Log page. */
   question: string;
   description: string;
-  /** Which days it applies: 'Sun–Thu', 'Fri–Sat', 'Every day' or 'Weekly'. */
+  /** Which days it applies: 'Sun–Thu', 'Fri–Sat', 'Sundays', 'Every day' or 'Weekly'. */
   days: string;
+  /** First day it is asked (challenge_rules.starts); earlier days have no answer and no miss. */
+  from?: string;
   group: string;
   /** Only this person has the rule; otherwise both do. */
   person?: Person;
   /** A Yes needs at least one screenshot. */
   proof?: boolean;
+  /** What the proof is called on the Log page, when not a screenshot. */
+  proofName?: string;
   /** Counted per Monday–Sunday week against the week's target, like the gym. */
   weekly?: boolean;
 };
@@ -132,6 +136,21 @@ export const rules: Rule[] = [
     proof: true,
   },
   {
+    id: 'hands',
+    title: 'Sunday hands photo',
+    fullTitle: 'Sunday hands photo: cuticle care',
+    question:
+      'Did you work on your cuticles this week: fidget tool, oil, and trying not to pick?',
+    description:
+      'Every Sunday, take a photo of your hands. It counts when you’ve been using your fidget tool, putting on the oil and trying not to pick. Trying is what counts, not perfect nails. Each week’s photo sits next to the others so you can see the change.',
+    days: 'Sundays',
+    from: '2026-10-11',
+    group: 'Self-care',
+    person: 'Erin',
+    proof: true,
+    proofName: 'photo of your hands',
+  },
+  {
     id: 'gym',
     title: 'Go to gym',
     question: 'Did you go to the gym today?',
@@ -175,6 +194,8 @@ export function activeRules(person: Person, date: string, weeks: Week[] = []) {
       (!r.person || r.person === person) &&
       (r.days !== 'Sun–Thu' || dow <= 4) &&
       (r.days !== 'Fri–Sat' || dow > 4) &&
+      (r.days !== 'Sundays' || dow === 0) &&
+      (!r.from || date >= r.from) &&
       (!r.weekly || targetFor(weekOf(weeks, date), r.id) > 0),
   );
 }

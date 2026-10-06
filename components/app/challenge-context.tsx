@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useNewBadges } from '@/hooks/use-new-badges';
 import { useNow } from '@/hooks/use-now';
+import { useSavedDrafts } from '@/hooks/use-saved-drafts';
 import type { Draft } from '@/lib/checkin';
 import { START, clampDate, defaultDate, shift, toronto } from '@/lib/dates';
 import {
@@ -113,10 +114,9 @@ function useChallengeState(
     setEditing(mode);
   };
   // Unsaved check-ins by `${day}|${rule}`. Each remembers the saved entry version it started from
-  // (`base`) and is ignored once that changes. Moving between questions keeps them; only Save sends one.
-  const [drafts, setDrafts] = useState<
-    Record<string, { base: string; draft: Draft }>
-  >({});
+  // (`base`) and is ignored once that changes. Moving between questions keeps them, and so does a
+  // reload (they are kept on the phone); only Save sends one.
+  const [drafts, setDrafts] = useSavedDrafts(me.id);
   const editDraft = (
     key: string,
     base: string,
