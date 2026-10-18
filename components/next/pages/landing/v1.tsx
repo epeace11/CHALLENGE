@@ -19,7 +19,7 @@ import { useLanding } from './use-landing';
 /** Landing page, version 2. */
 export default function LandingV2() {
   const world = useWorld();
-  const { start, signIn, invite, how, setHow } = useLanding();
+  const { start, signIn, invite, canOpenInvite, how, setHow } = useLanding();
 
   return (
     <PlainFrame
@@ -73,9 +73,11 @@ export default function LandingV2() {
             >
               Start a challenge
             </Button>
-            <Button size="lg" icon={Ticket} onClick={invite}>
-              I have an invite
-            </Button>
+            {canOpenInvite && (
+              <Button size="lg" icon={Ticket} onClick={invite}>
+                I have an invite
+              </Button>
+            )}
           </Enter>
         </div>
 

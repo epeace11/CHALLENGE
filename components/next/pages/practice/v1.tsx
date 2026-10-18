@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { ArrowRight, Check, RotateCcw, UserPlus } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import {
   ActionBar,
@@ -119,6 +120,9 @@ export default function PracticeV2() {
   const gift = useRef<HTMLLIElement>(null);
   const question = useRef<HTMLDivElement>(null);
   const partner = p.world.partner.name;
+  // In the live app the partner may already be in; the button then goes back to the challenge.
+  const { live } = useBackend();
+  const joined = live && !p.world.partnerPending;
   const at = ORDER.indexOf(p.phase);
   const state = (phase: Phase): State => {
     const i = ORDER.indexOf(phase);
@@ -174,10 +178,10 @@ export default function PracticeV2() {
           variant="primary"
           size="lg"
           full
-          icon={UserPlus}
-          onClick={() => navigate('invite')}
+          icon={joined ? ArrowRight : UserPlus}
+          onClick={() => (live ? navigate(null) : navigate('invite'))}
         >
-          Invite {partner} for real
+          {joined ? 'Back to your challenge' : `Invite ${partner} for real`}
         </Button>
         <Button variant="quiet" icon={RotateCcw} onClick={p.restart}>
           Practice again
