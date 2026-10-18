@@ -34,7 +34,7 @@ assert.deepEqual(await stepsTargets(), [
   ['2026-10-12', 1],
 ]);
 await db.exec(
-  `insert into challenge_weekly_targets values('steps_weekly','2026-09-21',1);insert into challenge_entries(user_id,rule_id,day,done,status) values('${kazzy}','steps_weekly','2026-09-23',false,'missed');insert into challenge_disputes(entry_id,raised_by,comment) select id,'${erin}','x' from challenge_entries where rule_id='steps_weekly';insert into challenge_points(user_id,rule_id,day,reason,slot) values('${kazzy}','steps_weekly','2026-09-27','weekly_shortfall',1);insert into challenge_requests(point_id,requester_id,reason) select id,'${kazzy}','Rained all week' from challenge_points where rule_id='steps_weekly'`,
+  `insert into challenge_weekly_targets values('steps_weekly','2026-09-21',1);insert into challenge_entries(user_id,rule_id,day,done,status) values('${kazzy}','steps_weekly','2026-09-23',false,'missed');insert into challenge_disputes(entry_id,raised_by,comment) select id,'${erin}','x' from challenge_entries where rule_id='steps_weekly';insert into challenge_points(user_id,rule_id,day,reason,slot) values('${kazzy}','steps_weekly','2026-09-27','weekly_shortfall',1);insert into challenge_requests(point_id,requester_id,reason) select id,'${kazzy}','Rained all week' from challenge_points where rule_id='steps_weekly' and day<'2026-09-28'`,
 );
 await db.exec(
   readFileSync(
@@ -212,6 +212,10 @@ assert.equal(
   true,
 );
 await actor(erin);
+// A gym week around today, so this runs on any date (the real weeks end Oct 14).
+await db.exec(
+  `insert into challenge_weeks values((now() at time zone 'America/Toronto')::date-3,(now() at time zone 'America/Toronto')::date+2) on conflict do nothing;insert into challenge_weekly_targets values('gym',(now() at time zone 'America/Toronto')::date-3,4) on conflict do nothing`,
+);
 await db.exec(
   `select challenge_log('gym',(now() at time zone 'America/Toronto')::date-2,true);select challenge_tick()`,
 );
@@ -458,7 +462,7 @@ await db.exec(`select challenge_review('${stepEntry.id}','approve')`);
 await actor(kazzy);
 const stepPoints = (
   await db.query(
-    `select user_id,slot,voided from challenge_points where rule_id='steps_weekly' order by slot`,
+    `select user_id,slot,voided from challenge_points where rule_id='steps_weekly' and day=${T}-3 order by slot`,
   )
 ).rows;
 assert.deepEqual(
