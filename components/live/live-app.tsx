@@ -77,22 +77,23 @@ const noSearch = () => '';
 const deviceZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 const nowIso = () => new Date().toISOString();
 
-/** Opened invites and shared links outlive the tab (localStorage); the invite link made for a partner only this tab (sessionStorage). */
-const store = (key: string) =>
-  key === INVITE_KEY || key === SHARED_KEY ? localStorage : sessionStorage;
-const readSession = (key: string) => {
+/**
+ * Kept in this browser: the invite or shared link someone opened (while they sign up, even in another
+ * tab), and the invite link made for a partner (so the app shows the same one again, not a new one).
+ */
+const readStored = (key: string) => {
   try {
-    return store(key).getItem(key);
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
 };
-const writeSession = (key: string, value: string | null) => {
+const writeStored = (key: string, value: string | null) => {
   try {
-    if (value === null) store(key).removeItem(key);
-    else store(key).setItem(key, value);
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
   } catch {
-    // Private mode: the invite then lives only in the URL.
+    // Private mode: links then live only in the URL.
   }
 };
 
@@ -204,7 +205,7 @@ export function LiveApp() {
     // A link that was turned off is forgotten.
     if (sharedToken && !shared) {
       sharedToken = null;
-      writeSession(SHARED_KEY, null);
+      writeStored(SHARED_KEY, null);
     }
     await api.ensureProfile().catch(() => {});
     const rows = await api.loadRows().catch(() => null);
@@ -219,10 +220,10 @@ export function LiveApp() {
     const params = new URLSearchParams(location.search);
     const invite = params.get('invite'),
       shared = params.get('shared');
-    if (invite) writeSession(INVITE_KEY, invite);
-    if (shared) writeSession(SHARED_KEY, shared);
-    inviteToken = invite ?? readSession(INVITE_KEY);
-    sharedToken = shared ?? readSession(SHARED_KEY);
+    if (invite) writeStored(INVITE_KEY, invite);
+    if (shared) writeStored(SHARED_KEY, shared);
+    inviteToken = invite ?? readStored(INVITE_KEY);
+    sharedToken = shared ?? readStored(SHARED_KEY);
     // reload() sets state only after the database answers, never during the effect.
     // oxlint-disable-next-line react/react-compiler
     void reload();
@@ -439,8 +440,8 @@ function Hosting({
       },
       signOut: async () => {
         await api.signOut();
-        writeSession(INVITE_KEY, null);
-        writeSession(LINK_KEY, null);
+        writeStored(INVITE_KEY, null);
+        writeStored(LINK_KEY, null);
         inviteToken = null;
         await reload();
         navigate('landing');
@@ -476,7 +477,7 @@ function Hosting({
       },
       inviteLink: async () => {
         const { world: w } = latest.current;
-        const kept = readSession(LINK_KEY);
+        const kept = readStored(LINK_KEY);
         if (kept) {
           const saved = JSON.parse(kept) as {
             challenge: string;
@@ -495,7 +496,7 @@ function Hosting({
           link: `${location.origin}/app?invite=${made.token}`,
           code: made.code,
         };
-        writeSession(LINK_KEY, JSON.stringify(out));
+        writeStored(LINK_KEY, JSON.stringify(out));
         return out;
       },
       startShared: async () => {
@@ -522,7 +523,7 @@ function Hosting({
         );
         if (id === false) return false;
         sharedToken = null;
-        writeSession(SHARED_KEY, null);
+        writeStored(SHARED_KEY, null);
         setWantedChallenge(id);
         await reload();
         navigate('setup');
@@ -553,7 +554,7 @@ function Hosting({
         }
         const id = await attempt(() => api.acceptInvite(t));
         if (id === false) return false;
-        writeSession(INVITE_KEY, null);
+        writeStored(INVITE_KEY, null);
         inviteToken = null;
         setWantedChallenge(id);
         await reload();

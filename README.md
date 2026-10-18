@@ -73,6 +73,8 @@ The app subscribes to Supabase Realtime for the published challenge tables and r
 
 `supabase/next/share-links.sql` (October 18, 2026; rerunnable, run once on PROD CHALLENGE, which was set up before it) adds share links: `nx_shared_preview(token)` lets anyone read a saved challenge's name, look, length, stakes and rules while its link is on (never who saved it), and `nx_save_shared(token)` saves a signed-in person's own copy. In the app, `/app?shared=<token>` opens the Shared page; Start this challenge and Save for later ask a signed-out person to make an account first. Fresh installs get both functions from `schema.sql`.
 
+`supabase/next/invite-links.sql` (October 18, 2026; rerunnable, run once on PROD CHALLENGE) keeps invite links already sent working when a new one is made (the app on another device used to cancel them), and opens an invite only with the full link, never the guessable six-character code. Fresh installs get the same from `schema.sql`.
+
 `supabase/next/import-original.sql` adds `nx_import_original(erin, kazzy)`, which copies the Sep 15 – Oct 14 challenge from the old tables into the new schema as a finished challenge ("The Original"); `tests/import-original.mjs` checks every point comes across and the new engine changes none. Screenshots are copied separately (the script's header says where each goes).
 
 ## Badges and screenshots

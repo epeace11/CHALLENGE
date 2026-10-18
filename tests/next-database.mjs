@@ -24,6 +24,14 @@ await db.exec(
 await db.exec(
   readFileSync(new URL('../supabase/next/schema.sql', import.meta.url), 'utf8'),
 );
+// The rerunnable scripts run cleanly on a project that already has the schema.
+for (const script of ['share-links.sql', 'invite-links.sql'])
+  await db.exec(
+    readFileSync(
+      new URL(`../supabase/next/${script}`, import.meta.url),
+      'utf8',
+    ),
+  );
 
 /** Runs SQL as `id` (row-level security on), at `now` when given. */
 async function as(id, sql, params = []) {
@@ -139,16 +147,27 @@ await fails(
   as(maya, `select nx_accept_invite($1)`, [token]),
   /your own invite/,
 );
-assert.equal(
-  (await one(jordan, `select nx_accept_invite($1) id`, [code.toLowerCase()]))
-    .id,
-  fall,
-  'the short code works too',
-);
 await fails(
-  as(priya, `select nx_accept_invite($1)`, [token]),
+  as(jordan, `select nx_accept_invite($1)`, [code]),
   /expired or was already used/,
+  'the short code is too easy to guess to open an invite',
 );
+// A second link (another device) leaves the first one working.
+const second = await one(
+  maya,
+  `select * from nx_create_invite($1,'Jordan','')`,
+  [fall],
+);
+assert.notEqual(second.token, token);
+assert.equal(
+  (await one(jordan, `select nx_accept_invite($1) id`, [token])).id,
+  fall,
+);
+for (const t of [token, second.token])
+  await fails(
+    as(priya, `select nx_accept_invite($1)`, [t]),
+    /expired or was already used|already has two people/,
+  );
 assert.equal(
   (await one(jordan, `select status from challenges where id=$1`, [fall]))
     .status,
