@@ -33,8 +33,8 @@ export function ThemeIcon({
         className,
       )}
       style={{
-        background: 'var(--nx-primary)',
-        boxShadow: 'var(--nx-primary-shadow)',
+        background: 'var(--nx-fill)',
+        boxShadow: 'var(--nx-fill-shadow)',
       }}
       aria-hidden="true"
     >

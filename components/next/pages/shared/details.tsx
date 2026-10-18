@@ -83,7 +83,7 @@ export function LookLabel({
       <span
         data-look={look}
         className="size-4 shrink-0 rounded-full"
-        style={{ background: 'var(--nx-primary)' }}
+        style={{ background: 'var(--nx-fill)' }}
         aria-hidden="true"
       />
       {lookName(look)} look

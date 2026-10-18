@@ -1,5 +1,5 @@
 /* Start a challenge: the look-coloured parts of the rows. Colours come from the look's tokens
-   (--nx-primary, --nx-accent…), set by data-look on each row, so light, dark and every look work
+   (--nx-fill, --nx-accent…; the filled row uses --nx-primary like a main button), set by data-look on each row, so light, dark and every look work
    without colours of their own. */
 /* Tailwind's layer order, stated first: if this sheet is registered before app/globals.css, the
    components layer still sits between base (preflight) and utilities. */
@@ -11,7 +11,7 @@
     border-radius: var(--nx-r-lg);
     border: 1px solid transparent;
     background: var(--nx-primary);
-    color: var(--nx-on-accent);
+    color: var(--nx-on-primary);
     box-shadow: var(--nx-primary-shadow);
   }
   .filled:hover:not(:disabled) {
@@ -21,7 +21,7 @@
     color: inherit;
   }
   .filled .dot {
-    background: color-mix(in srgb, var(--nx-on-accent) 22%, transparent);
+    background: color-mix(in srgb, var(--nx-on-primary) 18%, transparent);
     color: inherit;
   }
 
@@ -33,9 +33,9 @@
     width: 48px;
     height: 48px;
     border-radius: 14px;
-    background: var(--nx-primary);
+    background: var(--nx-fill);
     color: var(--nx-on-accent);
-    box-shadow: var(--nx-primary-shadow);
+    box-shadow: var(--nx-fill-shadow);
   }
   .swatch[data-size='lg'] {
     width: 64px;
@@ -69,6 +69,6 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: var(--nx-primary);
+    background: var(--nx-fill);
   }
 }

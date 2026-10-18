@@ -2,6 +2,11 @@
 
 Kazzy picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, October 18, 2026
+
+- **Calmer buttons, like today's app.** Erin found the purple buttons too aggressive and preferred the old design. In every look the main button is now today's dark slate in light mode and a soft light grey with dark text in dark mode, with no coloured glow (`--nx-primary`). Secondary buttons are light glass with a thin grey border and ink text, not purple. Each look's own colour (`--nx-fill`) stays on small things only: theme swatches, badges, today's marker, the progress dots.
+- **Smaller everything.** "Things are too big": buttons are 44px (48px for `size="lg"`) with 16px medium-weight labels, corners are smaller (11px buttons, 14/18px cards), card padding is tighter, and titles and big numbers step down (page titles 28–36px, stat numbers 30/40px, the landing title 32–46px). Body text stays at 17px and secondary at 15px, Kazzy's floor.
+
 ## Decisions, October 1, 2026
 
 Built on October 1, 2026 (see "What's built" below). Each page's pick is now its only version, `v1.tsx` in its folder.

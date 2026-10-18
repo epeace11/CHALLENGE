@@ -35,7 +35,7 @@ export function NotificationCard({
       <span className="flex items-center gap-2.5">
         <span
           className="grid size-7 shrink-0 place-items-center rounded-lg font-nx-serif text-nx-2 text-nx-on-accent"
-          style={{ background: 'var(--nx-primary)' }}
+          style={{ background: 'var(--nx-fill)' }}
           aria-hidden="true"
         >
           C

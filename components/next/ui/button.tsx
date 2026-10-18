@@ -13,7 +13,7 @@ export type ButtonProps = ComponentProps<'button'> & {
    * - `danger`: filled red, for destructive confirmations.
    */
   variant?: ButtonVariant;
-  /** `lg` is 56px tall with larger text, for the main action on a focused screen. */
+  /** `lg` is 48px tall with larger text, for the main action on a focused screen. */
   size?: 'md' | 'lg';
   /** Full width. */
   full?: boolean;
@@ -26,8 +26,8 @@ export type ButtonProps = ComponentProps<'button'> & {
 };
 
 /**
- * A button that says exactly what it does ("Save", "Approve", "Invite Jordan"). At least 48px
- * tall (44px for `quiet`), with press feedback. Defaults to type="button".
+ * A button that says exactly what it does ("Save", "Approve", "Invite Jordan"). 44px tall
+ * (48px for `lg`), with press feedback. Defaults to type="button".
  */
 export function Button({
   variant = 'secondary',

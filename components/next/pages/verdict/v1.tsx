@@ -344,7 +344,7 @@ function ScoreColumn({
         {won && (
           <span
             className="absolute -top-2 -right-2 grid size-7 place-items-center rounded-full text-nx-on-accent shadow-nx-glass"
-            style={{ background: 'var(--nx-primary)' }}
+            style={{ background: 'var(--nx-fill)' }}
             aria-hidden="true"
           >
             <Crown size={15} strokeWidth={2.4} />

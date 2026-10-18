@@ -15,7 +15,7 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: var(--nx-primary);
+    background: var(--nx-fill);
     transform-origin: bottom;
     transform: scaleY(0);
     transition: transform var(--nx-slow) var(--nx-ease);

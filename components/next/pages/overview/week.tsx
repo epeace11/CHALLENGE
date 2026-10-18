@@ -99,7 +99,7 @@ export function WeekStrip({
               className={cn(
                 'grid h-7 min-w-7 place-items-center rounded-full px-1 text-nx-2 leading-none font-semibold',
                 d.today
-                  ? 'text-nx-on-accent [background:var(--nx-primary)]'
+                  ? 'text-nx-on-accent [background:var(--nx-fill)]'
                   : 'text-nx-ink',
               )}
             >

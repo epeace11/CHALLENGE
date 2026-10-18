@@ -56,22 +56,22 @@
   --text-nx-body--line-height: 1.5;
   --text-nx-lead: 19px;
   --text-nx-lead--line-height: 1.45;
-  --text-nx-h3: 21px;
+  --text-nx-h3: 20px;
   --text-nx-h3--line-height: 1.25;
-  --text-nx-h2: 26px;
+  --text-nx-h2: 24px;
   --text-nx-h2--line-height: 1.2;
   --text-nx-h1: var(--nx-fs-h1);
   --text-nx-h1--line-height: 1.1;
-  --text-nx-num: 36px;
+  --text-nx-num: 30px;
   --text-nx-num--line-height: 1;
-  --text-nx-num-lg: 52px;
+  --text-nx-num-lg: 40px;
   --text-nx-num-lg--line-height: 1;
   --text-nx-num-xl: var(--nx-fs-num-xl);
   --text-nx-num-xl--line-height: 1;
 
   --radius-nx-sm: 12px;
-  --radius-nx: 18px;
-  --radius-nx-lg: 24px;
+  --radius-nx: 14px;
+  --radius-nx-lg: 18px;
 
   --shadow-nx-glass: var(--nx-glass-shadow);
   --shadow-nx-lift: var(--nx-lift-shadow);
@@ -114,16 +114,16 @@
     -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto,
     'Helvetica Neue', Arial, sans-serif;
   --nx-font-serif: Georgia, 'Times New Roman', serif;
-  --nx-fs-h1: clamp(32px, 2.4vw + 22px, 44px);
-  --nx-fs-num-xl: clamp(60px, 8vw + 32px, 96px);
+  --nx-fs-h1: clamp(28px, 1.6vw + 22px, 36px);
+  --nx-fs-num-xl: clamp(48px, 5vw + 30px, 72px);
 
   /* Layout */
   --nx-gutter: 20px;
   --nx-page-max: 720px;
   --nx-r-sm: 12px;
-  --nx-r: 18px;
-  --nx-r-lg: 24px;
-  --nx-r-btn: 14px;
+  --nx-r: 14px;
+  --nx-r-lg: 18px;
+  --nx-r-btn: 11px;
   /* Set by the preview (its version bar) and by AppFrame (the phone tab bar). */
   --nx-top-inset: 0px;
   --nx-nav-h: 0px;
@@ -167,9 +167,15 @@
   --nx-accent-soft: #ece8f8;
   --nx-accent-line: #cbc1ee;
   --nx-on-accent: #ffffff;
-  --nx-primary: linear-gradient(135deg, #6b55c9, #5541a0);
-  --nx-primary-hover: linear-gradient(135deg, #604ac0, #4b3892);
-  --nx-primary-shadow: 0 8px 20px -8px #5b47a899;
+  /* The look's own colour, for small filled things: theme swatches, badges, today's marker. */
+  --nx-fill: linear-gradient(135deg, #6b55c9, #5541a0);
+  --nx-fill-hover: linear-gradient(135deg, #604ac0, #4b3892);
+  --nx-fill-shadow: 0 1px 2px #1e2a5a1f;
+  /* The main button in every look: today's app's dark slate, no coloured glow. */
+  --nx-primary: linear-gradient(130deg, #49515e, #2e3543);
+  --nx-primary-hover: linear-gradient(130deg, #3f4754, #252c39);
+  --nx-primary-shadow: 0 1px 2px #1e2a5a1f;
+  --nx-on-primary: #ffffff;
 
   /* Tones: text on soft fill, and a bar colour */
   --nx-done: #1f7a4b;
@@ -218,9 +224,14 @@
   --nx-accent-soft: #2c2350;
   --nx-accent-line: #5d4d9e;
   --nx-on-accent: #ffffff;
-  --nx-primary: linear-gradient(135deg, #7456e0, #a8458f);
-  --nx-primary-hover: linear-gradient(135deg, #7f63ea, #b4509b);
-  --nx-primary-shadow: 0 10px 28px -10px #8b6cf0b3;
+  --nx-fill: linear-gradient(135deg, #7456e0, #a8458f);
+  --nx-fill-hover: linear-gradient(135deg, #7f63ea, #b4509b);
+  --nx-fill-shadow: 0 4px 14px -6px #00000099;
+  /* In dark, the main button is a soft light grey with dark text: clear without a bright colour. */
+  --nx-primary: linear-gradient(130deg, #e6e2ef, #d2cce0);
+  --nx-primary-hover: linear-gradient(130deg, #efecf6, #dcd7e8);
+  --nx-primary-shadow: none;
+  --nx-on-primary: #17131f;
   --nx-done: #7fe0ad;
   --nx-done-soft: #1c3a2c;
   --nx-done-bar: #5fd49a;
@@ -250,9 +261,9 @@
   --nx-accent-strong: #4a3794;
   --nx-accent-soft: #ece8f8;
   --nx-accent-line: #cbc1ee;
-  --nx-primary: linear-gradient(135deg, #6b55c9, #5541a0);
-  --nx-primary-hover: linear-gradient(135deg, #604ac0, #4b3892);
-  --nx-primary-shadow: 0 8px 20px -8px #5b47a899;
+  --nx-fill: linear-gradient(135deg, #6b55c9, #5541a0);
+  --nx-fill-hover: linear-gradient(135deg, #604ac0, #4b3892);
+  --nx-fill-shadow: 0 1px 2px #1e2a5a1f;
 }
 [data-theme='dark'] .nx [data-look='classic'] {
   --nx-page: #0d0b14;
@@ -263,9 +274,9 @@
   --nx-accent-strong: #ddd3ff;
   --nx-accent-soft: #2c2350;
   --nx-accent-line: #5d4d9e;
-  --nx-primary: linear-gradient(135deg, #7456e0, #a8458f);
-  --nx-primary-hover: linear-gradient(135deg, #7f63ea, #b4509b);
-  --nx-primary-shadow: 0 10px 28px -10px #8b6cf0b3;
+  --nx-fill: linear-gradient(135deg, #7456e0, #a8458f);
+  --nx-fill-hover: linear-gradient(135deg, #7f63ea, #b4509b);
+  --nx-fill-shadow: 0 4px 14px -6px #00000099;
 }
 .nx[data-look='seventy-five'],
 .nx [data-look='seventy-five'] {
@@ -277,9 +288,9 @@
   --nx-accent-strong: #8c2659;
   --nx-accent-soft: #f8e4ee;
   --nx-accent-line: #e8b8cf;
-  --nx-primary: linear-gradient(135deg, #b23c78, #8f2a5c);
-  --nx-primary-hover: linear-gradient(135deg, #a53570, #822452);
-  --nx-primary-shadow: 0 8px 20px -8px #a3326a99;
+  --nx-fill: linear-gradient(135deg, #b23c78, #8f2a5c);
+  --nx-fill-hover: linear-gradient(135deg, #a53570, #822452);
+  --nx-fill-shadow: 0 1px 2px #1e2a5a1f;
 }
 [data-theme='dark'] .nx[data-look='seventy-five'],
 [data-theme='dark'] .nx [data-look='seventy-five'] {
@@ -291,9 +302,9 @@
   --nx-accent-strong: #ffc2df;
   --nx-accent-soft: #3a1a2c;
   --nx-accent-line: #7a3558;
-  --nx-primary: linear-gradient(135deg, #b03a74, #8a2f86);
-  --nx-primary-hover: linear-gradient(135deg, #bd4580, #963a92);
-  --nx-primary-shadow: 0 10px 28px -10px #d0508fb3;
+  --nx-fill: linear-gradient(135deg, #b03a74, #8a2f86);
+  --nx-fill-hover: linear-gradient(135deg, #bd4580, #963a92);
+  --nx-fill-shadow: 0 4px 14px -6px #00000099;
 }
 .nx[data-look='sleep'],
 .nx [data-look='sleep'] {
@@ -305,9 +316,9 @@
   --nx-accent-strong: #2f4596;
   --nx-accent-soft: #e6ebfa;
   --nx-accent-line: #bdc9f0;
-  --nx-primary: linear-gradient(135deg, #4a63c4, #34489a);
-  --nx-primary-hover: linear-gradient(135deg, #4058b8, #2d3f8c);
-  --nx-primary-shadow: 0 8px 20px -8px #3d55b099;
+  --nx-fill: linear-gradient(135deg, #4a63c4, #34489a);
+  --nx-fill-hover: linear-gradient(135deg, #4058b8, #2d3f8c);
+  --nx-fill-shadow: 0 1px 2px #1e2a5a1f;
 }
 [data-theme='dark'] .nx[data-look='sleep'],
 [data-theme='dark'] .nx [data-look='sleep'] {
@@ -319,9 +330,9 @@
   --nx-accent-strong: #c9d2ff;
   --nx-accent-soft: #1c2550;
   --nx-accent-line: #3c4c96;
-  --nx-primary: linear-gradient(135deg, #4760c8, #3a3fa8);
-  --nx-primary-hover: linear-gradient(135deg, #526bd2, #4449b4);
-  --nx-primary-shadow: 0 10px 28px -10px #5b76e6b3;
+  --nx-fill: linear-gradient(135deg, #4760c8, #3a3fa8);
+  --nx-fill-hover: linear-gradient(135deg, #526bd2, #4449b4);
+  --nx-fill-shadow: 0 4px 14px -6px #00000099;
 }
 .nx[data-look='dry'],
 .nx [data-look='dry'] {
@@ -333,9 +344,9 @@
   --nx-accent-strong: #0d6164;
   --nx-accent-soft: #dff3f1;
   --nx-accent-line: #a6dad5;
-  --nx-primary: linear-gradient(135deg, #147f80, #0f6668);
-  --nx-primary-hover: linear-gradient(135deg, #117374, #0c5a5c);
-  --nx-primary-shadow: 0 8px 20px -8px #13777a99;
+  --nx-fill: linear-gradient(135deg, #147f80, #0f6668);
+  --nx-fill-hover: linear-gradient(135deg, #117374, #0c5a5c);
+  --nx-fill-shadow: 0 1px 2px #1e2a5a1f;
 }
 [data-theme='dark'] .nx[data-look='dry'],
 [data-theme='dark'] .nx [data-look='dry'] {
@@ -347,9 +358,9 @@
   --nx-accent-strong: #a6efe9;
   --nx-accent-soft: #0f3432;
   --nx-accent-line: #1f6b67;
-  --nx-primary: linear-gradient(135deg, #13807f, #0e5f66);
-  --nx-primary-hover: linear-gradient(135deg, #178c8b, #126b73);
-  --nx-primary-shadow: 0 10px 28px -10px #1fa5a0b3;
+  --nx-fill: linear-gradient(135deg, #13807f, #0e5f66);
+  --nx-fill-hover: linear-gradient(135deg, #178c8b, #126b73);
+  --nx-fill-shadow: 0 4px 14px -6px #00000099;
 }
 .nx[data-look='fitness'],
 .nx [data-look='fitness'] {
@@ -361,9 +372,9 @@
   --nx-accent-strong: #9a4211;
   --nx-accent-soft: #fbe9dc;
   --nx-accent-line: #efc2a3;
-  --nx-primary: linear-gradient(135deg, #b8531a, #9a410f);
-  --nx-primary-hover: linear-gradient(135deg, #ab4b15, #8c3a0c);
-  --nx-primary-shadow: 0 8px 20px -8px #b4501a99;
+  --nx-fill: linear-gradient(135deg, #b8531a, #9a410f);
+  --nx-fill-hover: linear-gradient(135deg, #ab4b15, #8c3a0c);
+  --nx-fill-shadow: 0 1px 2px #1e2a5a1f;
 }
 [data-theme='dark'] .nx[data-look='fitness'],
 [data-theme='dark'] .nx [data-look='fitness'] {
@@ -375,9 +386,9 @@
   --nx-accent-strong: #ffcaa4;
   --nx-accent-soft: #3a2212;
   --nx-accent-line: #7a4522;
-  --nx-primary: linear-gradient(135deg, #c0561c, #9a3f14);
-  --nx-primary-hover: linear-gradient(135deg, #cc6124, #a8481a);
-  --nx-primary-shadow: 0 10px 28px -10px #e0782fb3;
+  --nx-fill: linear-gradient(135deg, #c0561c, #9a3f14);
+  --nx-fill-hover: linear-gradient(135deg, #cc6124, #a8481a);
+  --nx-fill-shadow: 0 4px 14px -6px #00000099;
 }
 
 @media (min-width: 1024px) {
@@ -548,20 +559,19 @@
 
   /* ── Buttons ────────────────────────────────────────────────────────────── */
   .nx-btn {
-    --nx-btn-h: 48px;
+    --nx-btn-h: 44px;
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     min-height: var(--nx-btn-h);
-    padding: 0 22px;
-    border: 1.5px solid transparent;
+    padding: 0 18px;
+    border: 1px solid transparent;
     border-radius: var(--nx-r-btn);
     background: transparent;
     color: var(--nx-ink);
-    font: 600 17px/1.2 var(--nx-font-sans);
-    letter-spacing: 0.005em;
+    font: 500 16px/1.2 var(--nx-font-sans);
     text-align: center;
     text-decoration: none;
     white-space: nowrap;
@@ -583,29 +593,30 @@
     box-shadow: none;
   }
   .nx-btn[data-size='lg'] {
-    --nx-btn-h: 56px;
-    padding: 0 28px;
-    font-size: 18px;
+    --nx-btn-h: 48px;
+    padding: 0 22px;
+    font-size: 17px;
   }
   .nx-btn[data-full] {
     width: 100%;
   }
   .nx-btn[data-variant='primary'] {
     background: var(--nx-primary);
-    color: var(--nx-on-accent);
+    color: var(--nx-on-primary);
     box-shadow: var(--nx-primary-shadow);
   }
   .nx-btn[data-variant='primary']:hover:not(:disabled) {
     background: var(--nx-primary-hover);
   }
+  /* Like today's app: a light glass button with a thin grey border and ink text. */
   .nx-btn[data-variant='secondary'] {
-    border-color: var(--nx-accent-line);
+    border-width: 1px;
+    border-color: var(--nx-line-strong);
     background: var(--nx-surface-2);
-    color: var(--nx-accent);
+    color: var(--nx-ink);
   }
   .nx-btn[data-variant='secondary']:hover:not(:disabled) {
-    border-color: var(--nx-accent);
-    background: var(--nx-accent-soft);
+    background: var(--nx-surface);
   }
   .nx-btn[data-variant='quiet'] {
     --nx-btn-h: 44px;
@@ -684,17 +695,17 @@
     padding: 14px 16px;
   }
   .nx-pad {
-    padding: 20px;
+    padding: 18px;
   }
   .nx-pad-lg {
-    padding: 24px;
+    padding: 20px;
   }
   @media (min-width: 640px) {
     .nx-pad {
-      padding: 24px;
+      padding: 20px;
     }
     .nx-pad-lg {
-      padding: 32px;
+      padding: 26px;
     }
   }
   /* A whole card that is one button (RowButton, StatButton, tappable cards). */
@@ -747,13 +758,13 @@
     padding-right: 28px;
   }
   .nx-stat-value {
-    font: 36px/1.05 var(--nx-font-serif);
+    font: 30px/1.05 var(--nx-font-serif);
     letter-spacing: -0.02em;
     color: var(--nx-ink);
     font-variant-numeric: lining-nums tabular-nums;
   }
   .nx-stat[data-size='lg'] .nx-stat-value {
-    font-size: 52px;
+    font-size: 40px;
   }
   .nx-stat[data-tone='accent'] .nx-stat-value {
     color: var(--nx-accent);
@@ -792,7 +803,7 @@
     color: var(--nx-accent);
   }
   .nx-section-title {
-    font: 400 24px/1.2 var(--nx-font-serif);
+    font: 400 22px/1.2 var(--nx-font-serif);
     letter-spacing: -0.015em;
     margin: 0;
   }
@@ -956,7 +967,7 @@
     padding: 0 7px;
     border-radius: 999px;
     background: var(--nx-primary);
-    color: var(--nx-on-accent);
+    color: var(--nx-on-primary);
     font: 700 14px/1 var(--nx-font-sans);
     font-variant-numeric: tabular-nums;
   }
@@ -1312,7 +1323,7 @@
   }
   /* In dark the accent is a light tint, so a white knob needs the look's deeper primary fill. */
   [data-theme='dark'] [aria-checked='true'] > .nx-switch {
-    background: var(--nx-primary);
+    background: var(--nx-fill);
   }
   [aria-checked='true'] > .nx-switch::after {
     transform: translateX(20px);

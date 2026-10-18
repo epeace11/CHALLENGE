@@ -70,8 +70,7 @@ function Step({
       <span
         className={cn(
           'relative z-[1] grid size-8 place-items-center rounded-full transition-colors duration-300 ease-nx',
-          state === 'done' &&
-            'text-nx-on-accent [background:var(--nx-primary)]',
+          state === 'done' && 'text-nx-on-accent [background:var(--nx-fill)]',
           state === 'now' && 'border-2 border-nx-accent bg-nx-surface',
           state === 'next' && 'border-2 border-nx-line-strong bg-nx-surface',
         )}
