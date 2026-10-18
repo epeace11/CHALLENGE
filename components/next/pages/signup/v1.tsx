@@ -56,7 +56,7 @@ export default function SignupV2() {
         )
       }
     >
-      <div className="pt-2 pb-10">
+      <div className="pt-2">
         <Glide id={f.sentTo ? 'sent' : f.mode} direction={f.direction}>
           {f.sentTo ? (
             <SentPanel
@@ -66,7 +66,7 @@ export default function SignupV2() {
               onBack={f.back}
             />
           ) : (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
               <header className="nx-enter flex flex-col gap-2">
                 <h1 className="nx-page-title">
                   {signup ? 'Create your account' : 'Sign in'}
@@ -81,7 +81,7 @@ export default function SignupV2() {
                 <GlassCard>
                   <form
                     noValidate
-                    className="flex flex-col gap-5"
+                    className="flex flex-col gap-4"
                     onSubmit={(e) => {
                       e.preventDefault();
                       f.submit(method, e.currentTarget);

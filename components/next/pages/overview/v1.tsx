@@ -30,7 +30,7 @@ export default function OverviewV1() {
 
   return (
     <AppFrame>
-      <div className="flex flex-col gap-8 pb-4">
+      <div className="flex flex-col gap-8">
         <PageTitle title={o.today} />
 
         {/* One column in order of what matters now. */}

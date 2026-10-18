@@ -60,7 +60,7 @@ export default function ProgressV1() {
 
   return (
     <AppFrame>
-      <div className="flex flex-col gap-8 pb-6">
+      <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-5">
           <PageTitle title="Progress" />
           <SegmentedControl

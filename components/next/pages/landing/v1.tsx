@@ -29,7 +29,7 @@ export default function LandingV2() {
         </Button>
       }
     >
-      <div className="grid gap-10 pt-4 pb-6 sm:pt-10">
+      <div className="grid gap-10 pt-4 sm:pt-10">
         <div className="flex flex-col gap-7">
           <Enter>
             <HeroTitle>A habit challenge for couples</HeroTitle>

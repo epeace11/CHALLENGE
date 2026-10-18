@@ -56,7 +56,7 @@ export default function SayV1() {
 
   return (
     <PlainFrame back={{ to: 'start' }}>
-      <div className="flex flex-col gap-8 pb-4">
+      <div className="flex flex-col gap-8">
         <Title
           ref={title}
           title="Say your rules"

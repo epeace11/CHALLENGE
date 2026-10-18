@@ -34,7 +34,7 @@ export default function RulesV1() {
 
   return (
     <AppFrame>
-      <div className="flex flex-col gap-8 pb-2">
+      <div className="flex flex-col gap-8">
         <PageTitle title="Rules and help" />
         <WaitingProposals proposals={proposals} />
 

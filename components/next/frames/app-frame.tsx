@@ -18,6 +18,7 @@ import { dayNumber, reviewQueue } from '@/lib/next/selectors';
 import { useNav, type PageId } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Menu } from '@/components/next/ui/menu';
+import { useFit } from './use-fit';
 
 const TABS: { id: PageId; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Overview', icon: House },
@@ -44,6 +45,7 @@ export const MORE_PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
  * Every page, in both frames, is the same width (720px) with the same side margins.
  */
 export function AppFrame({ children }: { children: ReactNode }) {
+  const fit = useFit<HTMLDivElement>();
   const world = useWorld();
   const { page, navigate } = useNav();
   const c = world.challenge;
@@ -105,7 +107,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="nx-frame" data-frame="app">
+    <div ref={fit} className="nx-frame" data-frame="app">
       <header className="nx-app-header">
         <div className="nx-main nx-topbar">
           <div className="flex min-w-0 flex-col">

@@ -134,7 +134,7 @@ export default function SetupV1() {
 
   return (
     <PlainFrame back={{ to: 'start' }}>
-      <div className="flex flex-col gap-10 pb-2">
+      <div className="flex flex-col gap-10">
         <PageTitle title={`Set up ${draft.name.trim() || 'your challenge'}`} />
 
         <Section id="setup-details" title="Details" index={1}>

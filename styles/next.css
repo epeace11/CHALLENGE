@@ -1353,10 +1353,10 @@
   }
   .nx-input {
     width: 100%;
-    min-height: 52px;
-    padding: 12px 16px;
+    min-height: 48px;
+    padding: 10px 14px;
     border-radius: var(--nx-r-btn);
-    border: 1.5px solid var(--nx-line-strong);
+    border: 1px solid var(--nx-line-strong);
     background: var(--nx-surface);
     color: var(--nx-ink);
     font: 17px/1.4 var(--nx-font-sans) !important;
@@ -1619,9 +1619,15 @@
   }
 
   /* ── Frames ─────────────────────────────────────────────────────────────── */
+  /* The frame owns the space under the last thing on a page (pages add none of their own), kept
+     small so a page that fits on the screen never scrolls. */
   .nx-frame {
     min-height: calc(100dvh - var(--nx-top-inset));
-    padding-bottom: calc(var(--nx-nav-h) + 40px);
+    padding-bottom: calc(var(--nx-nav-h) + 20px);
+  }
+  /* Set by the frame (use-fit.ts) while the whole page fits on the screen. */
+  .nx-frame[data-fits] {
+    padding-bottom: var(--nx-nav-h);
   }
   /* Every page, in both frames, is the same width with the same side margins. */
   .nx-main {

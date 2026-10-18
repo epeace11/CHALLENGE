@@ -4,6 +4,7 @@ import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNav, type PageId } from '@/components/next/nav';
 import { Button } from '@/components/next/ui/button';
+import { useFit } from './use-fit';
 
 /**
  * The frame for everything before or outside a running challenge (landing, sign up, starting and
@@ -25,8 +26,9 @@ export function PlainFrame({
   center?: boolean;
 }) {
   const { navigate } = useNav();
+  const fit = useFit<HTMLDivElement>();
   return (
-    <div className="nx-frame" data-frame="plain">
+    <div ref={fit} className="nx-frame" data-frame="plain">
       <header className="nx-main nx-topbar">
         {back ? (
           <Button
@@ -48,7 +50,7 @@ export function PlainFrame({
         className={cn(
           'nx-main nx-fade-in pt-2',
           center &&
-            'flex min-h-[calc(100dvh-var(--nx-top-inset)-176px)] flex-col justify-center',
+            'flex min-h-[calc(100dvh-var(--nx-top-inset)-92px)] flex-col justify-center',
         )}
       >
         {children}

@@ -52,7 +52,7 @@ export default function Start() {
 
   return (
     <PlainFrame back={{ to: 'home', label: 'Your challenges' }}>
-      <div className="flex flex-col gap-6 pb-6">
+      <div className="flex flex-col gap-6">
         <PageTitle
           title="Start a challenge"
           detail={`With ${world.partner.name}`}

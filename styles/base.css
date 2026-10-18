@@ -155,7 +155,10 @@ body {
     Helvetica,
     sans-serif;
   background: var(--page-bg);
+  /* The visible screen: on phones, 100vh is taller than the screen while the browser's bars show,
+     which made every page scroll a little. */
   min-height: 100vh;
+  min-height: 100dvh;
 }
 button,
 input,

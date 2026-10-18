@@ -66,7 +66,7 @@ export default function SettingsV1() {
 
   return (
     <AppFrame>
-      <div className="flex flex-col gap-9 pb-6">
+      <div className="flex flex-col gap-9">
         <PageTitle title="Settings" />
 
         <Section title="You" index={1}>
