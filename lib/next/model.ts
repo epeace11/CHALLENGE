@@ -294,6 +294,8 @@ export type Verdict = {
     /** Days with nothing missed. */
     cleanDays: number;
     badges: string[];
+    /** When the gift this person receives was marked given; absent until it is. */
+    giftGivenAt?: Instant;
   }[];
   /** Fewer points wins; null on a tie. */
   winner: string | null;

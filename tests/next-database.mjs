@@ -25,7 +25,7 @@ await db.exec(
   readFileSync(new URL('../supabase/next/schema.sql', import.meta.url), 'utf8'),
 );
 // The rerunnable scripts run cleanly on a project that already has the schema.
-for (const script of ['share-links.sql', 'invite-links.sql'])
+for (const script of ['share-links.sql', 'invite-links.sql', 'gifts-given.sql'])
   await db.exec(
     readFileSync(
       new URL(`../supabase/next/${script}`, import.meta.url),
@@ -564,6 +564,30 @@ assert.equal(
   'finished',
 );
 
+// Gifts are marked given once it's over, by either person, and only for this couple.
+await as(jordan, `select nx_mark_gift($1,$2,true)`, [fall, maya]);
+await as(maya, `select nx_mark_gift($1,$2,true)`, [fall, maya]);
+assert.equal(
+  (await as(maya, `select count(*)::int n from gifts_given`))[0].n,
+  1,
+);
+await fails(
+  as(maya, `select nx_mark_gift($1,$2,true)`, [fall, priya]),
+  /isn't part/,
+);
+await fails(
+  as(priya, `select nx_mark_gift($1,$2,true)`, [fall, maya]),
+  /isn't yours/,
+);
+assert.equal(
+  (await as(priya, `select count(*)::int n from gifts_given`))[0].n,
+  0,
+);
+await fails(
+  as(priya, `select nx_mark_gift($1,$2,true)`, [dry, priya]),
+  /once the challenge is over/,
+);
+
 // The rows, as PostgREST would return them (JSON), become the World the pages read.
 async function rowsFor(id) {
   const all = async (t, cols = 't') =>
@@ -591,6 +615,7 @@ async function rowsFor(id) {
       "jsonb_build_object('id',t.id,'challenge_id',t.challenge_id,'from_id',t.from_id,'to_name',t.to_name,'to_email',t.to_email,'code',t.code,'sent_at',t.sent_at,'opened_at',t.opened_at,'accepted_at',t.accepted_at,'expires_at',t.expires_at)",
     ),
     saved: await all('saved_challenges'),
+    gifts: await all('gifts_given'),
   };
 }
 const links = { origin: 'https://test.example' };
@@ -630,6 +655,11 @@ assert.equal(
 assert.equal(reviewQueue(w, maya).count, 0);
 assert.equal(w.past.length, 1, 'the finished challenge has its verdict');
 assert.equal(w.past[0].verdict.people[0].points, n);
+assert.ok(
+  w.past[0].verdict.people[0].giftGivenAt,
+  "Maya's gift is marked given",
+);
+assert.equal(w.past[0].verdict.people[1].giftGivenAt, undefined);
 assert.equal(verdictFor(w).people.length, 2);
 assert.equal(w.saved[0].name, 'The Fall One');
 assert.equal(w.saved[0].rules[3].who, jordan);

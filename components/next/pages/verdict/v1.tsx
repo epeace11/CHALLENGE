@@ -32,6 +32,7 @@ import { formatMoney, plural } from '@/lib/next/selectors';
 import {
   BADGE_ICON,
   giftsOf,
+  markGift,
   saveAs,
   suggestName,
   verdictOf,
@@ -55,7 +56,15 @@ export default function VerdictV2() {
   const backend = useBackend();
   const undoAction = useUndoAction();
   const toast = useToast();
-  const [given, setGiven] = useState<Record<string, boolean>>({});
+  // Which gifts are marked given, by who receives them: saved with the challenge in the live app.
+  const [given, setGiven] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      (world.past[0]?.verdict.people ?? []).map((p) => [
+        p.personId,
+        !!p.giftGivenAt,
+      ]),
+    ),
+  );
   // The gift just marked, and a count so its burst plays again each time.
   const [burst, setBurst] = useState<{ id: string; n: number } | null>(null);
   const [sheet, setSheet] = useState<VerdictSheet>(null);
@@ -91,8 +100,18 @@ export default function VerdictV2() {
   const next =
     gifts.find((g) => !given[g.id] && g.from.isMe) ??
     gifts.find((g) => !given[g.id]);
-  const setOne = (id: string, value: boolean) =>
+  const setOne = (id: string, value: boolean) => {
     setGiven((s) => ({ ...s, [id]: value }));
+    backend.act(
+      {
+        type: 'markGift',
+        challengeId: v.past.challenge.id,
+        recipientId: id,
+        given: value,
+      },
+      (w) => markGift(w, v.past.challenge.id, id, value ? w.now : null),
+    );
+  };
   const mark = (g: Gift) => {
     setOne(g.id, true);
     setBurst((b) => ({ id: g.id, n: (b?.n ?? 0) + 1 }));
@@ -100,7 +119,9 @@ export default function VerdictV2() {
       text: g.to.isMe
         ? `The ${formatMoney(g.amount)} gift is marked as received`
         : `Your ${formatMoney(g.amount)} gift is marked as given`,
-      action: { label: 'Undo', onClick: () => setOne(g.id, false) },
+      ...(backend.live
+        ? {}
+        : { action: { label: 'Undo', onClick: () => setOne(g.id, false) } }),
     });
   };
   const close = (open: boolean) => {

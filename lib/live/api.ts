@@ -60,6 +60,7 @@ export async function loadRows(): Promise<Rows | null> {
     signatures,
     invites,
     saved,
+    gifts,
   ] = await Promise.all([
     select<Rows['members'][number]>('profiles', 'id,name,hue'),
     select<{ couple_id: string; person_id: string }>('couple_members'),
@@ -76,6 +77,8 @@ export async function loadRows(): Promise<Rows | null> {
       'id,challenge_id,from_id,to_name,to_email,code,sent_at,opened_at,accepted_at,expires_at',
     ),
     select<SavedRow>('saved_challenges'),
+    // Added by supabase/next/gifts-given.sql: until that has run, no gift is marked.
+    select<Rows['gifts'][number]>('gifts_given').catch(() => []),
   ]);
   const me = profiles.find((p) => p.id === user.id);
   if (!me) return null;
@@ -99,6 +102,7 @@ export async function loadRows(): Promise<Rows | null> {
     signatures,
     invites,
     saved,
+    gifts,
   };
 }
 
@@ -470,6 +474,12 @@ export function send(challengeId: string, c: Command) {
       return setName(c.name);
     case 'setShareLink':
       return rpc('nx_set_share_link', { p_saved: c.savedId, p_on: c.on });
+    case 'markGift':
+      return rpc('nx_mark_gift', {
+        p_challenge: c.challengeId,
+        p_recipient: c.recipientId,
+        p_given: c.given,
+      });
     case 'saveAs':
       return rpc('nx_save_challenge', {
         p_challenge: c.challengeId,
@@ -491,6 +501,7 @@ export function subscribe(onChange: () => void) {
     'forgiveness_requests',
     'disputes',
     'journal_notes',
+    'gifts_given',
   ])
     channel.on(
       'postgres_changes',

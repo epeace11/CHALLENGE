@@ -194,6 +194,14 @@ export type Rows = {
   signatures: SignatureRow[];
   invites: InviteRow[];
   saved: SavedRow[];
+  /** Gifts marked given, by who receives them (supabase/next/gifts-given.sql). */
+  gifts: GiftRow[];
+};
+
+export type GiftRow = {
+  challenge_id: string;
+  recipient_id: string;
+  given_at: string;
 };
 
 /** Where the app lives, for invite and share links. */
@@ -574,7 +582,20 @@ export function buildWorld(
             row.id,
             false,
           ).world;
-          return { challenge: w.challenge, verdict: verdictFor(w) };
+          const verdict = verdictFor(w);
+          return {
+            challenge: w.challenge,
+            verdict: {
+              ...verdict,
+              people: verdict.people.map((p) => {
+                const given = (rows.gifts ?? []).find(
+                  (g) =>
+                    g.challenge_id === row.id && g.recipient_id === p.personId,
+                );
+                return given ? { ...p, giftGivenAt: given.given_at } : p;
+              }),
+            },
+          };
         })
     : [];
   return {

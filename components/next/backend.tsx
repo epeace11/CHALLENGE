@@ -43,7 +43,14 @@ export type Command =
   | { type: 'signPact' }
   | { type: 'rename'; name: string }
   | { type: 'setShareLink'; savedId: string; on: boolean }
-  | { type: 'saveAs'; challengeId: string; name: string };
+  | { type: 'saveAs'; challengeId: string; name: string }
+  | {
+      type: 'markGift';
+      challengeId: string;
+      /** Who receives the gift. */
+      recipientId: string;
+      given: boolean;
+    };
 
 /** Where a new challenge starts from on the Start page. */
 export type Template =

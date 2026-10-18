@@ -175,3 +175,32 @@ export function saveAs(w: World, past: PastChallenge, name: string): World {
   };
   return { ...w, saved: [...w.saved, saved] };
 }
+
+/** Marks the gift `recipientId` gets in a finished challenge as given (`at`), or not (null). */
+export function markGift(
+  w: World,
+  challengeId: string,
+  recipientId: string,
+  at: string | null,
+): World {
+  return {
+    ...w,
+    past: w.past.map((p) =>
+      p.challenge.id !== challengeId
+        ? p
+        : {
+            ...p,
+            verdict: {
+              ...p.verdict,
+              people: p.verdict.people.map((x) =>
+                x.personId !== recipientId
+                  ? x
+                  : at
+                    ? { ...x, giftGivenAt: at }
+                    : { ...x, giftGivenAt: undefined },
+              ),
+            },
+          },
+    ),
+  };
+}
