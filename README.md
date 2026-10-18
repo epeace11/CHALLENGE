@@ -114,3 +114,5 @@ A feature-detected WebMCP `open_challenge_page` tool provides navigation only. I
 Connect the GitHub `main` branch (the separate Claude branch uses a different framework). In Cloudflare Workers Builds, use repository root `/`, leave the build command empty, and set the deploy command to `npm run deploy`. This command always runs the Vinext build before deploying `dist/server/wrangler.json`. Use Node 22.13 or later. The generated config names the Worker `sites-project`, so the deploy script passes `--name challenge` to publish to the `challenge` Worker (the one serving `thechallenge.win`). If the Worker is ever renamed, update that flag.
 
 For local packaging verification without publishing: `npm run deploy -- --dry-run`.
+
+The prod-challenge branch never runs `npm run deploy` (that publishes to the live `challenge` Worker). Its test address is a separate Worker, `challenge-test`: `npm run deploy:test` publishes it (at `challenge-test.<account>.workers.dev`), or connect a Workers Build for the `prod-challenge` branch with `npm run deploy:test` as its deploy command.

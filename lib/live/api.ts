@@ -166,13 +166,20 @@ export async function sendLink(a: { email: string; name?: string }) {
   if (error) throw new Error(error.message);
 }
 
+/** Signs in with the code from a sign-in email, or from the email that confirms a new account. */
 export async function verifyCode(a: { email: string; code: string }) {
-  const { error } = await supabase.auth.verifyOtp({
+  const signIn = await supabase.auth.verifyOtp({
     email: a.email,
     token: a.code,
     type: 'email',
   });
-  if (error) throw new Error(error.message);
+  if (!signIn.error) return;
+  const confirm = await supabase.auth.verifyOtp({
+    email: a.email,
+    token: a.code,
+    type: 'signup',
+  });
+  if (confirm.error) throw new Error(signIn.error.message);
 }
 
 export const signOut = () => supabase.auth.signOut();
