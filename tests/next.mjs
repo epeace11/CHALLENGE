@@ -655,6 +655,12 @@ for (const file of sources) {
     /@\/lib\/(supabase|api|proof|push)\b|\bfetch\(|XMLHttpRequest|WebSocket\(/,
     `${name}: the preview makes no network or database calls`,
   );
+  // The live app's host and database calls stay out of the kit and pages: they reach it through useBackend().
+  assert.doesNotMatch(
+    text,
+    /@\/(components|lib)\/live\b|\.\.\/live\//,
+    `${name}: pages and the kit never import components/live or lib/live`,
+  );
   // Deterministic: pages and data read the time from world.now, never the clock.
   if (/^(lib\/next|components\/next\/pages)\//.test(name))
     assert.doesNotMatch(
