@@ -168,6 +168,8 @@ export type SavedRow = {
   link_token: string;
   link_on: boolean;
   created_at: string;
+  /** Whose 'me' the rules mean; null for saves from before this was recorded. */
+  saved_by?: string | null;
 };
 /** A rule as nx_save_challenge stores it: `who` is 'both', 'me' (whoever saved it) or 'partner'. */
 export type SavedRule = Omit<Rule, 'id' | 'who'> & { who: string };
@@ -374,11 +376,17 @@ export function savedOf(
     days: s.days,
     step: Number(s.step),
     cap: num(s.cap),
-    rules: s.rules.map((r, i) => ({
-      ...r,
-      id: `${s.id}-${i}`,
-      who: r.who === 'me' ? me : r.who === 'partner' ? partner : 'both',
-    })),
+    rules: s.rules.map((r, i) => {
+      // 'me' is whoever saved it: the partner's own rules stay theirs when the viewer starts it.
+      const savedByPartner = !!s.saved_by && s.saved_by === partner;
+      const mine = savedByPartner ? partner : me,
+        theirs = savedByPartner ? me : partner;
+      return {
+        ...r,
+        id: `${s.id}-${i}`,
+        who: r.who === 'me' ? mine : r.who === 'partner' ? theirs : 'both',
+      };
+    }),
     source: 'mine',
     sharedBy: null,
     link: `${links.origin}/app?shared=${s.link_token}`,
@@ -390,8 +398,9 @@ export function savedOf(
 /* ── The world ─────────────────────────────────────────────────────────── */
 
 /**
- * The challenge to show: the newest one still being set up or running, or else the newest
- * finished one. Null when the couple has none.
+ * The challenge to show: the one asked for, else the running one, else one being set up, else the
+ * newest finished one. Null when the couple has none. (The database allows one unfinished challenge
+ * per couple, so at most one is running or being set up.)
  */
 export function currentChallenge(rows: Rows, wanted?: string | null) {
   const list = [...rows.challenges].sort((a, b) =>
@@ -399,6 +408,7 @@ export function currentChallenge(rows: Rows, wanted?: string | null) {
   );
   return (
     list.find((c) => c.id === wanted) ??
+    list.find((c) => c.status === 'running') ??
     list.find((c) => c.status !== 'finished') ??
     list[0] ??
     null

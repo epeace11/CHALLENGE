@@ -146,6 +146,15 @@ assert.equal(w.partner.id, JORDAN);
 assert.equal(dayNumber(FALL_RESET, w.today), 19);
 assert.equal(daysLeft(FALL_RESET, w.today), 12);
 assert.equal(openDay(w), '2026-11-19');
+// With a same-night deadline, today is the day being logged and yesterday is closed.
+{
+  const sameDay = updateChallenge(w, {
+    deadline: { daysAfter: 0, time: '23:59' },
+  });
+  assert.equal(openDay(sameDay), '2026-11-20');
+  assert.equal(dayColor(sameDay, w.me.id, '2026-11-20'), 'open');
+  assert.equal(dayColor(w, w.me.id, '2026-11-20'), 'ahead');
+}
 assert.equal(formatDuration(timeLeft(w)), '4h 29m');
 assert.ok(isClosed(FALL_RESET, '2026-11-18', w.now));
 assert.ok(!isClosed(FALL_RESET, '2026-11-19', w.now));

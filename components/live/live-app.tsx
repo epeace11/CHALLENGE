@@ -60,6 +60,12 @@ const LINK_KEY = 'nx-invite-link';
 let inviteToken: string | null = null;
 /** A shared challenge's token from its link (?shared=…), kept the same way. */
 let sharedToken: string | null = null;
+/** Counts loads, so only the newest one's rows land on screen. */
+let loads = 0;
+/** Fired a few seconds after a load fails, to try again. */
+const RETRY_EVENT = 'nx-retry';
+/** Where to go once signed in: the page that sent someone to Sign up (the shared challenge). */
+let afterSignIn: PageId | null = null;
 
 /** The URL's query string, as a store pages re-render on (back and forward, and navigate below). */
 const URL_EVENT = 'nx-url';
@@ -123,18 +129,18 @@ const RUNNING: PageId[] = [
   'recap',
   'settings',
   'home',
-  'start',
   'practice',
 ];
 
 /**
- * The page to show for `wanted`, given where the account stands. An open shared link shows the
- * Shared page unless the person asked for a page they can open (an invite comes first).
+ * The page to show for `wanted`, given where the account stands. A shared challenge shows when its
+ * link was just opened (`fromLink`) or the Shared page is asked for; an open invite comes first.
  */
 function resolve(
   wanted: PageId | null,
   loaded: Loaded,
   built: Built | null,
+  fromLink: boolean,
 ): PageId | 'waiting' {
   const page = resolveAccount(wanted, loaded, built);
   const invited =
@@ -143,7 +149,7 @@ function resolve(
     loaded.kind !== 'loading' &&
     loaded.shared &&
     !invited &&
-    (wanted === null || wanted === 'shared' || page !== wanted)
+    (wanted === 'shared' || (wanted === null && fromLink))
   )
     return 'shared';
   return page;
@@ -180,7 +186,7 @@ function resolveAccount(
     case 'running':
       return pick(RUNNING, 'overview');
     case 'finished':
-      return pick([...RUNNING, 'verdict'], 'verdict');
+      return pick([...RUNNING, 'verdict', 'start'], 'verdict');
   }
 }
 
@@ -194,6 +200,8 @@ export function LiveApp() {
 
   /** Loads everything again: the session, the invite or shared link opened, and the account's rows. */
   const reload = useCallback(async () => {
+    // Only the newest load lands: one started earlier but answered later would put old rows back.
+    const mine = ++loads;
     const preview = inviteToken
       ? ((await api
           .invitePreview(inviteToken)
@@ -208,9 +216,16 @@ export function LiveApp() {
       writeStored(SHARED_KEY, null);
     }
     await api.ensureProfile().catch(() => {});
-    const rows = await api.loadRows().catch(() => null);
+    // null: signed out (or no profile yet). A failed load keeps what is on screen until the next one.
+    const rows = await api.loadRows().catch(() => undefined);
+    if (mine !== loads) return;
+    if (rows === undefined) {
+      setTimeout(() => window.dispatchEvent(new Event(RETRY_EVENT)), 4000);
+      return;
+    }
     if (!rows) return setLoaded({ kind: 'out', preview, shared });
     const urls = await api.proofUrls(rows).catch(() => ({}));
+    if (mine !== loads) return;
     setOverlay(null);
     setLoaded({ kind: 'in', rows, urls, preview, shared });
   }, []);
@@ -233,7 +248,12 @@ export function LiveApp() {
       if (document.visibilityState === 'visible') void reload();
     };
     document.addEventListener('visibilitychange', onFocus);
+    const again = () => void reload();
+    window.addEventListener(RETRY_EVENT, again);
+    window.addEventListener('online', again);
     return () => {
+      window.removeEventListener(RETRY_EVENT, again);
+      window.removeEventListener('online', again);
       auth.unsubscribe();
       unsubscribe();
       document.removeEventListener('visibilitychange', onFocus);
@@ -286,7 +306,12 @@ export function LiveApp() {
       : built.world;
   }, [overlay, loaded, built]);
 
-  const shown = resolve(page, loaded, built);
+  const shown = resolve(
+    page,
+    loaded,
+    built,
+    new URLSearchParams(query).has('shared'),
+  );
 
   const navigate = useCallback<Nav['navigate']>((next) => {
     const url = new URL(location.href);
@@ -393,9 +418,19 @@ function Hosting({
           w.partner.id === PENDING_PARTNER ? PENDING_PARTNER : w.partner.id,
       };
     };
+    /** After signing in: load the account, and go back to the page that asked for an account. */
+    async function signedIn() {
+      await reload();
+      const to = afterSignIn;
+      afterSignIn = null;
+      if (to) navigate(to);
+    }
     return {
-      send: async (command) => {
-        const ok = await attempt(() => api.send(ids().challenge, command));
+      send: async (commands) => {
+        const challenge = ids().challenge;
+        const ok = await attempt(async () => {
+          for (const c of commands) await api.send(challenge, c);
+        });
         if (ok !== false) await reload();
         return ok !== false;
       },
@@ -422,27 +457,31 @@ function Hosting({
           input.click();
         }),
       signUp: async (a) => {
-        const r = await attempt(() => api.signUp(a, inviteToken));
-        if (r === 'in') await reload();
+        const r = await attempt(() =>
+          api.signUp(a, { invite: inviteToken, shared: sharedToken }),
+        );
+        if (r === 'in') await signedIn();
         return r;
       },
       signIn: async (a) => {
         const ok = await attempt(() => api.signIn(a));
-        if (ok !== false) await reload();
+        if (ok !== false) await signedIn();
         return ok !== false;
       },
       sendLink: async (a) =>
-        (await attempt(() => api.sendLink(a, inviteToken))) !== false,
+        (await attempt(() =>
+          api.sendLink(a, { invite: inviteToken, shared: sharedToken }),
+        )) !== false,
       verifyCode: async (a) => {
         const ok = await attempt(() => api.verifyCode(a));
-        if (ok !== false) await reload();
+        if (ok !== false) await signedIn();
         return ok !== false;
       },
       signOut: async () => {
         await api.signOut();
-        writeStored(INVITE_KEY, null);
-        writeStored(LINK_KEY, null);
-        inviteToken = null;
+        for (const key of [INVITE_KEY, SHARED_KEY, LINK_KEY])
+          writeStored(key, null);
+        inviteToken = sharedToken = afterSignIn = null;
         await reload();
         navigate('landing');
       },
@@ -483,8 +522,14 @@ function Hosting({
             challenge: string;
             link: string;
             code: string;
+            /** Epoch ms after which a new link is made (links last 7 days). */
+            renewAt?: number;
           };
-          if (saved.challenge === w.challenge.id) return saved;
+          if (
+            saved.challenge === w.challenge.id &&
+            Date.now() < (saved.renewAt ?? 0)
+          )
+            return saved;
         }
         const name = w.partner.id === PENDING_PARTNER ? '' : w.partner.name;
         const made = await attempt(() =>
@@ -495,6 +540,8 @@ function Hosting({
           challenge: w.challenge.id,
           link: `${location.origin}/app?invite=${made.token}`,
           code: made.code,
+          // A day before the link expires, so a link shown here always has time left.
+          renewAt: Date.now() + 6 * 864e5,
         };
         writeStored(LINK_KEY, JSON.stringify(out));
         return out;
@@ -505,6 +552,7 @@ function Hosting({
         if (!shared) return false;
         if (!latest.current.built) {
           // Not signed in yet: make the account first; the link waits in this browser.
+          afterSignIn = 'shared';
           setSignupMode('signup');
           navigate('signup');
           return false;
@@ -533,12 +581,16 @@ function Hosting({
         const t = sharedToken;
         if (!t) return false;
         if (!latest.current.built) {
+          afterSignIn = 'shared';
           setSignupMode('signup');
           navigate('signup');
           return false;
         }
         const ok = await attempt(() => api.saveShared(t));
         if (ok === false) return false;
+        // Saved: the link has done its job, and Your challenges lists the copy.
+        sharedToken = null;
+        writeStored(SHARED_KEY, null);
         await reload();
         return true;
       },

@@ -59,17 +59,20 @@ export default function HomeV2() {
       <div className="grid gap-6">
         <div className="flex flex-col gap-6">
           <PageTitle title="Your challenges" />
-          <Enter index={1}>
-            <Button
-              variant="primary"
-              size="lg"
-              icon={Plus}
-              className="w-full sm:w-auto"
-              onClick={() => navigate('start')}
-            >
-              Start a new challenge
-            </Button>
-          </Enter>
+          {/* In the live app a new challenge starts once this one has finished. */}
+          {(!host || world.challenge.status === 'finished') && (
+            <Enter index={1}>
+              <Button
+                variant="primary"
+                size="lg"
+                icon={Plus}
+                className="w-full sm:w-auto"
+                onClick={() => navigate('start')}
+              >
+                Start a new challenge
+              </Button>
+            </Enter>
+          )}
 
           {world.challenge.status === 'running' && (
             <Enter index={2}>

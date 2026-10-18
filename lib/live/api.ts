@@ -24,10 +24,22 @@ async function rpc<T = unknown>(name: string, args: Record<string, unknown>) {
   return data as T;
 }
 
-async function select<T>(table: string, columns = '*') {
-  const { data, error } = await supabase.from(table).select(columns);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as T[];
+/** Rows per request: Supabase returns at most 1,000 by default. */
+const PAGE = 1000;
+
+/** Every row of `table` the account can read, a page at a time in `order`, so none is cut off. */
+async function select<T>(table: string, columns = '*', order = 'id') {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .order(order)
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as T[]));
+    if (!data || data.length < PAGE) return out;
+  }
 }
 
 /* ── Loading ───────────────────────────────────────────────────────────── */
@@ -63,7 +75,11 @@ export async function loadRows(): Promise<Rows | null> {
     gifts,
   ] = await Promise.all([
     select<Rows['members'][number]>('profiles', 'id,name,hue'),
-    select<{ couple_id: string; person_id: string }>('couple_members'),
+    select<{ couple_id: string; person_id: string; joined_at: string }>(
+      'couple_members',
+      '*',
+      'person_id',
+    ),
     select<ChallengeRow>('challenges'),
     select<Rows['rules'][number]>('rules'),
     select<Rows['entries'][number]>('entries'),
@@ -71,21 +87,23 @@ export async function loadRows(): Promise<Rows | null> {
     select<Rows['requests'][number]>('forgiveness_requests'),
     select<Rows['disputes'][number]>('disputes'),
     select<Rows['notes'][number]>('journal_notes'),
-    select<Rows['signatures'][number]>('signatures'),
+    select<Rows['signatures'][number]>('signatures', '*', 'challenge_id'),
     select<Rows['invites'][number]>(
       'invites',
       'id,challenge_id,from_id,to_name,to_email,code,sent_at,opened_at,accepted_at,expires_at',
     ),
     select<SavedRow>('saved_challenges'),
     // Added by supabase/next/gifts-given.sql: until that has run, no gift is marked.
-    select<Rows['gifts'][number]>('gifts_given').catch(() => []),
+    select<Rows['gifts'][number]>('gifts_given', '*', 'challenge_id').catch(
+      () => [],
+    ),
   ]);
   const me = profiles.find((p) => p.id === user.id);
   if (!me) return null;
-  // The couple of the newest challenge (an account normally has one).
-  const couple =
-    [...fresh].sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
-      ?.couple_id ?? members[0]?.couple_id;
+  // The couple this person joined most recently: their current partner (as the database chooses).
+  const couple = members
+    .filter((m) => m.person_id === user.id)
+    .sort((a, b) => b.joined_at.localeCompare(a.joined_at))[0]?.couple_id;
   const inCouple = new Set(
     members.filter((m) => m.couple_id === couple).map((m) => m.person_id),
   );
@@ -145,20 +163,26 @@ export async function ensureProfile() {
 }
 
 /**
- * Where links in sign-up and sign-in emails lead: the app, carrying the invite the person opened,
- * so it survives opening the email in another tab or browser.
+ * Where links in sign-up and sign-in emails lead: the app, carrying the invite or shared link the
+ * person opened, so it survives opening the email in another tab or browser.
  */
-const redirect = (invite: string | null) =>
-  `${location.origin}/app${invite ? `?invite=${encodeURIComponent(invite)}` : ''}`;
+type Opened = { invite: string | null; shared: string | null };
+const redirect = ({ invite, shared }: Opened) => {
+  const params = new URLSearchParams();
+  if (invite) params.set('invite', invite);
+  if (shared) params.set('shared', shared);
+  const query = params.toString();
+  return `${location.origin}/app${query ? `?${query}` : ''}`;
+};
 
 export async function signUp(
   a: { name: string; email: string; password: string },
-  invite: string | null,
+  opened: Opened,
 ) {
   const { data, error } = await supabase.auth.signUp({
     email: a.email,
     password: a.password,
-    options: { data: { name: a.name }, emailRedirectTo: redirect(invite) },
+    options: { data: { name: a.name }, emailRedirectTo: redirect(opened) },
   });
   if (error) throw new Error(error.message);
   return data.session ? ('in' as const) : ('confirm' as const);
@@ -171,12 +195,12 @@ export async function signIn(a: { email: string; password: string }) {
 
 export async function sendLink(
   a: { email: string; name?: string },
-  invite: string | null,
+  opened: Opened,
 ) {
   const { error } = await supabase.auth.signInWithOtp({
     email: a.email,
     options: {
-      emailRedirectTo: redirect(invite),
+      emailRedirectTo: redirect(opened),
       ...(a.name ? { data: { name: a.name } } : {}),
     },
   });
@@ -501,7 +525,8 @@ export function subscribe(onChange: () => void) {
     'forgiveness_requests',
     'disputes',
     'journal_notes',
-    'gifts_given',
+    // Not gifts_given: a project that hasn't run gifts-given.sql would fail the whole channel.
+    // Gift marks are rare and show on the next reload.
   ])
     channel.on(
       'postgres_changes',

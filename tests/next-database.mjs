@@ -25,7 +25,12 @@ await db.exec(
   readFileSync(new URL('../supabase/next/schema.sql', import.meta.url), 'utf8'),
 );
 // The rerunnable scripts run cleanly on a project that already has the schema.
-for (const script of ['share-links.sql', 'invite-links.sql', 'gifts-given.sql'])
+for (const script of [
+  'share-links.sql',
+  'invite-links.sql',
+  'gifts-given.sql',
+  'fixes-oct-18.sql',
+])
   await db.exec(
     readFileSync(
       new URL(`../supabase/next/${script}`, import.meta.url),
@@ -304,6 +309,23 @@ await as(maya, `select nx_resolve_dispute($1,'concede')`, [disputeId]);
 assert.equal((await entry(maya, pray, '2026-11-02')).status, 'conceded');
 await as(maya, `select nx_decide_forgiveness($1,true)`, [req.id]);
 assert.equal((await entry(jordan, pray, '2026-11-02')).status, 'excused');
+// Editing a forgiven No (adding a note) keeps it forgiven.
+await as(
+  jordan,
+  `select nx_save_checkin($1,$2,'2026-11-02',false,p_note=>'Back at 2 am')`,
+  [fall, pray],
+);
+assert.equal((await entry(jordan, pray, '2026-11-02')).status, 'excused');
+assert.equal(
+  (
+    await one(
+      maya,
+      `select forgiven from points where person_id=$1 and rule_id=$2 and day='2026-11-02'`,
+      [jordan, pray],
+    )
+  ).forgiven,
+  true,
+);
 const mayaSteps = (await entry(maya, steps, '2026-11-02')).id;
 await as(jordan, `select nx_review($1,'approve')`, [mayaSteps]);
 
@@ -682,10 +704,13 @@ assert.equal(
 );
 assert.equal(opened.saved[0].rules[3].who, opened.partner.id);
 
-// Before the invite is accepted, the partner is a stand-in named from the invite.
-const { nx_create_challenge: solo } = await one(
-  priya,
-  `select nx_create_challenge('Solo Start','classic',null,'2026-12-01',30,'America/Toronto',1,null,'[]')`,
+// One challenge at a time: a couple starts another once the unfinished one is done.
+await fails(
+  as(
+    priya,
+    `select nx_create_challenge('Solo Start','classic',null,'2026-12-01',30,'America/Toronto',1,null,'[]')`,
+  ),
+  /Finish Dry October before starting another/,
 );
 const sam2 = buildWorld(
   await rowsFor(sam),
@@ -694,6 +719,115 @@ const sam2 = buildWorld(
   links,
 );
 assert.equal(sam2.world.partner.name, 'Priya');
-assert.ok(solo);
+
+// Signing after the planned first day: Day 1 becomes today. With a same-night deadline, today is logged
+// today, and a day nobody logged is a miss once that night is over.
+await as(priya, `select nx_update_challenge($1,p_deadline_days=>0)`, [dry]);
+await as(priya, `select nx_sign_pact($1)`, [dry]);
+await as(sam, `select nx_sign_pact($1)`, [dry]);
+assert.deepEqual(
+  await one(
+    priya,
+    `select status, start_date::text s from challenges where id=$1`,
+    [dry],
+  ),
+  { status: 'running', s: '2026-11-17' },
+);
+const dryPray = (
+  await one(
+    priya,
+    `select id from rules where challenge_id=$1 and title='Pray daily'`,
+    [dry],
+  )
+).id;
+await clock('2026-11-17T20:00:00-08:00');
+await as(priya, `select nx_save_checkin($1,$2,'2026-11-17',true)`, [
+  dry,
+  dryPray,
+]);
+await fails(
+  as(priya, `select nx_save_checkin($1,$2,'2026-11-18',true)`, [dry, dryPray]),
+  /once it's over/,
+);
+await clock('2026-11-18T09:00:00-08:00');
+await as(sam, `select nx_sync($1)`, [dry]);
+assert.deepEqual(
+  await as(
+    priya,
+    `select p.name, e.status from entries e join profiles p on p.id=e.person_id where e.rule_id=$1 order by 1`,
+    [dryPray],
+  ),
+  [
+    { name: 'Priya', status: 'pending' },
+    { name: 'Sam', status: 'unlogged' },
+  ],
+);
+assert.equal(
+  (
+    await as(
+      priya,
+      `select count(*)::int n from points where challenge_id=$1 and day<'2026-11-17'`,
+      [dry],
+    )
+  )[0].n,
+  0,
+  'no misses before both had signed',
+);
+
+// An invitee who had started on their own: their saved challenge comes along, their setup goes, and
+// the rules they called their own stay theirs for both of them.
+const alex = '00000000-0000-0000-0000-00000000000e',
+  blake = '00000000-0000-0000-0000-00000000000f';
+await db.exec(
+  `insert into auth.users values('${alex}','alex@example.com','{}'),('${blake}','blake@example.com','{}')`,
+);
+await as(alex, `select nx_set_name('Alex')`);
+await as(blake, `select nx_set_name('Blake')`);
+const { nx_create_challenge: alexDraft } = await one(
+  alex,
+  `select nx_create_challenge('Alex Draft','classic',null,'2026-12-01',30,'America/Toronto',1,null,$1::jsonb)`,
+  [rules],
+);
+await as(alex, `select nx_save_challenge($1,'Alex Saved')`, [alexDraft]);
+const { nx_create_challenge: blakePlan } = await one(
+  blake,
+  `select nx_create_challenge('Blake Plan','classic',null,'2026-12-01',30,'America/Toronto',1,null,$1::jsonb)`,
+  [rules],
+);
+await as(blake, `select nx_finish_setup($1)`, [blakePlan]);
+const blakeInvite = await one(blake, `select * from nx_create_invite($1)`, [
+  blakePlan,
+]);
+await as(alex, `select nx_accept_invite($1)`, [blakeInvite.token]);
+assert.deepEqual(
+  (await as(alex, `select name from challenges order by name`)).map(
+    (r) => r.name,
+  ),
+  ['Blake Plan'],
+  "Alex's own setup is gone",
+);
+assert.equal(
+  (
+    await as(
+      alex,
+      `select count(distinct couple_id)::int n from couple_members where person_id=$1`,
+      [alex],
+    )
+  )[0].n,
+  1,
+);
+const blakeWorld = buildWorld(
+  await rowsFor(blake),
+  '2026-11-18T14:00:00.000Z',
+  'America/Toronto',
+  links,
+).world;
+const alexSaved = blakeWorld.saved.find((x) => x.name === 'Alex Saved');
+assert.ok(alexSaved, "Alex's saved challenge is the couple's now");
+assert.equal(
+  alexSaved.rules[1].who,
+  alex,
+  "Alex's own steps rule stays Alex's when Blake starts it",
+);
 
 console.log('next database: ok');

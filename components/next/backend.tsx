@@ -74,8 +74,8 @@ export type SetupDraft = {
 
 /** What the live app adds. Every call shows its own error and returns false when it fails. */
 export type Host = {
-  /** Sends a command to the database (after its change is already on screen). */
-  send: (command: Command) => Promise<boolean>;
+  /** Sends commands to the database in order (their change is already on screen), then reloads once. */
+  send: (commands: Command[]) => Promise<boolean>;
   /** Asks for a screenshot and uploads it; null when the person cancels. */
   pickProof: (day: DateString) => Promise<Proof | null>;
   /** 'in' when signed in at once, 'confirm' when the email has to be confirmed first. */
@@ -128,11 +128,7 @@ export function useBackend(): Backend {
     (command: Command | Command[], change: (w: World) => World) => {
       if (!live) return update(change);
       live.apply(change);
-      const host = live.host;
-      void (async () => {
-        for (const c of Array.isArray(command) ? command : [command])
-          if (!(await host.send(c))) break;
-      })();
+      void live.host.send(Array.isArray(command) ? command : [command]);
     },
     [live, update],
   );

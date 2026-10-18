@@ -131,11 +131,18 @@ export const daysLeft = (
   today: DateString,
 ) => Math.min(c.days, Math.max(0, daysBetween(today, lastDay(c)) + 1));
 
-/** Days that can still be logged: before today, inside the challenge, deadline not yet passed. Oldest first. */
+/**
+ * Days that can still be logged: inside the challenge, deadline not yet passed, and over (or today,
+ * when the deadline is the same night). Oldest first.
+ */
 export function openDays(w: World): DateString[] {
   const c = w.challenge,
     out: DateString[] = [];
-  for (let n = 1; n <= c.deadline.daysAfter + 1; n++) {
+  for (
+    let n = c.deadline.daysAfter === 0 ? 0 : 1;
+    n <= c.deadline.daysAfter + 1;
+    n++
+  ) {
     const d = shift(w.today, -n);
     if (d >= c.start && d <= lastDay(c) && !isClosed(c, d, w.now))
       out.unshift(d);
@@ -581,7 +588,7 @@ const MISS = new Set(['missed', 'conceded', 'unlogged']);
 
 /**
  * Where `day` stands for `personId` (daily rules only; weekly rules are judged by the week):
- * - `ahead`: today or later, or outside the challenge.
+ * - `ahead`: today or later (today is open when the deadline is that night), or outside the challenge.
  * - `open`: still loggable and something is unanswered.
  * - `missed`: a miss with a point that is not forgiven and not waiting on a forgiveness request.
  * - `review`: something waiting (an answer, a correction, a dispute or a forgiveness request).
@@ -594,7 +601,13 @@ export function dayColor(
   day: DateString,
 ): DayColor {
   const c = w.challenge;
-  if (day < c.start || day > lastDay(c) || day >= w.today) return 'ahead';
+  if (
+    day < c.start ||
+    day > lastDay(c) ||
+    day > w.today ||
+    (day === w.today && c.deadline.daysAfter > 0)
+  )
+    return 'ahead';
   const closed = isClosed(c, day, w.now);
   const entries = dailyRulesOn(c, personId, day).map((r) =>
     entryFor(w, personId, r.id, day),
