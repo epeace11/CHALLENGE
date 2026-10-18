@@ -1,5 +1,6 @@
 // The Monday notification comes first, as it arrived, then the score and the gifts as four big numbers and one card for each result.
 'use client';
+import { useBackend } from '@/components/next/backend';
 import { useState } from 'react';
 import {
   ArrowRight,
@@ -40,6 +41,8 @@ export default function RecapV2() {
   const world = useWorld();
   const { navigate } = useNav();
   const [notify, setNotify] = useState(true);
+  // Monday notifications come with reminders, later in the live app.
+  const { live } = useBackend();
   const [sheet, setSheet] = useState(false);
   const v = recapOf(world);
   const partner = world.partner.name;
@@ -78,12 +81,14 @@ export default function RecapV2() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-5">
           <PageTitle kicker={v.range} title="Monday recap" />
-          <NotificationCard
-            title={note.title}
-            body={note.body}
-            on={notify}
-            onOpen={() => setSheet(true)}
-          />
+          {!live && (
+            <NotificationCard
+              title={note.title}
+              body={note.body}
+              on={notify}
+              onOpen={() => setSheet(true)}
+            />
+          )}
         </div>
 
         <Section title={headline(world, v)} index={1}>

@@ -1,4 +1,5 @@
 'use client';
+import { useBackend } from '@/components/next/backend';
 import { useState, type ReactNode } from 'react';
 import {
   AnimatePresence,
@@ -523,6 +524,7 @@ export function HowSheet({
   world: World;
 }) {
   const { navigate } = useNav();
+  const { live } = useBackend();
   const { step, cap } = world.challenge;
   const partner = world.partner.name;
   const lines = [
@@ -539,7 +541,11 @@ export function HowSheet({
       title="How gifts work"
       footer={
         <>
-          <Button onClick={() => navigate('settings')}>Change the step</Button>
+          {!live && (
+            <Button onClick={() => navigate('settings')}>
+              Change the step
+            </Button>
+          )}
           <Button variant="primary" onClick={() => onOpenChange(false)}>
             Done
           </Button>

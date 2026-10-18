@@ -60,6 +60,14 @@ export default function VerdictV2() {
   const [burst, setBurst] = useState<{ id: string; n: number } | null>(null);
   const [sheet, setSheet] = useState<VerdictSheet>(null);
   const v = verdictOf(world);
+  /** A new challenge with the same rules and stakes (the live app), or Set up (the preview). */
+  const runAgain = () =>
+    v && backend.host
+      ? void backend.host.startFrom({
+          kind: 'again',
+          challenge: v.past.challenge,
+        })
+      : navigate('setup');
 
   if (!v)
     return (
@@ -257,7 +265,7 @@ export default function VerdictV2() {
                 ? `Mark the ${formatMoney(next.amount)} gift as received`
                 : `Mark your ${formatMoney(next.amount)} gift as given`}
             </Button>
-            <Button icon={RotateCcw} onClick={() => navigate('setup')}>
+            <Button icon={RotateCcw} onClick={runAgain}>
               Run it again
             </Button>
           </>
@@ -268,7 +276,7 @@ export default function VerdictV2() {
               size="lg"
               full
               icon={RotateCcw}
-              onClick={() => navigate('setup')}
+              onClick={runAgain}
             >
               Run it again
             </Button>
@@ -288,7 +296,7 @@ export default function VerdictV2() {
         v={v}
         open={sheet === 'streaks'}
         onOpenChange={close}
-        onRunAgain={() => navigate('setup')}
+        onRunAgain={runAgain}
       />
       <BadgesSheet v={v} open={sheet === 'badges'} onOpenChange={close} />
       <SaveSheet

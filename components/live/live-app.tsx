@@ -72,17 +72,20 @@ const noSearch = () => '';
 const deviceZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 const nowIso = () => new Date().toISOString();
 
+/** The invite outlives the tab (localStorage); the invite link made for a partner only this tab (sessionStorage). */
+const store = (key: string) =>
+  key === INVITE_KEY ? localStorage : sessionStorage;
 const readSession = (key: string) => {
   try {
-    return sessionStorage.getItem(key);
+    return store(key).getItem(key);
   } catch {
     return null;
   }
 };
 const writeSession = (key: string, value: string | null) => {
   try {
-    if (value === null) sessionStorage.removeItem(key);
-    else sessionStorage.setItem(key, value);
+    if (value === null) store(key).removeItem(key);
+    else store(key).setItem(key, value);
   } catch {
     // Private mode: the invite then lives only in the URL.
   }
@@ -363,7 +366,7 @@ function Hosting({
           input.click();
         }),
       signUp: async (a) => {
-        const r = await attempt(() => api.signUp(a));
+        const r = await attempt(() => api.signUp(a, inviteToken));
         if (r === 'in') await reload();
         return r;
       },
@@ -372,7 +375,8 @@ function Hosting({
         if (ok !== false) await reload();
         return ok !== false;
       },
-      sendLink: async (a) => (await attempt(() => api.sendLink(a))) !== false,
+      sendLink: async (a) =>
+        (await attempt(() => api.sendLink(a, inviteToken))) !== false,
       verifyCode: async (a) => {
         const ok = await attempt(() => api.verifyCode(a));
         if (ok !== false) await reload();

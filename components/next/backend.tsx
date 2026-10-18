@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useCallback, useContext, useMemo } from 'react';
 import type {
+  Challenge,
   DateString,
   Proof,
   Rule,
@@ -48,7 +49,9 @@ export type Command =
 export type Template =
   | { kind: 'blank' }
   | { kind: 'theme'; theme: Theme }
-  | { kind: 'saved'; saved: SavedChallenge };
+  | { kind: 'saved'; saved: SavedChallenge }
+  /** Run a finished challenge again. */
+  | { kind: 'again'; challenge: Challenge };
 
 /** The challenge as Set up edits it. */
 export type SetupDraft = {

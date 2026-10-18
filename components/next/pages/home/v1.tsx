@@ -12,6 +12,7 @@ import {
   PageTitle,
   ProgressBar,
 } from '@/components/next/ui';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { formatDate, formatRange, lastDay } from '@/lib/next/selectors';
@@ -40,6 +41,10 @@ export default function HomeV2() {
     setShownId(s.id);
     setOpen(true);
   };
+  const { host } = useBackend();
+  /** Starts a new challenge from a saved one (the live app), or opens Set up (the preview). */
+  const startFrom = (saved: SavedChallenge) =>
+    host ? void host.startFrom({ kind: 'saved', saved }) : navigate('setup');
   // Each finished challenge with the saved copy that runs it again; then saved ones never run.
   const finished = world.past.map((p) => ({
     past: p,
@@ -66,59 +71,61 @@ export default function HomeV2() {
             </Button>
           </Enter>
 
-          <Enter index={2}>
-            <ChallengeCard
-              kicker="Running now"
-              name={run.name}
-              detail={run.range}
-            >
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  className="nx-press -ml-2 inline-flex min-h-11 items-center gap-1 self-start rounded-nx-sm px-2 text-nx-body font-semibold text-nx-ink hover:bg-nx-accent-soft"
-                  onClick={() => navigate('progress')}
-                >
-                  Day {run.day} of {run.days}
-                  <ChevronRight
-                    size={20}
-                    className="text-nx-accent"
-                    aria-hidden="true"
+          {world.challenge.status === 'running' && (
+            <Enter index={2}>
+              <ChallengeCard
+                kicker="Running now"
+                name={run.name}
+                detail={run.range}
+              >
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    className="nx-press -ml-2 inline-flex min-h-11 items-center gap-1 self-start rounded-nx-sm px-2 text-nx-body font-semibold text-nx-ink hover:bg-nx-accent-soft"
+                    onClick={() => navigate('progress')}
+                  >
+                    Day {run.day} of {run.days}
+                    <ChevronRight
+                      size={20}
+                      className="text-nx-accent"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <ProgressBar
+                    value={run.day}
+                    max={run.days}
+                    label={`Day ${run.day} of ${run.days}`}
                   />
-                </button>
-                <ProgressBar
-                  value={run.day}
-                  max={run.days}
-                  label={`Day ${run.day} of ${run.days}`}
-                />
-              </div>
-              <Rows>
-                <Row
-                  lead={
-                    <span className={styles.count}>
-                      <CountUp value={run.left} />
-                    </span>
-                  }
-                  title="Left to log"
-                  detail={
-                    run.openDay && run.left
-                      ? `${run.openDay}, ${run.leftHint}`
-                      : run.leftHint
-                  }
-                  onClick={() => navigate('log')}
-                />
-                <Row
-                  lead={
-                    <span className={styles.count} data-tone="wait">
-                      <CountUp value={run.waiting} />
-                    </span>
-                  }
-                  title="To review"
-                  detail={run.waitingHint}
-                  onClick={() => navigate('review')}
-                />
-              </Rows>
-            </ChallengeCard>
-          </Enter>
+                </div>
+                <Rows>
+                  <Row
+                    lead={
+                      <span className={styles.count}>
+                        <CountUp value={run.left} />
+                      </span>
+                    }
+                    title="Left to log"
+                    detail={
+                      run.openDay && run.left
+                        ? `${run.openDay}, ${run.leftHint}`
+                        : run.leftHint
+                    }
+                    onClick={() => navigate('log')}
+                  />
+                  <Row
+                    lead={
+                      <span className={styles.count} data-tone="wait">
+                        <CountUp value={run.waiting} />
+                      </span>
+                    }
+                    title="To review"
+                    detail={run.waitingHint}
+                    onClick={() => navigate('review')}
+                  />
+                </Rows>
+              </ChallengeCard>
+            </Enter>
+          )}
         </div>
 
         <div className="flex flex-col gap-6">
@@ -163,7 +170,7 @@ export default function HomeV2() {
                     </div>
                     <Button
                       className="self-start"
-                      onClick={() => navigate('setup')}
+                      onClick={() => startFrom(saved)}
                     >
                       {startLabel(saved)}
                     </Button>
@@ -192,10 +199,7 @@ export default function HomeV2() {
                     <ShareLink saved={s} />
                   </div>
                 )}
-                <Button
-                  className="self-start"
-                  onClick={() => navigate('setup')}
-                >
+                <Button className="self-start" onClick={() => startFrom(s)}>
                   {startLabel(s)}
                 </Button>
               </ChallengeCard>
@@ -208,7 +212,7 @@ export default function HomeV2() {
         saved={shown}
         open={open}
         onOpenChange={setOpen}
-        onStart={() => navigate('setup')}
+        onStart={() => shown && startFrom(shown)}
       />
     </AppFrame>
   );

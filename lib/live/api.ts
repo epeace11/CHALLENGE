@@ -134,17 +134,21 @@ export async function ensureProfile() {
   await setName(name.slice(0, 40));
 }
 
-const redirect = () => `${location.origin}/app${location.search}`;
+/**
+ * Where links in sign-up and sign-in emails lead: the app, carrying the invite the person opened,
+ * so it survives opening the email in another tab or browser.
+ */
+const redirect = (invite: string | null) =>
+  `${location.origin}/app${invite ? `?invite=${encodeURIComponent(invite)}` : ''}`;
 
-export async function signUp(a: {
-  name: string;
-  email: string;
-  password: string;
-}) {
+export async function signUp(
+  a: { name: string; email: string; password: string },
+  invite: string | null,
+) {
   const { data, error } = await supabase.auth.signUp({
     email: a.email,
     password: a.password,
-    options: { data: { name: a.name }, emailRedirectTo: redirect() },
+    options: { data: { name: a.name }, emailRedirectTo: redirect(invite) },
   });
   if (error) throw new Error(error.message);
   return data.session ? ('in' as const) : ('confirm' as const);
@@ -155,11 +159,14 @@ export async function signIn(a: { email: string; password: string }) {
   if (error) throw new Error(error.message);
 }
 
-export async function sendLink(a: { email: string; name?: string }) {
+export async function sendLink(
+  a: { email: string; name?: string },
+  invite: string | null,
+) {
   const { error } = await supabase.auth.signInWithOtp({
     email: a.email,
     options: {
-      emailRedirectTo: redirect(),
+      emailRedirectTo: redirect(invite),
       ...(a.name ? { data: { name: a.name } } : {}),
     },
   });
@@ -225,6 +232,21 @@ export function templateFields(template: Template) {
       step: t.step,
       cap: null,
       rules: t.rules.filter((r) => !t.optionalRuleIds.includes(r.id)),
+    };
+  }
+  if (template.kind === 'again') {
+    const c = template.challenge;
+    return {
+      name: c.name,
+      look: c.look,
+      theme: c.theme,
+      days: c.days,
+      step: c.step,
+      cap: c.cap,
+      rules: c.rules.map((r) => {
+        const { startsOn: _s, endsOn: _e, ...rest } = r;
+        return rest;
+      }),
     };
   }
   if (template.kind === 'saved') {
