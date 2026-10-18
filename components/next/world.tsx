@@ -94,3 +94,27 @@ export const useWorld = () => useContext(DemoContext).world;
 
 /** The world plus update, undo and reset. */
 export const useDemo = () => useContext(DemoContext);
+
+/**
+ * A world someone else keeps (the live app): pages read it with useWorld(), and every change goes
+ * through useBackend() in backend.tsx, so update and undo do nothing here.
+ */
+export function HostedWorld({
+  world,
+  children,
+}: {
+  world: World;
+  children: ReactNode;
+}) {
+  const value = useMemo(
+    () => ({
+      world,
+      update: () => {},
+      undo: () => {},
+      canUndo: false,
+      reset: () => {},
+    }),
+    [world],
+  );
+  return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
+}

@@ -128,14 +128,19 @@ Sample screenshots for "add a screenshot" flows: `stepsShot(steps, day)` and `sc
 
 ### Changing the world
 
-Pages change the sample world with pure actions from `@/lib/next/actions` through `useDemo()`:
+Pages change things through `useBackend()`, passing the same change twice: as a command (data the live app at `/app` sends to the database) and as a pure action from `@/lib/next/actions` (which the preview applies to the sample world, and the live app applies at once while the database catches up):
 
 ```tsx
-const { update, undo } = useDemo(); // from '@/components/next/world'
+const backend = useBackend(); // from '@/components/next/backend'
+const undoAction = useUndoAction(); // Undo only where it works: the preview
 const toast = useToast(); // from '@/components/next/ui'
-update((w) => approve(w, entry.id));
-toast({ text: 'Approved', action: { label: 'Undo', onClick: undo } });
+backend.act({ type: 'approve', entryId: entry.id }, (w) =>
+  approve(w, entry.id),
+);
+toast({ text: 'Approved', ...undoAction() });
 ```
+
+Steps that are not world changes (signing up, starting a challenge, finishing setup, the invite link, accepting an invite, adding a screenshot) go through `backend.host`, which is null in the preview: keep the preview behaviour when it is null. `components/live/` is the host; pages never import it.
 
 Actions: `saveCheckin(w, { personId, ruleId, day, done | value, note, proofs, forgiveness })`, `approve` (answers and late answers), `rejectCorrection`, `dispute(w, entryId, raisedBy, comment)`, `concede`, `withdrawDispute`, `replyToDispute`, `askForgiveness`, `decideForgiveness(w, requestId, 'approved' | 'denied')`, `forgivePoint`, `addNote`, `editNote`, `removeNote`, `signPact`, `updateChallenge(w, patch)`, `setShareLink`, `sendInvite`. Changes last while the preview is open, across pages (log Maya's 3 check-ins on Check in, and Overview shows 0 left). "Reset sample data" on the page index starts over.
 

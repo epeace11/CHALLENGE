@@ -32,6 +32,7 @@ Run `npm install`, then `npm run dev`. Run `npm run build` for the Sites/Cloudfl
 - `public/sw.js` — the service worker; it only shows push notifications and never intercepts requests.
 - `supabase/functions/remind/` — the Deno Edge Function that sends the reminders (excluded from `tsc` and `oxlint`; see Reminders).
 - The new product for any couple (prod-challenge branch), previewed at `/preview` on sample data only: `lib/next/` (types, the sample world, selectors, actions), `components/next/` (the kit in `ui/`, `frames/`, the preview, and one folder per page in `pages/`), `styles/next.css` (scoped under `.nx`, imported last) and `app/preview/page.tsx`. `components/next/README.md` is the guide; `tests/next.mjs` covers it.
+- The working version of that product (prod-challenge branch) at `/app` (`app/app/page.tsx`), on the PROD CHALLENGE database: `components/live/` is the host (sign-in, which page a person can open, loading, live updates, sending changes; plus the invite-link screen), `lib/live/api.ts` every database call, `lib/live/world.ts` the rows-to-World builder. Pages change things only through `useBackend()` (`components/next/backend.tsx`), so the same pages run on sample data at `/preview`. Its database is `supabase/next/`; see the Database section.
 
 Where to change things:
 
@@ -65,6 +66,12 @@ The scheduled function runs every hour; checks use Toronto local dates, so dayli
 Each person can add any number of timestamped journal notes to a day, from the Overview (today), the Log page (the day being logged) or the calendar day view. Notes are readable by both members, editable and removable only by their author, never lock, and never affect scoring.
 
 The app subscribes to Supabase Realtime for the published challenge tables and reloads within a moment of any change, on top of the 60-second poll and the reload on focus. Realtime respects row-level security, so only the two members receive events. Loads never overlap: a load requested mid-load runs once more afterwards, so stale data cannot land over fresh data. The poll, the focus reload and the first load run the deadline checks (`challenge_sync`) first; the reload after one of your own writes and the Realtime reload skip them, since the write already ran them. A failed background load shows in the error bar until the next successful one.
+
+### The new product's database (prod-challenge)
+
+`supabase/next/schema.sql` is the fresh-install script for The Challenge for any couple: profiles, couples, challenges with their rules, signatures and invites, and the answers, points, forgiveness requests, disputes and journal notes, each belonging to a challenge; saved challenges belong to a couple. Run it once in the PROD CHALLENGE project's SQL editor (it leaves the old `challenge_*` tables alone). Reads go through row-level security (`nx_in_challenge`, `nx_in_couple`); every write is an `nx_*` security-definer function that checks membership and takes that challenge's own lock. `nx_tick` runs the deadlines (unlogged misses, weekly shortfalls prorated in short weeks, 48-hour auto-approval, finishing) before every write and on every load; for an hourly run, `select cron.schedule('nx-hourly','0 * * * *','select public.nx_tick_all()')`. Screenshots go in the private `proofs` bucket as `<challenge>/<person>/<file>`. `tests/next-database.mjs` plays two couples through the whole loop, checks neither can read or change the other's rows, and builds the pages' World from the rows.
+
+`supabase/next/import-original.sql` adds `nx_import_original(erin, kazzy)`, which copies the Sep 15 – Oct 14 challenge from the old tables into the new schema as a finished challenge ("The Original"); `tests/import-original.mjs` checks every point comes across and the new engine changes none. Screenshots are copied separately (the script's header says where each goes).
 
 ## Badges and screenshots
 

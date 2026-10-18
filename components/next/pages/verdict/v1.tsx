@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
-import { useDemo, useWorld } from '@/components/next/world';
+import { useBackend, useUndoAction } from '@/components/next/backend';
+import { useWorld } from '@/components/next/world';
 import {
   ActionBar,
   Avatar,
@@ -51,7 +52,8 @@ import styles from './verdict.module.css';
 export default function VerdictV2() {
   const world = useWorld();
   const { navigate } = useNav();
-  const { update, undo } = useDemo();
+  const backend = useBackend();
+  const undoAction = useUndoAction();
   const toast = useToast();
   const [given, setGiven] = useState<Record<string, boolean>>({});
   // The gift just marked, and a count so its burst plays again each time.
@@ -295,11 +297,15 @@ export default function VerdictV2() {
         suggestion={suggestName(world, v.name)}
         taken={world.saved.map((s) => s.name)}
         onSave={(name) => {
-          update((w) => saveAs(w, v.past, name));
-          toast({
-            text: `Saved as ${name}`,
-            action: { label: 'Undo', onClick: undo },
-          });
+          backend.act(
+            {
+              type: 'saveAs',
+              challengeId: v.past.challenge.id,
+              name: name.trim(),
+            },
+            (w) => saveAs(w, v.past, name),
+          );
+          toast({ text: `Saved as ${name}`, ...undoAction() });
         }}
       />
     </PlainFrame>

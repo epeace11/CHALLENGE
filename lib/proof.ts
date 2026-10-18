@@ -7,7 +7,7 @@ export const PROOF_BUCKET = 'challenge-proof';
 export const MAX_PROOFS = 6;
 
 /** Scales a screenshot down to 1600 px on its long side and re-encodes it as JPEG. */
-async function compress(file: File) {
+export async function compress(file: File) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
     throw Error('Choose a JPEG, PNG, or WebP screenshot.');
   if (file.size > 20 * 1024 * 1024)

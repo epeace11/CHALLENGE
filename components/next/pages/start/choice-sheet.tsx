@@ -1,4 +1,5 @@
 'use client';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Button, Sheet } from '@/components/next/ui';
@@ -22,7 +23,16 @@ export function ChoiceSheet({
 }) {
   const world = useWorld();
   const { navigate } = useNav();
+  const { host } = useBackend();
   if (!choice) return null;
+  const use = () => {
+    if (!host) return navigate('setup');
+    const theme = world.themes.find((t) => t.id === choice.id),
+      saved = world.saved.find((s) => s.id === choice.id);
+    if (choice.kind === 'theme' && theme)
+      void host.startFrom({ kind: 'theme', theme });
+    else if (saved) void host.startFrom({ kind: 'saved', saved });
+  };
   return (
     <Sheet
       open={open}
@@ -37,7 +47,7 @@ export function ChoiceSheet({
             </Button>
           )}
           <div data-look={choice.look} className="contents">
-            <Button variant="primary" onClick={() => navigate('setup')}>
+            <Button variant="primary" onClick={use}>
               {choice.kind === 'theme'
                 ? 'Use this theme'
                 : 'Use this challenge'}

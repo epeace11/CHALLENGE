@@ -20,8 +20,9 @@ import {
   shift,
   timeLeft,
 } from '@/lib/next/selectors';
+import { useBackend, useUndoAction } from '@/components/next/backend';
 import { useToast } from '@/components/next/ui';
-import { useDemo, useWorld } from '@/components/next/world';
+import { useWorld } from '@/components/next/world';
 
 /**
  * The state every Check in version shares: which day is on screen, the check-in being answered,
@@ -160,7 +161,8 @@ export type Anchors = {
 
 export function useCheckin({ top, heading }: Anchors) {
   const world = useWorld();
-  const { update, undo } = useDemo();
+  const backend = useBackend();
+  const undoAction = useUndoAction();
   const toast = useToast();
   const c = world.challenge,
     me = world.me.id,
@@ -277,7 +279,7 @@ export function useCheckin({ top, heading }: Anchors) {
         : { done: d.done === true }),
       ...(ask ? { forgiveness: ask } : {}),
     };
-    update((w) => saveCheckin(w, input));
+    backend.act({ type: 'saveCheckin', input }, (w) => saveCheckin(w, input));
     const k = key(rule);
     drop(rule);
     setFocus(null);
@@ -290,13 +292,7 @@ export function useCheckin({ top, heading }: Anchors) {
         : ask
           ? `Saved. ${partner} will see your request.`
           : 'Saved',
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          undo();
-          setDrafts((all) => ({ ...all, [k]: d }));
-        },
-      },
+      ...undoAction(() => setDrafts((all) => ({ ...all, [k]: d }))),
     });
   };
 
@@ -330,14 +326,18 @@ export function useCheckin({ top, heading }: Anchors) {
     setSkipped([]);
   };
 
-  const addProof = (rule: Rule) => {
+  const addProof = async (rule: Rule) => {
     const d = draftOf(rule);
     shots.current += 1;
-    change(rule, {
-      proofs: [
-        ...d.proofs,
-        sampleShot(rule, d.value, day ?? '', shots.current),
-      ],
+    const proof = backend.host
+      ? day && (await backend.host.pickProof(day))
+      : sampleShot(rule, d.value, day ?? '', shots.current);
+    if (!proof) return;
+    const k = key(rule),
+      base = draftFrom(entryOf(rule));
+    setDrafts((all) => {
+      const was = all[k] ?? base;
+      return { ...all, [k]: { ...was, proofs: [...was.proofs, proof] } };
     });
   };
   const removeProof = (rule: Rule, proofId: string) =>

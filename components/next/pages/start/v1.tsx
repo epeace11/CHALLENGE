@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Button, Glide, PageTitle, Stagger } from '@/components/next/ui';
@@ -30,6 +31,7 @@ const countWord = (n: number) => WORDS[n] ?? String(n);
 export default function Start() {
   const world = useWorld();
   const { navigate } = useNav();
+  const { host } = useBackend();
   const sheet = useChoiceSheet();
   const [step, setStep] = useState<Step>('how');
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -63,20 +65,29 @@ export default function Start() {
                 title="Create new challenge"
                 detail="Pick each rule yourself"
                 icon={Plus}
-                onClick={() => navigate('setup')}
+                onClick={() =>
+                  host
+                    ? void host.startFrom({ kind: 'blank' })
+                    : navigate('setup')
+                }
               />
-              <StartRow
-                title="Say your rules"
-                detail="Say them in one sentence"
-                icon={Mic}
-                onClick={() => navigate('say')}
-              />
-              <StartRow
-                title="Saved challenges"
-                detail={saved.map((s) => s.name).join(' or ')}
-                icon={Bookmark}
-                onClick={() => go('saved')}
-              />
+              {/* Say your rules needs the AI step, which the live app adds later. */}
+              {!host && (
+                <StartRow
+                  title="Say your rules"
+                  detail="Say them in one sentence"
+                  icon={Mic}
+                  onClick={() => navigate('say')}
+                />
+              )}
+              {saved.length > 0 && (
+                <StartRow
+                  title="Saved challenges"
+                  detail={saved.map((s) => s.name).join(' or ')}
+                  icon={Bookmark}
+                  onClick={() => go('saved')}
+                />
+              )}
               <StartRow
                 title="Themes"
                 detail={`${countWord(themes.length)} ready-made challenges`}

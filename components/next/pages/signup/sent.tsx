@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, MailCheck, RotateCcw } from 'lucide-react';
+import { useBackend } from '@/components/next/backend';
 import { Button, GlassCard, useToast } from '@/components/next/ui';
 import { CodeField } from './fields';
 import { codeError } from './form';
@@ -22,6 +23,7 @@ export function SentPanel({
   onBack: () => void;
 }) {
   const toast = useToast();
+  const { host } = useBackend();
   const [code, setCode] = useState('');
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -36,7 +38,11 @@ export function SentPanel({
     setTried(true);
     if (error) return;
     setBusy(true);
-    setTimeout(onDone, 450);
+    if (host)
+      void host
+        .verifyCode({ email, code: code.trim() })
+        .then(() => setBusy(false));
+    else setTimeout(onDone, 450);
   };
 
   return (
@@ -77,7 +83,10 @@ export function SentPanel({
         <Button
           variant="quiet"
           icon={RotateCcw}
-          onClick={() => toast(`Sent a new link to ${email}`)}
+          onClick={async () => {
+            if (!host || (await host.sendLink({ email })))
+              toast(`Sent a new link to ${email}`);
+          }}
         >
           Send a new link
         </Button>

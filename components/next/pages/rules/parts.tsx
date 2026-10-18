@@ -1,4 +1,5 @@
 'use client';
+import { useBackend } from '@/components/next/backend';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import {
   CalendarClock,
@@ -48,6 +49,8 @@ import styles from './rules.module.css';
 
 export function useProposals() {
   const world = useWorld();
+  // Proposals reach the partner only in the preview so far; the live app adds them later.
+  const enabled = !useBackend().live;
   const toast = useToast();
   const [list, setList] = useState<Proposal[]>([]);
   const made = useRef(0);
@@ -98,6 +101,7 @@ export function useProposals() {
   return {
     list,
     propose,
+    enabled,
     withdraw,
     /** The proposal waiting on a rule, if any. */
     pendingFor: (ruleId: string) => list.find((p) => p.ruleId === ruleId),
@@ -220,7 +224,7 @@ export function RuleSheet({
       }}
       title={shown?.title ?? 'Rule'}
       footer={
-        shown && !pending ? (
+        shown && !pending && proposals.enabled ? (
           <>
             <Button onClick={() => go('retire')}>Propose retiring it</Button>
             <Button variant="primary" onClick={() => go('change')}>

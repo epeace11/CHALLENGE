@@ -5,8 +5,13 @@ import {
   decideForgiveness,
   forgivePoint,
 } from '@/lib/next/actions';
+import {
+  useBackend,
+  useUndoAction,
+  type Command,
+} from '@/components/next/backend';
 import { useToast } from '@/components/next/ui';
-import { useDemo } from '@/components/next/world';
+import { useWorld } from '@/components/next/world';
 import type { PointRow } from './ledger';
 
 /**
@@ -14,11 +19,13 @@ import type { PointRow } from './ledger';
  * count to their new value, and Review and Overview follow) with a toast that can undo it.
  */
 export function useGifts() {
-  const { world, update, undo } = useDemo();
+  const world = useWorld();
+  const backend = useBackend();
+  const undoAction = useUndoAction();
   const toast = useToast();
-  const act = (change: (w: World) => World, text: string) => {
-    update(change);
-    toast({ text, action: { label: 'Undo', onClick: undo } });
+  const act = (command: Command, change: (w: World) => World, text: string) => {
+    backend.act(command, change);
+    toast({ text, ...undoAction() });
   };
   return {
     world,
@@ -26,6 +33,13 @@ export function useGifts() {
     forgive: (row: PointRow) => {
       const request = row.pending;
       act(
+        request
+          ? {
+              type: 'decideForgiveness',
+              requestId: request.id,
+              decision: 'approved',
+            }
+          : { type: 'forgivePoint', pointId: row.point.id },
         (w) =>
           request
             ? decideForgiveness(w, request.id, 'approved')
@@ -38,6 +52,11 @@ export function useGifts() {
       const request = row.pending;
       if (request)
         act(
+          {
+            type: 'decideForgiveness',
+            requestId: request.id,
+            decision: 'denied',
+          },
           (w) => decideForgiveness(w, request.id, 'denied'),
           'Forgiveness declined',
         );
@@ -45,6 +64,7 @@ export function useGifts() {
     /** Asks the partner to forgive one of the viewer's points. */
     ask: (row: PointRow, reason: string) =>
       act(
+        { type: 'askForgiveness', pointId: row.point.id, reason },
         (w) => askForgiveness(w, row.point.id, reason),
         `Asked ${world.partner.name} to forgive it`,
       ),

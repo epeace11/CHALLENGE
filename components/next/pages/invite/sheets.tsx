@@ -73,7 +73,7 @@ function RuleSheet({ flow }: { flow: InviteFlow }) {
       description={rule?.description}
       footer={
         <>
-          {!flow.sent && rule && (
+          {flow.canSuggest && rule && (
             <Button onClick={() => flow.suggest(ruleTopic(rule.id))}>
               Suggest a change
             </Button>
@@ -126,7 +126,7 @@ function DatesSheet({ flow }: { flow: InviteFlow }) {
       description={`${c.name} runs ${c.days} days, on ${flow.place} time.`}
       footer={
         <>
-          {!flow.sent && (
+          {flow.canSuggest && (
             <Button onClick={() => flow.suggest('start')}>
               Suggest a different date
             </Button>
@@ -161,7 +161,7 @@ function StepSheet({ flow }: { flow: InviteFlow }) {
       description="Each miss is a point, and each point costs one step more than the one before."
       footer={
         <>
-          {!flow.sent && (
+          {flow.canSuggest && (
             <Button onClick={() => flow.suggest('step')}>
               Suggest a different step
             </Button>

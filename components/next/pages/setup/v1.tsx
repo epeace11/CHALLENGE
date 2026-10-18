@@ -17,6 +17,7 @@ import {
   useReducedMotion,
   useToast,
 } from '@/components/next/ui';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { formatMoney, openDay } from '@/lib/next/selectors';
@@ -49,6 +50,8 @@ export default function SetupV1() {
   const world = useWorld();
   const { me, partner } = world;
   const { navigate } = useNav();
+  const { host } = useBackend();
+  const [busy, setBusy] = useState(false);
   const toast = useToast();
   const still = useReducedMotion();
   const { draft, patch, stakes, people, saveRule, removeRule, restoreRule } =
@@ -107,6 +110,22 @@ export default function SetupV1() {
           : found.rules
             ? 'rules'
             : null;
+    if (!first && host) {
+      setBusy(true);
+      void host
+        .finishSetup({
+          name: draft.name.trim(),
+          start: draft.start,
+          days: draftDays(draft),
+          timeZone: draft.timeZone,
+          deadline: draft.deadline,
+          step: draft.step,
+          cap: draftCap(draft),
+          rules: draft.rules,
+        })
+        .then(() => setBusy(false));
+      return;
+    }
     if (!first) return navigate('invite');
     document
       .getElementById(`setup-${first}`)
@@ -249,9 +268,12 @@ export default function SetupV1() {
           size="lg"
           full
           iconEnd={ArrowRight}
+          loading={busy}
           onClick={invite}
         >
-          Invite {partner.name}
+          {host && !world.partnerPending
+            ? `Send to ${partner.name} to sign`
+            : `Invite ${partner.name}`}
         </Button>
       </ActionBar>
 

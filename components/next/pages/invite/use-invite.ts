@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useToast } from '@/components/next/ui';
 import { useWorld } from '@/components/next/world';
@@ -18,6 +19,7 @@ export function useInvite() {
   const world = useWorld();
   const view = inviteView(world);
   const { navigate } = useNav();
+  const { host } = useBackend();
   const toast = useToast();
   const [sheet, setSheet] = useState<InviteSheet | null>(null);
   // The rule in the rule sheet, kept after it closes so the sheet keeps its content while it falls.
@@ -79,13 +81,15 @@ export function useInvite() {
       });
     },
     sent,
+    /** Suggestions go to the inviter only in the preview; the live app adds them later. */
+    canSuggest: !sent && !host,
     takeBack: () => {
       if (sent) setDraft(sent.text);
       setSent(null);
     },
-    accept: () => navigate('pact'),
-    switchAccount: () => navigate('signup'),
-    signOut: () => navigate('landing'),
+    accept: () => (host ? void host.acceptInvite() : navigate('pact')),
+    switchAccount: () => (host ? void host.signOut() : navigate('signup')),
+    signOut: () => (host ? void host.signOut() : navigate('landing')),
   };
 }
 

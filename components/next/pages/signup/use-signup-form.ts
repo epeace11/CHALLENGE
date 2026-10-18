@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { FIELDS, validate, type Draft, type Field, type Method } from './form';
 import { setSignupMode, signupMode, type SignupMode } from './mode';
@@ -17,6 +18,7 @@ const WAIT_MS = 450;
  */
 export function useSignupForm() {
   const { navigate } = useNav();
+  const { host } = useBackend();
   const [mode, setModeState] = useState<SignupMode>(signupMode);
   const [draft, setDraft] = useState<Draft>({
     name: '',
@@ -52,7 +54,10 @@ export function useSignupForm() {
       setTouched((t) => (t[field] ? t : { ...t, [field]: true }));
   };
 
-  const goOn = () => navigate(mode === 'signup' ? 'start' : 'home');
+  // The live app moves on by itself once the account is signed in.
+  const goOn = () => {
+    if (!host) navigate(mode === 'signup' ? 'start' : 'home');
+  };
 
   /**
    * The main action (a password) or the emailed link: check the fields, then go on. `form` is the
@@ -67,9 +72,38 @@ export function useSignupForm() {
       form?.querySelector<HTMLInputElement>(`[name="${first}"]`)?.focus();
       return;
     }
+    const email = draft.email.trim(),
+      name = draft.name.trim();
+    if (host) {
+      setBusy(true);
+      void (async () => {
+        if (method === 'link') {
+          const ok = await host.sendLink({
+            email,
+            ...(mode === 'signup' ? { name } : {}),
+          });
+          setBusy(false);
+          if (ok) {
+            setDirection(1);
+            setSentTo(email);
+          }
+          return;
+        }
+        const result =
+          mode === 'signup'
+            ? await host.signUp({ name, email, password: draft.password })
+            : await host.signIn({ email, password: draft.password });
+        setBusy(false);
+        if (result === 'confirm') {
+          setDirection(1);
+          setSentTo(email);
+        }
+      })();
+      return;
+    }
     if (method === 'link') {
       setDirection(1);
-      setSentTo(draft.email.trim());
+      setSentTo(email);
       return;
     }
     setBusy(true);

@@ -2,7 +2,7 @@
 import { Copy } from 'lucide-react';
 import type { SavedChallenge } from '@/lib/next/model';
 import { setShareLink } from '@/lib/next/actions';
-import { useDemo } from '@/components/next/world';
+import { useBackend } from '@/components/next/backend';
 import {
   Button,
   Presence,
@@ -21,14 +21,20 @@ import styles from './home.module.css';
  * slides open and closed.
  */
 export function ShareLink({ saved }: { saved: SavedChallenge }) {
-  const { update } = useDemo();
+  const backend = useBackend();
   const toast = useToast();
   const still = useReducedMotion();
+  // Share links open for other couples in a later step of the live app.
+  if (backend.live) return null;
   return (
     <div className="flex flex-col">
       <Toggle
         checked={saved.linkOn}
-        onChange={(on) => update((w) => setShareLink(w, saved.id, on))}
+        onChange={(on) =>
+          backend.act({ type: 'setShareLink', savedId: saved.id, on }, (w) =>
+            setShareLink(w, saved.id, on),
+          )
+        }
         label="Share link"
         description="Lets other couples start their own copy."
       />

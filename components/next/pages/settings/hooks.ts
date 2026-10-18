@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { World } from '@/lib/next/model';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useToast } from '@/components/next/ui';
 import { exportFile } from './data';
@@ -79,6 +80,7 @@ function download(filename: string, text: string) {
 /** The account's actions, each doing exactly what its button says. */
 export function useAccount(world: World) {
   const { navigate } = useNav();
+  const { host } = useBackend();
   const toast = useToast();
   return {
     exportData: () => {
@@ -87,6 +89,7 @@ export function useAccount(world: World) {
       toast(`Downloaded ${file.filename}`);
     },
     signOut: () => {
+      if (host) return void host.signOut();
       toast('Signed out');
       navigate('signup');
     },

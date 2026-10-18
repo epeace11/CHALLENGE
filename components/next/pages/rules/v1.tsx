@@ -72,18 +72,20 @@ export default function RulesV1() {
           </GlassCard>
         </Section>
 
-        <ActionBar>
-          <Button
-            variant="primary"
-            size="lg"
-            full
-            icon={Plus}
-            className="sm:w-auto sm:min-w-72"
-            onClick={() => proposals.propose('add')}
-          >
-            Propose a change
-          </Button>
-        </ActionBar>
+        {proposals.enabled && (
+          <ActionBar>
+            <Button
+              variant="primary"
+              size="lg"
+              full
+              icon={Plus}
+              className="sm:w-auto sm:min-w-72"
+              onClick={() => proposals.propose('add')}
+            >
+              Propose a change
+            </Button>
+          </ActionBar>
+        )}
       </div>
       <RuleSheet
         rule={open}

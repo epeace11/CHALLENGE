@@ -112,7 +112,7 @@ export default function InviteV2() {
         >
           Accept and continue
         </Button>
-        {!flow.sent && (
+        {flow.canSuggest && (
           <Button
             size="lg"
             className="w-full sm:w-auto"

@@ -395,4 +395,6 @@ export type World = {
   pact: Pact;
   practice: PracticeScript;
   sayRules: SayRulesDraft;
+  /** True while the partner has no account in the couple yet (the live app, before the invite is accepted). */
+  partnerPending?: boolean;
 };

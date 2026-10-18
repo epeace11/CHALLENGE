@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Clock3, Download, LogOut, Trash2 } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
-import { useDemo, useWorld } from '@/components/next/world';
+import { useBackend, useUndoAction } from '@/components/next/backend';
+import { useWorld } from '@/components/next/world';
 import {
   Avatar,
   Button,
@@ -46,9 +47,12 @@ type Open = 'name' | 'times' | 'terms' | 'leave' | 'delete' | null;
 /** Settings, version 1. */
 export default function SettingsV1() {
   const world = useWorld();
-  const { update, undo } = useDemo();
+  const backend = useBackend();
+  const undoAction = useUndoAction();
   const toast = useToast();
   const account = useAccount(world);
+  // Reminders, proposed changes, leaving and deleting the account come later in the live app.
+  const later = backend.live;
   const [theme, setTheme] = useThemeChoice();
   const [open, setOpen] = useState<Open>(null);
   const [reminders, setReminders] = useState<Reminders>(DEFAULT_REMINDERS);
@@ -74,36 +78,38 @@ export default function SettingsV1() {
           />
         </Section>
 
-        <Section title="Reminders" index={2}>
-          <GlassCard pad="sm" className="flex flex-col gap-1 px-5 sm:px-6">
-            <Toggle
-              checked={reminders.on}
-              onChange={(on) => {
-                setReminders({ ...reminders, on });
-                toast(on ? 'Reminders on' : 'Reminders off');
-              }}
-              label="Evening reminders"
-              description="Only when something is left to log"
-            />
-            <div className="-mx-2 border-t border-nx-line pt-2 sm:-mx-3">
-              <RowButton
-                glass={false}
-                className="border-0 bg-transparent disabled:opacity-50"
-                leading={
-                  <Clock3
-                    size={22}
-                    className="text-nx-accent"
-                    aria-hidden="true"
-                  />
-                }
-                title="Times"
-                detail={remindersLine(reminders)}
-                disabled={!reminders.on}
-                onClick={() => setOpen('times')}
+        {!later && (
+          <Section title="Reminders" index={2}>
+            <GlassCard pad="sm" className="flex flex-col gap-1 px-5 sm:px-6">
+              <Toggle
+                checked={reminders.on}
+                onChange={(on) => {
+                  setReminders({ ...reminders, on });
+                  toast(on ? 'Reminders on' : 'Reminders off');
+                }}
+                label="Evening reminders"
+                description="Only when something is left to log"
               />
-            </div>
-          </GlassCard>
-        </Section>
+              <div className="-mx-2 border-t border-nx-line pt-2 sm:-mx-3">
+                <RowButton
+                  glass={false}
+                  className="border-0 bg-transparent disabled:opacity-50"
+                  leading={
+                    <Clock3
+                      size={22}
+                      className="text-nx-accent"
+                      aria-hidden="true"
+                    />
+                  }
+                  title="Times"
+                  detail={remindersLine(reminders)}
+                  disabled={!reminders.on}
+                  onClick={() => setOpen('times')}
+                />
+              </div>
+            </GlassCard>
+          </Section>
+        )}
 
         <Section title="Appearance" index={3}>
           <SegmentedControl
@@ -115,47 +121,49 @@ export default function SettingsV1() {
           />
         </Section>
 
-        <Section title={c.name} index={4}>
-          <div className="flex flex-col gap-2.5">
-            <RowButton
-              title="Challenge name"
-              detail={c.name}
-              onClick={() => setOpen('terms')}
-            />
-            <RowButton
-              title={`Dollar step: ${formatMoney(c.step)}`}
-              detail={stepLine(c.step)}
-              onClick={() => setOpen('terms')}
-            />
-            <RowButton
-              title="Gift cap"
-              detail={capLine(c.cap)}
-              onClick={() => setOpen('terms')}
-            />
-          </div>
-          {proposal ? (
-            <ProposalCard
-              partner={partner}
-              changes={changesOf(now, proposal)}
-              onWithdraw={() => {
-                setProposal(null);
-                toast('Withdrawn');
-              }}
-            />
-          ) : (
-            <p className="text-nx-2 text-nx-ink-2">
-              Changes here go to {partner} to accept.
-            </p>
-          )}
-          <Button
-            variant="quiet"
-            icon={LogOut}
-            className="-ml-3 self-start text-nx-danger"
-            onClick={() => setOpen('leave')}
-          >
-            Leave challenge
-          </Button>
-        </Section>
+        {!later && (
+          <Section title={c.name} index={4}>
+            <div className="flex flex-col gap-2.5">
+              <RowButton
+                title="Challenge name"
+                detail={c.name}
+                onClick={() => setOpen('terms')}
+              />
+              <RowButton
+                title={`Dollar step: ${formatMoney(c.step)}`}
+                detail={stepLine(c.step)}
+                onClick={() => setOpen('terms')}
+              />
+              <RowButton
+                title="Gift cap"
+                detail={capLine(c.cap)}
+                onClick={() => setOpen('terms')}
+              />
+            </div>
+            {proposal ? (
+              <ProposalCard
+                partner={partner}
+                changes={changesOf(now, proposal)}
+                onWithdraw={() => {
+                  setProposal(null);
+                  toast('Withdrawn');
+                }}
+              />
+            ) : (
+              <p className="text-nx-2 text-nx-ink-2">
+                Changes here go to {partner} to accept.
+              </p>
+            )}
+            <Button
+              variant="quiet"
+              icon={LogOut}
+              className="-ml-3 self-start text-nx-danger"
+              onClick={() => setOpen('leave')}
+            >
+              Leave challenge
+            </Button>
+          </Section>
+        )}
 
         <Section title="Your account" index={5}>
           <div className="flex flex-col gap-2.5">
@@ -183,17 +191,19 @@ export default function SettingsV1() {
               detail={world.me.email}
               onClick={account.signOut}
             />
-            <RowButton
-              leading={
-                <Trash2
-                  size={22}
-                  className="text-nx-danger"
-                  aria-hidden="true"
-                />
-              }
-              title={<span className="text-nx-danger">Delete account</span>}
-              onClick={() => setOpen('delete')}
-            />
+            {!later && (
+              <RowButton
+                leading={
+                  <Trash2
+                    size={22}
+                    className="text-nx-danger"
+                    aria-hidden="true"
+                  />
+                }
+                title={<span className="text-nx-danger">Delete account</span>}
+                onClick={() => setOpen('delete')}
+              />
+            )}
           </div>
         </Section>
       </div>
@@ -203,11 +213,10 @@ export default function SettingsV1() {
         onOpenChange={close}
         name={world.me.name}
         onSave={(name) => {
-          update((w) => renamePerson(w, w.me.id, name));
-          toast({
-            text: 'Name saved',
-            action: { label: 'Undo', onClick: undo },
-          });
+          backend.act({ type: 'rename', name: name.trim() }, (w) =>
+            renamePerson(w, w.me.id, name),
+          );
+          toast({ text: 'Name saved', ...undoAction() });
         }}
       />
       <TimesSheet

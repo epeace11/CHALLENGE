@@ -16,25 +16,29 @@ import {
   TextField,
   useToast,
 } from '@/components/next/ui';
-import { useDemo, useWorld } from '@/components/next/world';
+import { useBackend, useUndoAction } from '@/components/next/backend';
+import { useWorld } from '@/components/next/world';
 
 /** The day's notes by both people, oldest first, and adding or removing one (with Undo). */
 export function useNotes(day: DateString) {
   const world = useWorld();
-  const { update, undo } = useDemo();
+  const backend = useBackend();
+  const undoAction = useUndoAction();
   const toast = useToast();
   const notes = world.journal
     .filter((n) => n.day === day)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const add = (text: string) => {
     if (!text.trim()) return false;
-    update((w) => addNote(w, world.me.id, day, text));
-    toast({ text: 'Note added', action: { label: 'Undo', onClick: undo } });
+    backend.act({ type: 'addNote', day, text: text.trim() }, (w) =>
+      addNote(w, world.me.id, day, text),
+    );
+    toast({ text: 'Note added', ...undoAction() });
     return true;
   };
   const remove = (id: string) => {
-    update((w) => removeNote(w, id));
-    toast({ text: 'Note removed', action: { label: 'Undo', onClick: undo } });
+    backend.act({ type: 'removeNote', noteId: id }, (w) => removeNote(w, id));
+    toast({ text: 'Note removed', ...undoAction() });
   };
   return { notes, add, remove };
 }

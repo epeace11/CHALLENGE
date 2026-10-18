@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { useNav } from '@/components/next/nav';
 import { useToast } from '@/components/next/ui';
-import { useDemo } from '@/components/next/world';
+import { useBackend, useUndoAction } from '@/components/next/backend';
+import { useWorld } from '@/components/next/world';
 import { pactView, signPactAt } from './pact-data';
 
 /** The sheets the pact opens: Day 1 and the first check-in, the dollar step, one rule, the whole pact. */
@@ -14,7 +15,9 @@ export type PactSheet = 'first' | 'step' | 'rule' | 'pact';
  * takes it back.
  */
 export function usePact() {
-  const { world, update, undo } = useDemo();
+  const world = useWorld();
+  const backend = useBackend();
+  const undoAction = useUndoAction();
   const view = pactView(world);
   const { navigate } = useNav();
   const toast = useToast();
@@ -37,11 +40,10 @@ export function usePact() {
     justSigned,
     sign: () => {
       setJustSigned(true);
-      update((w) => signPactAt(w, view.you.id, view.signAt));
-      toast({
-        text: 'You signed the pact',
-        action: { label: 'Undo', onClick: undo },
-      });
+      backend.act({ type: 'signPact' }, (w) =>
+        signPactAt(w, view.you.id, view.signAt),
+      );
+      toast({ text: 'You signed the pact', ...undoAction() });
     },
     goToOverview: () => navigate('overview'),
     practice: () => navigate('practice'),
