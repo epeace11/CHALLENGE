@@ -3,7 +3,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { buildWorld, verdictFor } from '../lib/live/world.ts';
+import { buildWorld, verdictFor, withShared } from '../lib/live/world.ts';
 import { activePoints, owes, reviewQueue } from '../lib/next/selectors.ts';
 
 const db = new PGlite();
@@ -400,38 +400,91 @@ await fails(
   as(priya, `select nx_set_share_link($1,false)`, [saved]),
   /isn't yours/,
 );
+// The share-links script reruns cleanly on a project that already has the schema.
+await db.exec(
+  readFileSync(
+    new URL('../supabase/next/share-links.sql', import.meta.url),
+    'utf8',
+  ),
+);
+// Anyone with the link reads the rules and settings while the link is on, never who saved it.
+const linkToken = (
+  await one(maya, `select link_token from saved_challenges where id=$1`, [
+    saved,
+  ])
+).link_token;
+await db.exec(`set role anon`);
+const sharedPreview = (
+  await db.query(`select nx_shared_preview($1) p`, [linkToken])
+).rows[0].p;
+await db.exec(`reset role`);
+assert.equal(sharedPreview.name, 'The Fall One');
+assert.equal(sharedPreview.rules.length, 4);
+assert.equal(sharedPreview.couple_id, undefined);
+// Another couple saves their own copy, with its link off; saving again from the owners is a no-op.
+const { nx_save_shared: copy } = await one(priya, `select nx_save_shared($1)`, [
+  linkToken,
+]);
+assert.notEqual(copy, saved);
+const copyRow = await one(
+  priya,
+  `select name, link_on, link_token from saved_challenges where id=$1`,
+  [copy],
+);
+assert.deepEqual([copyRow.name, copyRow.link_on], ['The Fall One', false]);
+assert.notEqual(copyRow.link_token, linkToken);
+assert.equal(
+  (await one(maya, `select nx_save_shared($1) id`, [linkToken])).id,
+  saved,
+);
+// Turned off, the link shows nothing and can't be saved.
+await as(maya, `select nx_set_share_link($1,false)`, [saved]);
+assert.equal(
+  (await one(priya, `select nx_shared_preview($1) p`, [linkToken])).p,
+  null,
+);
+await fails(as(sam, `select nx_save_shared($1)`, [linkToken]), /turned off/);
 
 // The other couple sees nothing of Fall Reset and can change none of it.
-for (const t of [
-  'challenges',
-  'rules',
-  'entries',
-  'points',
-  'forgiveness_requests',
-  'disputes',
-  'journal_notes',
-  'signatures',
-  'saved_challenges',
-  'invites',
-])
+await as(maya, `select nx_add_note($1,'2026-11-09','Long walk')`, [fall]);
+const mayasCouple = (
+  await one(maya, `select couple_id from challenges where id=$1`, [fall])
+).couple_id;
+for (const [t, column] of [
+  ['challenges', 'id'],
+  ['rules', 'challenge_id'],
+  ['entries', 'challenge_id'],
+  ['points', 'challenge_id'],
+  ['forgiveness_requests', 'challenge_id'],
+  ['disputes', 'challenge_id'],
+  ['journal_notes', 'challenge_id'],
+  ['signatures', 'challenge_id'],
+  ['invites', 'challenge_id'],
+  ['saved_challenges', 'couple_id'],
+]) {
+  const value = column === 'couple_id' ? mayasCouple : fall;
+  assert.ok(
+    (
+      await as(
+        maya,
+        `select count(${column})::int n from ${t} where ${column}=$1`,
+        [value],
+      )
+    )[0].n > 0,
+    `${t}: Maya sees her own rows`,
+  );
   assert.equal(
     (
       await as(
         priya,
-        `select count(${t === 'saved_challenges' ? 'couple_id' : t === 'challenges' ? 'id' : 'challenge_id'})::int n from ${t} where ${t === 'saved_challenges' ? 'couple_id' : t === 'challenges' ? 'id' : 'challenge_id'} in (select id from challenges union select couple_id from challenges)`,
+        `select count(${column})::int n from ${t} where ${column}=$1`,
+        [value],
       )
     )[0].n,
-    t === 'challenges' || t === 'rules' || t === 'signatures' || t === 'invites'
-      ? (
-          await as(
-            priya,
-            `select count(${t === 'challenges' ? 'id' : 'challenge_id'})::int n from ${t} where ${t === 'challenges' ? 'id' : 'challenge_id'}=$1`,
-            [dry],
-          )
-        )[0].n
-      : 0,
-    `${t}: only their own rows`,
+    0,
+    `${t}: Priya sees none of them`,
   );
+}
 assert.deepEqual(
   (await as(priya, `select name from profiles order by name`)).map(
     (r) => r.name,
@@ -561,6 +614,24 @@ assert.equal(w.past[0].verdict.people[0].points, n);
 assert.equal(verdictFor(w).people.length, 2);
 assert.equal(w.saved[0].name, 'The Fall One');
 assert.equal(w.saved[0].rules[3].who, jordan);
+
+// A shared link shows first among the saved challenges, with 'me' and 'partner' as the viewer and partner.
+const priyaWorld = buildWorld(
+  await rowsFor(priya),
+  '2026-11-17T14:00:00.000Z',
+  'America/Toronto',
+  links,
+).world;
+const opened = withShared(priyaWorld, sharedPreview, links);
+assert.equal(opened.saved[0].source, 'link');
+assert.equal(opened.saved[0].name, 'The Fall One');
+assert.equal(opened.saved[0].sharedBy, null);
+assert.equal(
+  opened.saved[0].rules[1].who,
+  priya,
+  "Maya's own steps rule becomes the viewer's",
+);
+assert.equal(opened.saved[0].rules[3].who, opened.partner.id);
 
 // Before the invite is accepted, the partner is a stand-in named from the invite.
 const { nx_create_challenge: solo } = await one(

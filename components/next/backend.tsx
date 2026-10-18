@@ -91,6 +91,10 @@ export type Host = {
   inviteLink: () => Promise<{ link: string; code: string } | null>;
   /** The partner accepts the invite they opened. */
   acceptInvite: () => Promise<boolean>;
+  /** Starts a new challenge from the shared link that was opened (after signing up, if needed). */
+  startShared: () => Promise<boolean>;
+  /** Saves a copy of the shared challenge to Your challenges (after signing up, if needed). */
+  saveShared: () => Promise<boolean>;
 };
 
 type Backend = {

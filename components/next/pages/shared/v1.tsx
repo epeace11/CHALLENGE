@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
@@ -30,12 +31,14 @@ const days = (n: number) => plural(Math.round(n), 'day');
 export default function SharedV1() {
   const world = useWorld();
   const { navigate } = useNav();
+  const { host } = useBackend();
   const shared = sharedChallenge(world);
   const { saved, toggle } = useSaveForLater(shared.name);
   const [sheet, setSheet] = useState<string | null>(null);
   const start = () => {
     setSheet(null);
-    navigate('setup');
+    if (host) void host.startShared();
+    else navigate('setup');
   };
 
   return (

@@ -33,10 +33,12 @@ import {
   PENDING_PARTNER,
   buildWorld,
   inviteWorld,
+  withShared,
   type Built,
   type InvitePreviewRow,
   type ProofUrls,
   type Rows,
+  type SharedRow,
 } from '@/lib/live/world';
 import { Waiting } from './waiting';
 
@@ -51,10 +53,13 @@ import { Waiting } from './waiting';
  */
 
 const INVITE_KEY = 'nx-invite';
+const SHARED_KEY = 'nx-shared';
 const LINK_KEY = 'nx-invite-link';
 
-/** The invite token from the link (?invite=…), kept for this tab while its person signs up. */
+/** The invite token from the link (?invite=…), kept while its person signs up. */
 let inviteToken: string | null = null;
+/** A shared challenge's token from its link (?shared=…), kept the same way. */
+let sharedToken: string | null = null;
 
 /** The URL's query string, as a store pages re-render on (back and forward, and navigate below). */
 const URL_EVENT = 'nx-url';
@@ -72,9 +77,9 @@ const noSearch = () => '';
 const deviceZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 const nowIso = () => new Date().toISOString();
 
-/** The invite outlives the tab (localStorage); the invite link made for a partner only this tab (sessionStorage). */
+/** Opened invites and shared links outlive the tab (localStorage); the invite link made for a partner only this tab (sessionStorage). */
 const store = (key: string) =>
-  key === INVITE_KEY ? localStorage : sessionStorage;
+  key === INVITE_KEY || key === SHARED_KEY ? localStorage : sessionStorage;
 const readSession = (key: string) => {
   try {
     return store(key).getItem(key);
@@ -93,12 +98,17 @@ const writeSession = (key: string, value: string | null) => {
 
 type Loaded =
   | { kind: 'loading' }
-  | { kind: 'out'; preview: InvitePreviewRow | null }
+  | {
+      kind: 'out';
+      preview: InvitePreviewRow | null;
+      shared: SharedRow | null;
+    }
   | {
       kind: 'in';
       rows: Rows;
       urls: ProofUrls;
       preview: InvitePreviewRow | null;
+      shared: SharedRow | null;
     };
 
 const SIGNED_OUT: PageId[] = ['landing', 'signup'];
@@ -116,8 +126,29 @@ const RUNNING: PageId[] = [
   'practice',
 ];
 
-/** The page to show for `wanted`, given where the account stands. */
+/**
+ * The page to show for `wanted`, given where the account stands. An open shared link shows the
+ * Shared page unless the person asked for a page they can open (an invite comes first).
+ */
 function resolve(
+  wanted: PageId | null,
+  loaded: Loaded,
+  built: Built | null,
+): PageId | 'waiting' {
+  const page = resolveAccount(wanted, loaded, built);
+  const invited =
+    loaded.kind !== 'loading' && loaded.preview && page === 'invite';
+  if (
+    loaded.kind !== 'loading' &&
+    loaded.shared &&
+    !invited &&
+    (wanted === null || wanted === 'shared' || page !== wanted)
+  )
+    return 'shared';
+  return page;
+}
+
+function resolveAccount(
   wanted: PageId | null,
   loaded: Loaded,
   built: Built | null,
@@ -160,26 +191,38 @@ export function LiveApp() {
   const p = new URLSearchParams(query).get('page');
   const page: PageId | null = isPageId(p) ? p : null;
 
-  /** Loads everything again: the session, the invite on the link, and the account's rows. */
+  /** Loads everything again: the session, the invite or shared link opened, and the account's rows. */
   const reload = useCallback(async () => {
     const preview = inviteToken
       ? ((await api
           .invitePreview(inviteToken)
           .catch(() => null)) as InvitePreviewRow | null)
       : null;
+    const shared = sharedToken
+      ? await api.sharedPreview(sharedToken).catch(() => null)
+      : null;
+    // A link that was turned off is forgotten.
+    if (sharedToken && !shared) {
+      sharedToken = null;
+      writeSession(SHARED_KEY, null);
+    }
     await api.ensureProfile().catch(() => {});
     const rows = await api.loadRows().catch(() => null);
-    if (!rows) return setLoaded({ kind: 'out', preview });
+    if (!rows) return setLoaded({ kind: 'out', preview, shared });
     const urls = await api.proofUrls(rows).catch(() => ({}));
     setOverlay(null);
-    setLoaded({ kind: 'in', rows, urls, preview });
+    setLoaded({ kind: 'in', rows, urls, preview, shared });
   }, []);
 
-  // The page and invite come from the URL: /app?page=log, /app?invite=<token>.
+  // The page, an invite and a shared link come from the URL: /app?page=log, ?invite=…, ?shared=….
   useEffect(() => {
-    const invite = new URLSearchParams(location.search).get('invite');
+    const params = new URLSearchParams(location.search);
+    const invite = params.get('invite'),
+      shared = params.get('shared');
     if (invite) writeSession(INVITE_KEY, invite);
+    if (shared) writeSession(SHARED_KEY, shared);
     inviteToken = invite ?? readSession(INVITE_KEY);
+    sharedToken = shared ?? readSession(SHARED_KEY);
     // reload() sets state only after the database answers, never during the effect.
     // oxlint-disable-next-line react/react-compiler
     void reload();
@@ -226,9 +269,20 @@ export function LiveApp() {
         loaded.kind === 'in' ? loaded.rows.me : null,
         nowIso(),
       );
-    // Signed out, Landing and Sign up only show the themes.
-    if (loaded.kind === 'out') return signedOutWorld;
-    return built?.world ?? null;
+    const links = { origin: location.origin };
+    // Signed out, Landing and Sign up only show the themes, and Shared its one challenge.
+    if (loaded.kind === 'out')
+      return loaded.shared
+        ? withShared(
+            { ...signedOutWorld, saved: [], past: [] },
+            loaded.shared,
+            links,
+          )
+        : signedOutWorld;
+    if (!built) return null;
+    return loaded.shared
+      ? withShared(built.world, loaded.shared, links)
+      : built.world;
   }, [overlay, loaded, built]);
 
   const shown = resolve(page, loaded, built);
@@ -236,6 +290,7 @@ export function LiveApp() {
   const navigate = useCallback<Nav['navigate']>((next) => {
     const url = new URL(location.href);
     url.searchParams.delete('invite');
+    url.searchParams.delete('shared');
     if (next) url.searchParams.set('page', next);
     else url.searchParams.delete('page');
     history.pushState(null, '', url);
@@ -442,6 +497,49 @@ function Hosting({
         };
         writeSession(LINK_KEY, JSON.stringify(out));
         return out;
+      },
+      startShared: async () => {
+        const { world: w } = latest.current;
+        const shared = w.saved.find((x) => x.source === 'link');
+        if (!shared) return false;
+        if (!latest.current.built) {
+          // Not signed in yet: make the account first; the link waits in this browser.
+          setSignupMode('signup');
+          navigate('signup');
+          return false;
+        }
+        const id = await attempt(() =>
+          api.startChallenge(
+            { kind: 'saved', saved: shared },
+            shift(w.today, 1),
+            deviceZone(),
+            w.me.id,
+            w.partner.id,
+            latest.current.built?.current?.status === 'draft'
+              ? latest.current.built.current.id
+              : null,
+          ),
+        );
+        if (id === false) return false;
+        sharedToken = null;
+        writeSession(SHARED_KEY, null);
+        setWantedChallenge(id);
+        await reload();
+        navigate('setup');
+        return true;
+      },
+      saveShared: async () => {
+        const t = sharedToken;
+        if (!t) return false;
+        if (!latest.current.built) {
+          setSignupMode('signup');
+          navigate('signup');
+          return false;
+        }
+        const ok = await attempt(() => api.saveShared(t));
+        if (ok === false) return false;
+        await reload();
+        return true;
       },
       acceptInvite: async () => {
         const t = inviteToken;

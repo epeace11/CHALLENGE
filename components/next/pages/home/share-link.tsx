@@ -24,8 +24,6 @@ export function ShareLink({ saved }: { saved: SavedChallenge }) {
   const backend = useBackend();
   const toast = useToast();
   const still = useReducedMotion();
-  // Share links open for other couples in a later step of the live app.
-  if (backend.live) return null;
   return (
     <div className="flex flex-col">
       <Toggle

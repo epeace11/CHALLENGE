@@ -172,6 +172,12 @@ export type SavedRow = {
 /** A rule as nx_save_challenge stores it: `who` is 'both', 'me' (whoever saved it) or 'partner'. */
 export type SavedRule = Omit<Rule, 'id' | 'who'> & { who: string };
 
+/** A shared challenge as nx_shared_preview returns it: never who saved it. */
+export type SharedRow = Pick<
+  SavedRow,
+  'id' | 'name' | 'look' | 'days' | 'step' | 'cap' | 'rules' | 'created_at'
+>;
+
 /** Everything one couple's account can read. */
 export type Rows = {
   /** The signed-in person. */
@@ -676,5 +682,22 @@ export function inviteWorld(
     practice: practiceFor(challenge),
     sayRules: { sentence: '', rules: [], questions: [] },
     partnerPending: false,
+  };
+}
+
+/**
+ * A world showing a shared challenge first among the saved ones (the Shared page shows the first one
+ * opened from a link). 'me' and 'partner' in its rules become the viewer and their partner.
+ */
+export function withShared(w: World, shared: SharedRow, links: Links): World {
+  const asSaved = savedOf(
+    { ...shared, couple_id: '', link_token: '', link_on: false },
+    w.me.id,
+    w.partner.id,
+    links,
+  );
+  return {
+    ...w,
+    saved: [{ ...asSaved, source: 'link', link: '' }, ...w.saved],
   };
 }

@@ -3,7 +3,13 @@ import { supabase } from '@/lib/supabase';
 import { compress } from '@/lib/proof';
 import type { Command, SetupDraft, Template } from '@/components/next/backend';
 import type { Rule } from '@/lib/next/model';
-import type { ChallengeRow, ProofUrls, Rows, SavedRow } from './world';
+import type {
+  ChallengeRow,
+  ProofUrls,
+  Rows,
+  SavedRow,
+  SharedRow,
+} from './world';
 
 /**
  * Every database call the live app makes (supabase/next/schema.sql). Browser only. Each function
@@ -358,6 +364,16 @@ export const invitePreview = (token: string) =>
 
 export const acceptInvite = (token: string) =>
   rpc<string>('nx_accept_invite', { p_token: token });
+
+/* ── Share links ───────────────────────────────────────────────────────── */
+
+/** A saved challenge another couple shared, while its link is on; null once it is off. */
+export const sharedPreview = (token: string) =>
+  rpc<SharedRow | null>('nx_shared_preview', { p_token: token });
+
+/** Saves a copy of a shared challenge to this account's saved challenges. */
+export const saveShared = (token: string) =>
+  rpc<string>('nx_save_shared', { p_token: token });
 
 /* ── Screenshots ───────────────────────────────────────────────────────── */
 

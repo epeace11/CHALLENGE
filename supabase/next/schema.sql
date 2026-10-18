@@ -803,6 +803,36 @@ begin
   if not found then raise exception 'That saved challenge isn''t yours.'; end if;
 end $$;
 
+/* ── Share links: anyone with a saved challenge's link can read it while the link is on ── */
+
+create or replace function public.nx_shared_preview(p_token text) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('id', s.id, 'name', s.name, 'look', s.look, 'days', s.days, 'step', s.step,
+                            'cap', s.cap, 'rules', s.rules, 'created_at', s.created_at)
+  from saved_challenges s
+  where s.link_token = p_token and s.link_on
+$$;
+
+create or replace function public.nx_save_shared(p_token text) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare s saved_challenges; couple uuid; out_id uuid;
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  if not exists(select 1 from profiles where id = auth.uid()) then raise exception 'Add your first name first.'; end if;
+  select * into s from saved_challenges where link_token = p_token and link_on;
+  if s.id is null then raise exception 'This link was turned off.'; end if;
+  if nx_in_couple(s.couple_id) then return s.id; end if;
+  select couple_id into couple from couple_members where person_id = auth.uid() order by joined_at limit 1;
+  if couple is null then
+    insert into couples default values returning id into couple;
+    insert into couple_members(couple_id, person_id) values (couple, auth.uid());
+  end if;
+  insert into saved_challenges(couple_id, name, look, days, step, cap, rules)
+  values (couple, s.name, s.look, s.days, s.step, s.cap, s.rules)
+  returning id into out_id;
+  return out_id;
+end $$;
+
 /* ── Reads ─────────────────────────────────────────────────────────────── */
 
 do $$ declare t text; begin
@@ -852,6 +882,10 @@ do $$ declare f text; begin
 end $$;
 -- Anyone with the link can see the invite before signing up.
 grant execute on function public.nx_invite_preview(text) to anon, authenticated;
+-- And a shared challenge while its link is on; saving a copy needs an account.
+revoke all on function public.nx_shared_preview(text), public.nx_save_shared(text) from public, anon;
+grant execute on function public.nx_shared_preview(text) to anon, authenticated;
+grant execute on function public.nx_save_shared(text) to authenticated;
 revoke all on function public.nx_tick_all() from public, anon, authenticated;
 grant execute on function public.nx_tick_all() to service_role;
 
