@@ -72,6 +72,13 @@ Pick: 1
 
 Pick: 1 for now. Neither version is good; this page needs another design round.
 
+Round 2, October 20, 2026 (version 1 is the page above; `v2.tsx` and `v3.tsx` are new):
+
+2. One step at a time: a wizard that glides between Name and dates, Rules, What a miss costs (the "about $150" number opens how it adds up) and Check and invite, with a labelled step bar, Back, and one filled button per screen; deadline and time zone are rows on the check screen that open sheets.
+3. Checklist: four big rows (Name and dates, Rules, What a miss costs, Deadline and time zone), each showing its value in plain words and a tick when ready; a row opens in place, one at a time, and Done closes it; Invite Jordan is pinned and opens the first row that needs attention.
+
+Pick: waiting for Erin and Kazzy.
+
 ### Your challenges (`home`)
 
 1. Sorted by kind: the running Fall Reset card with Day 19 of 30 and two number buttons (3 left to log, 4 to review), then Saved, then Finished; Start a new challenge pinned at the bottom.
@@ -141,12 +148,26 @@ Pick: 2
 
 Pick: 1 for now. Neither version is great; this page needs another design round.
 
+Round 2, October 20, 2026 (version 1 is the page above; `v2.tsx` and `v3.tsx` are new):
+
+2. Scoreboard: one head-to-head card, "You get $45" and "Jordan gets $21" as big buttons with each next miss, and a bar showing who is ahead by how many points; Jordan's forgiveness request is the main action; then one list of both people's points by day, newest first.
+3. Plain sentences: "Jordan owes you a $45 gift" and "You owe Jordan a $21 gift" as two big rows that open the points behind them; under "What could change it", the forgiveness request (main action) and what each next miss adds. Nothing else.
+
+Pick: waiting for Erin and Kazzy.
+
 ### Progress (`progress`)
 
 1. Calendar first, with Log Thursday on the calendar card and a You/Jordan switch; habits (streak and hit rate) and badges beside it on laptops; days and habits open drill-down sheets.
 2. The streak to protect first and largest with the next badge under it; habits as cards ranked by streak, then the calendar and badge tiles; the main action in a sticky bar.
 
 Pick: 1 for now. Neither version is right; this page needs another design round.
+
+Round 2, October 20, 2026 (version 1 is the page above; `v2.tsx` and `v3.tsx` are new):
+
+2. This week, both of you: one card per habit with this week's seven days as marks for You and for Jordan (gym as "2 of 4" bars), previous and next week glide, Log Thursday under the title, and one row for the next badge.
+3. What needs work: You/Jordan switch, one row for the streak to protect, one row that opens the month calendar in a sheet, then habits from weakest to strongest ("Missed 2 of 17 days") with a small bar; the main action is pinned.
+
+Pick: waiting for Erin and Kazzy.
 
 ### Monday recap (`recap`)
 

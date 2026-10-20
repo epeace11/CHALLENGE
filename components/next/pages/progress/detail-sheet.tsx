@@ -22,7 +22,9 @@ import {
   formatRange,
   formatTime,
   formatWhen,
+  calendar,
   isClosed,
+  lastDay,
   nameOf,
   openDay,
   personById,
@@ -63,6 +65,10 @@ function titleOf(w: World, view: DetailView) {
       return view.personId === w.me.id
         ? 'Your badges'
         : `${nameOf(w, view.personId)}’s badges`;
+    case 'calendar':
+      return view.personId === w.me.id
+        ? 'Your calendar'
+        : `${nameOf(w, view.personId)}’s calendar`;
   }
 }
 
@@ -84,6 +90,8 @@ function describe(w: World, view: DetailView) {
     case 'day':
       if (openDay(w) === view.day) return `Open ${lockWords(w, view.day)}`;
       return whose ? `${whose}’s check-ins` : undefined;
+    case 'calendar':
+      return formatRange(w.challenge.start, lastDay(w.challenge));
     default:
       return undefined;
   }
@@ -187,6 +195,8 @@ function ViewBody({
       return <BadgeBody world={world} view={view} push={push} />;
     case 'badges':
       return <BadgesBody world={world} view={view} push={push} />;
+    case 'calendar':
+      return <CalendarBody world={world} view={view} push={push} />;
   }
 }
 
@@ -488,6 +498,35 @@ function BadgesBody({
           <ul className="flex flex-col gap-2">{rest.map(row)}</ul>
         </section>
       )}
+    </div>
+  );
+}
+
+/** The whole month for one person; a day opens its check-ins. */
+function CalendarBody({
+  world,
+  view,
+  push,
+}: {
+  world: World;
+  view: Extract<DetailView, { kind: 'calendar' }>;
+  push: (v: DetailView) => void;
+}) {
+  const days = calendar(world, view.personId).map((d) => ({
+    day: d.day,
+    tone: d.color,
+  }));
+  return (
+    <div className="flex flex-col gap-5">
+      <Whose world={world} personId={view.personId} />
+      <DayGrid
+        days={days}
+        weekStart={world.challenge.weekStart}
+        today={world.today}
+        label={titleOf(world, view)}
+        onOpen={(day) => push({ kind: 'day', personId: view.personId, day })}
+      />
+      <Legend tones={LEGEND} />
     </div>
   );
 }

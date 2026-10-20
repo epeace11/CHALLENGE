@@ -99,4 +99,40 @@
     box-shadow: none;
     border: 1.5px dashed var(--nx-line-strong);
   }
+
+  /* One week of one habit for one person: seven marks, each at least 48px tall. */
+  .marks {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+  @media (min-width: 640px) {
+    .marks {
+      gap: 6px;
+    }
+  }
+  .mark {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 48px;
+    border-radius: 12px;
+    font: 600 14px/1 var(--nx-font-sans);
+  }
+  button.mark {
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease),
+      filter var(--nx-base) var(--nx-ease);
+  }
+  button.mark:hover {
+    filter: brightness(0.97);
+    box-shadow: 0 0 0 2px var(--nx-accent-line);
+  }
+  button.mark:active {
+    transform: scale(0.93);
+  }
 }

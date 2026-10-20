@@ -7,7 +7,8 @@ export type DetailView =
   | { kind: 'habit'; personId: string; ruleId: string }
   | { kind: 'day'; personId: string; day: DateString }
   | { kind: 'badge'; personId: string; badgeId: string }
-  | { kind: 'badges'; personId: string };
+  | { kind: 'badges'; personId: string }
+  | { kind: 'calendar'; personId: string };
 
 /** The sheet's state: whether it is open and the views it has stacked. */
 export function useDetail() {
