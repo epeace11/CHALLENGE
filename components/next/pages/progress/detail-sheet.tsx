@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { ArrowRight, ChevronLeft } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { DateString, World } from '@/lib/next/model';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -10,12 +10,14 @@ import {
   Glide,
   PersonChip,
   ProgressBar,
+  ProofStrip,
   RowButton,
   Sheet,
   StatusPill,
 } from '@/components/next/ui';
 import {
   badges,
+  dateIn,
   formatAnswer,
   formatDate,
   formatDay,
@@ -55,6 +57,8 @@ function titleOf(w: World, view: DetailView) {
       return ruleById(w.challenge, view.ruleId)?.title ?? 'Habit';
     case 'day':
       return formatDay(view.day);
+    case 'checkin':
+      return ruleById(w.challenge, view.ruleId)?.title ?? 'Check-in';
     case 'badge':
       return (
         badges(w, view.personId).find((b) => b.id === view.badgeId)?.title ??
@@ -85,6 +89,9 @@ function describe(w: World, view: DetailView) {
     case 'day':
       if (openDay(w) === view.day) return `Open ${lockWords(w, view.day)}`;
       return whose ? `${whose}’s check-ins` : undefined;
+    case 'checkin':
+      // The Back button above names the day it came from.
+      return whose ? `${whose}’s check-in` : undefined;
     default:
       return undefined;
   }
@@ -95,6 +102,11 @@ function actionOf(w: World, view: DetailView): MainAction | null {
     return sheetAction(w, view.personId, { ruleId: view.ruleId });
   if (view.kind === 'day')
     return sheetAction(w, view.personId, { day: view.day });
+  if (view.kind === 'checkin')
+    return sheetAction(w, view.personId, {
+      day: view.day,
+      ruleId: view.ruleId,
+    });
   return null;
 }
 
@@ -165,7 +177,11 @@ export function DetailSheet({
           <ViewBody
             world={world}
             view={top}
-            from={prev?.kind === 'day' ? prev.day : undefined}
+            from={
+              prev?.kind === 'day' || prev?.kind === 'checkin'
+                ? prev.day
+                : undefined
+            }
             push={detail.push}
             swap={bothPeople ? detail.replace : undefined}
           />
@@ -202,6 +218,8 @@ function ViewBody({
       );
     case 'day':
       return <DayBody world={world} view={view} push={push} />;
+    case 'checkin':
+      return <CheckinBody world={world} view={view} push={push} />;
     case 'badge':
       return <BadgeBody world={world} view={view} push={push} />;
     case 'badges':
@@ -392,9 +410,10 @@ function DayBody({
                 }
                 onClick={() =>
                   push({
-                    kind: 'habit',
+                    kind: 'checkin',
                     personId: view.personId,
                     ruleId: rule.id,
+                    day: view.day,
                   })
                 }
               />
@@ -416,6 +435,95 @@ function DayBody({
           ))}
         </section>
       )}
+    </div>
+  );
+}
+
+/**
+ * One check-in on one day: the answer and how it stands, its screenshots (tap for full screen), the
+ * note, a correction or dispute on it, and a way on to every day of that habit.
+ */
+function CheckinBody({
+  world,
+  view,
+  push,
+}: {
+  world: World;
+  view: Extract<DetailView, { kind: 'checkin' }>;
+  push: (v: DetailView) => void;
+}) {
+  const row = dayCheckins(world, view.personId, view.day).find(
+    (r) => r.rule.id === view.ruleId,
+  );
+  if (!row) return null;
+  const { rule, entry, pill } = row;
+  const answer =
+    pill.status === 'open' || !entry ? null : formatAnswer(rule, entry);
+  const shown = answer && answer !== pill.label ? answer : null;
+  const disputes = entry
+    ? world.disputes.filter((d) => d.entryId === entry.id)
+    : [];
+  const tz = world.challenge.timeZone;
+  const who = (id: string) => (id === world.me.id ? 'You' : nameOf(world, id));
+  return (
+    <div className="flex flex-col gap-5">
+      <Whose world={world} personId={view.personId} />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {shown && <span className="text-nx-lead font-semibold">{shown}</span>}
+        <StatusPill status={pill.status} label={pill.label} />
+      </div>
+      {entry && entry.proofs.length > 0 && <ProofStrip proofs={entry.proofs} />}
+      {entry?.note ? (
+        <Card pad="sm">
+          <p className="text-nx-body">{entry.note}</p>
+        </Card>
+      ) : null}
+      {entry?.correction && (
+        <Card pad="sm" className="flex flex-col gap-2">
+          <p className="text-nx-2 font-semibold text-nx-ink-2">
+            Late correction, waiting for review
+          </p>
+          <p className="text-nx-body">
+            {formatAnswer(rule, { ...entry, ...entry.correction })}
+            {entry.correction.note ? ` · ${entry.correction.note}` : ''}
+          </p>
+          {entry.correction.proofs.length > 0 && (
+            <ProofStrip proofs={entry.correction.proofs} />
+          )}
+        </Card>
+      )}
+      {disputes.map((d) => (
+        <Card key={d.id} pad="sm" className="flex flex-col gap-1.5">
+          <p className="text-nx-2 font-semibold text-nx-ink-2">
+            {who(d.raisedBy)} disputed it
+            {d.status === 'conceded'
+              ? ' · conceded'
+              : d.status === 'withdrawn'
+                ? ' · withdrawn'
+                : ''}
+          </p>
+          <p className="text-nx-body">“{d.comment}”</p>
+          {d.reply && (
+            <p className="text-nx-body text-nx-ink-2">Reply: “{d.reply}”</p>
+          )}
+        </Card>
+      ))}
+      {entry?.loggedAt && (
+        <p className="text-nx-2 text-nx-ink-2">
+          Logged {formatDate(dateIn(tz, entry.loggedAt))} at{' '}
+          {formatTime(entry.loggedAt, tz)}
+        </p>
+      )}
+      <Button
+        variant="quiet"
+        iconEnd={ChevronRight}
+        className="-ml-3 self-start"
+        onClick={() =>
+          push({ kind: 'habit', personId: view.personId, ruleId: rule.id })
+        }
+      >
+        Every day of this habit
+      </Button>
     </div>
   );
 }

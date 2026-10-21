@@ -2,10 +2,14 @@
 import { useState } from 'react';
 import type { DateString } from '@/lib/next/model';
 
-/** What the Progress sheet shows. Views stack: a day opens its habits, a habit opens its days. */
+/**
+ * What the Progress sheet shows. Views stack: a day opens its check-ins, a check-in shows what was
+ * logged (and opens its habit), a habit opens its days.
+ */
 export type DetailView =
   | { kind: 'habit'; personId: string; ruleId: string }
   | { kind: 'day'; personId: string; day: DateString }
+  | { kind: 'checkin'; personId: string; ruleId: string; day: DateString }
   | { kind: 'badge'; personId: string; badgeId: string }
   | { kind: 'badges'; personId: string };
 
