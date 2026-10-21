@@ -11,7 +11,11 @@ import { draftFrom, draftStakes, type Draft } from './draft';
 export function useDraft() {
   const world = useWorld();
   const { me, partner } = world;
-  const [draft, setDraft] = useState<Draft>(() => draftFrom(world.challenge));
+  // The name starts empty: it is the first thing asked.
+  const [draft, setDraft] = useState<Draft>(() => ({
+    ...draftFrom(world.challenge),
+    name: '',
+  }));
   const people = useMemo(() => [me, partner], [me, partner]);
   const stakes = useMemo(() => draftStakes(draft, people), [draft, people]);
 

@@ -22,13 +22,12 @@ import {
   formatRange,
   formatTime,
   formatWhen,
-  calendar,
   isClosed,
-  lastDay,
   nameOf,
   openDay,
   personById,
   ruleById,
+  rulesFor,
   streaks,
   weekTarget,
   weeksOf,
@@ -65,10 +64,6 @@ function titleOf(w: World, view: DetailView) {
       return view.personId === w.me.id
         ? 'Your badges'
         : `${nameOf(w, view.personId)}’s badges`;
-    case 'calendar':
-      return view.personId === w.me.id
-        ? 'Your calendar'
-        : `${nameOf(w, view.personId)}’s calendar`;
   }
 }
 
@@ -90,8 +85,6 @@ function describe(w: World, view: DetailView) {
     case 'day':
       if (openDay(w) === view.day) return `Open ${lockWords(w, view.day)}`;
       return whose ? `${whose}’s check-ins` : undefined;
-    case 'calendar':
-      return formatRange(w.challenge.start, lastDay(w.challenge));
     default:
       return undefined;
   }
@@ -110,7 +103,14 @@ function actionOf(w: World, view: DetailView): MainAction | null {
  * badges. Tapping inside moves further in (a habit's day, a day's habit) with a Back button, and the
  * content glides between views. The footer holds the one action that fits, if any.
  */
-export function DetailSheet({ detail }: { detail: Detail }) {
+export function DetailSheet({
+  detail,
+  bothPeople,
+}: {
+  detail: Detail;
+  /** A habit shared by both people gets You and partner chips that switch whose days show. */
+  bothPeople?: boolean;
+}) {
   const world = useWorld();
   const { navigate } = useNav();
   const top = detail.stack[detail.stack.length - 1];
@@ -167,6 +167,7 @@ export function DetailSheet({ detail }: { detail: Detail }) {
             view={top}
             from={prev?.kind === 'day' ? prev.day : undefined}
             push={detail.push}
+            swap={bothPeople ? detail.replace : undefined}
           />
         </Glide>
       </div>
@@ -179,24 +180,32 @@ function ViewBody({
   view,
   from,
   push,
+  swap,
 }: {
   world: World;
   view: DetailView;
   /** The day this view was opened from, if it was a day. */
   from?: DateString;
   push: (v: DetailView) => void;
+  swap?: (v: DetailView) => void;
 }) {
   switch (view.kind) {
     case 'habit':
-      return <HabitBody world={world} view={view} from={from} push={push} />;
+      return (
+        <HabitBody
+          world={world}
+          view={view}
+          from={from}
+          push={push}
+          swap={swap}
+        />
+      );
     case 'day':
       return <DayBody world={world} view={view} push={push} />;
     case 'badge':
       return <BadgeBody world={world} view={view} push={push} />;
     case 'badges':
       return <BadgesBody world={world} view={view} push={push} />;
-    case 'calendar':
-      return <CalendarBody world={world} view={view} push={push} />;
   }
 }
 
@@ -211,11 +220,14 @@ function HabitBody({
   view,
   from,
   push,
+  swap,
 }: {
   world: World;
   view: Extract<DetailView, { kind: 'habit' }>;
   from?: DateString;
   push: (v: DetailView) => void;
+  /** Given, a habit both people have shows a chip for each that switches to theirs. */
+  swap?: (v: DetailView) => void;
 }) {
   const rule = ruleById(world.challenge, view.ruleId);
   const stat = habitStats(world, view.personId).find(
@@ -234,9 +246,30 @@ function HabitBody({
       : []),
   ];
   const c = world.challenge;
+  const shared =
+    swap &&
+    [world.me, world.partner].every((p) =>
+      rulesFor(c, p.id).some((r) => r.id === rule.id),
+    );
   return (
     <div className="flex flex-col gap-5">
-      <Whose world={world} personId={view.personId} />
+      {shared ? (
+        <fieldset className="flex flex-wrap gap-2">
+          <legend className="sr-only">Whose days</legend>
+          {[world.me, world.partner].map((p) => (
+            <PersonChip
+              key={p.id}
+              person={p}
+              pressed={p.id === view.personId}
+              onClick={() => swap({ ...view, personId: p.id })}
+            >
+              {p.id === world.me.id ? 'You' : p.name}
+            </PersonChip>
+          ))}
+        </fieldset>
+      ) : (
+        <Whose world={world} personId={view.personId} />
+      )}
       {stat.weekly && stat.week ? (
         <div className="flex flex-col gap-3">
           <p className="text-nx-body">
@@ -498,35 +531,6 @@ function BadgesBody({
           <ul className="flex flex-col gap-2">{rest.map(row)}</ul>
         </section>
       )}
-    </div>
-  );
-}
-
-/** The whole month for one person; a day opens its check-ins. */
-function CalendarBody({
-  world,
-  view,
-  push,
-}: {
-  world: World;
-  view: Extract<DetailView, { kind: 'calendar' }>;
-  push: (v: DetailView) => void;
-}) {
-  const days = calendar(world, view.personId).map((d) => ({
-    day: d.day,
-    tone: d.color,
-  }));
-  return (
-    <div className="flex flex-col gap-5">
-      <Whose world={world} personId={view.personId} />
-      <DayGrid
-        days={days}
-        weekStart={world.challenge.weekStart}
-        today={world.today}
-        label={titleOf(world, view)}
-        onOpen={(day) => push({ kind: 'day', personId: view.personId, day })}
-      />
-      <Legend tones={LEGEND} />
     </div>
   );
 }

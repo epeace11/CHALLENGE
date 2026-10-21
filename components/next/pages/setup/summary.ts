@@ -2,10 +2,7 @@ import type { Rule } from '@/lib/next/model';
 import { formatDeadline, formatMoney } from '@/lib/next/selectors';
 import { draftCap, draftDays, rangeLine, zoneCity, type Draft } from './draft';
 
-/**
- * Each part of the draft in plain words, for the rows that sum it up (the check screen in
- * version 2, the checklist in version 3).
- */
+/** Each part of the draft in plain words, for the checklist rows that sum it up. */
 
 /** "Fall Reset · Mon, Nov 2 – Tue, Dec 1" */
 export const detailsLine = (d: Draft) =>
@@ -30,8 +27,7 @@ export function stakesLine(d: Draft) {
 }
 
 /** "Log by 11:59 pm the next day" */
-export const deadlineShort = (d: Draft) =>
-  `Log by ${formatDeadline(d.deadline)}`;
+const deadlineShort = (d: Draft) => `Log by ${formatDeadline(d.deadline)}`;
 
 /** "Log by 11:59 pm the next day · Toronto" */
 export const deadlineZoneLine = (d: Draft) =>

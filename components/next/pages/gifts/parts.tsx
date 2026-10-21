@@ -1,12 +1,6 @@
 'use client';
 import { useBackend } from '@/components/next/backend';
 import { useState, type ReactNode } from 'react';
-import {
-  AnimatePresence,
-  motion,
-  useIsPresent,
-  useReducedMotion,
-} from 'motion/react';
 import { ChevronRight, CircleHelp } from 'lucide-react';
 import type { Person, World } from '@/lib/next/model';
 import {
@@ -22,8 +16,6 @@ import {
   Avatar,
   Button,
   CountUp,
-  DURATION,
-  EASE,
   Sheet,
   StatusPill,
   TextField,
@@ -109,41 +101,6 @@ export function Struck({
     >
       {children}
     </span>
-  );
-}
-
-/**
- * Content that folds away when `show` turns false (a request once it is decided) and fades back in
- * when it returns (Undo). Nothing waits for it; under reduced motion it simply goes.
- */
-export function Fold({
-  show,
-  children,
-}: {
-  show: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <AnimatePresence initial={false}>
-      {show && <FoldBody key="fold">{children}</FoldBody>}
-    </AnimatePresence>
-  );
-}
-
-function FoldBody({ children }: { children: ReactNode }) {
-  const present = useIsPresent();
-  const still = useReducedMotion();
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: still ? 0 : DURATION.slow, ease: EASE }}
-      className={present ? undefined : 'pointer-events-none overflow-hidden'}
-      inert={!present}
-    >
-      {children}
-    </motion.div>
   );
 }
 
@@ -240,70 +197,6 @@ export function GiftCard({
         aria-hidden="true"
       />
     </button>
-  );
-}
-
-/* ── A request to forgive ──────────────────────────────────────────────── */
-
-/**
- * The partner asks to forgive a point: their reason, what forgiving does to the viewer's gift (which
- * opens "How gifts work"), and Forgive (the page's filled button) or Decline.
- */
-export function RequestDecision({
-  world,
-  row,
-  gifts,
-  onHow,
-  className,
-}: {
-  world: World;
-  row: PointRow;
-  gifts: Gifts;
-  /** Opens "How gifts work". */
-  onHow: () => void;
-  className?: string;
-}) {
-  const effect = forgiveEffect(world, row.point);
-  if (!row.pending) return null;
-  return (
-    <div className={cn('flex flex-col gap-3', className)}>
-      <Quote person={world.partner}>{row.pending.reason}</Quote>
-      <button
-        type="button"
-        className="nx-press -mx-2 flex min-h-11 items-center gap-2 rounded-nx-sm px-2 py-1.5 text-left text-nx-2 text-nx-ink-2 hover:bg-nx-accent-soft"
-        onClick={onHow}
-      >
-        <span className="min-w-0 flex-1">
-          If you forgive it, the gift you get goes from{' '}
-          <b className="font-semibold text-nx-ink">{formatMoney(effect.now)}</b>{' '}
-          to{' '}
-          <b className="font-semibold text-nx-ink">
-            {formatMoney(effect.after)}
-          </b>
-          .
-        </span>
-        <ChevronRight
-          size={18}
-          className="shrink-0 text-nx-accent"
-          aria-hidden="true"
-        />
-      </button>
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="primary"
-          className="min-w-[8.5rem] flex-1"
-          onClick={() => gifts.forgive(row)}
-        >
-          Forgive
-        </Button>
-        <Button
-          className="min-w-[8.5rem] flex-1"
-          onClick={() => gifts.decline(row)}
-        >
-          Decline
-        </Button>
-      </div>
-    </div>
   );
 }
 

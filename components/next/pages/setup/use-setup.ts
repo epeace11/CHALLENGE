@@ -11,7 +11,7 @@ import { useDraft } from './use-draft';
 /** The parts of setting up that can need attention, in page order. */
 export type Part = 'details' | 'rules' | 'stakes';
 export type Errors = Partial<Record<'name' | 'days' | 'cap' | 'rules', string>>;
-export type SetupSheet = 'zone' | 'deadline' | 'how' | 'library' | 'builder';
+export type SetupSheet = 'zone' | 'how' | 'library' | 'builder';
 
 const PARTS: Record<Part, (keyof Errors)[]> = {
   details: ['name', 'days'],
@@ -19,8 +19,8 @@ const PARTS: Record<Part, (keyof Errors)[]> = {
   stakes: ['cap'],
 };
 
-/** What is wrong with the draft, field by field (the same checks and words as version 1). */
-export function problems(draft: Draft): Errors {
+/** What is wrong with the draft, field by field. */
+function problems(draft: Draft): Errors {
   return {
     name: draft.name.trim() ? undefined : 'Name the challenge.',
     days: draft.days ? undefined : 'Enter how many days it runs.',
@@ -32,22 +32,25 @@ export function problems(draft: Draft): Errors {
   };
 }
 
-/** Whether one part of the draft is ready. */
-export const partReady = (draft: Draft, part: Part) => {
+/** What one part of the draft still needs, in a few words ("Add at least one rule"), or undefined when it is ready. */
+export const partProblem = (draft: Draft, part: Part) => {
   const found = problems(draft);
-  return PARTS[part].every((key) => !found[key]);
+  return PARTS[part]
+    .map((key) => found[key])
+    .find(Boolean)
+    ?.replace(/\.$/, '');
 };
 
 /** The first part with a problem, or null when everything is ready. */
-export const firstProblem = (found: Errors): Part | null =>
+const firstProblem = (found: Errors): Part | null =>
   (Object.keys(PARTS) as Part[]).find((part) =>
     PARTS[part].some((key) => found[key]),
   ) ?? null;
 
 /**
- * Everything versions 2 and 3 share with version 1: the draft, which sheet is open, the rule being
- * built, the errors, removing a rule with Undo, adding from the library, and finishing (the live
- * app's finishSetup, or the Invite page in the preview).
+ * The page's state: the draft, which sheet is open, the rule being built, the errors, removing a
+ * rule with Undo, adding from the library, and finishing (the live app's finishSetup, or the
+ * Invite page in the preview).
  */
 export function useSetup() {
   const world = useWorld();
@@ -109,6 +112,13 @@ export function useSetup() {
     return keys.every((key) => !found[key]);
   };
 
+  /** Shows the name's error, if any, and says whether the name is fine. */
+  const checkName = () => {
+    const error = problems(draft).name;
+    setErrors({ ...errors, name: error });
+    return !error;
+  };
+
   /** Checks everything, then sends the challenge; `onProblem` shows the first part that needs attention. */
   const finish = (onProblem: (part: Part) => void) => {
     const found = problems(draft);
@@ -150,6 +160,7 @@ export function useSetup() {
     build,
     builderSaved,
     check,
+    checkName,
     finish,
     finishLabel,
     busy,

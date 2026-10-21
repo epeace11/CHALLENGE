@@ -334,3 +334,94 @@ export function sheetAction(
     return { label: 'Open Review', page: 'review' };
   return null;
 }
+
+/** Check-ins by how they stand: the parts of a whole-challenge or a habit bar. */
+export type Counts = {
+  done: number;
+  excused: number;
+  missed: number;
+  review: number;
+  open: number;
+  ahead: number;
+};
+
+const ZERO: Counts = {
+  done: 0,
+  excused: 0,
+  missed: 0,
+  review: 0,
+  open: 0,
+  ahead: 0,
+};
+
+/**
+ * One habit's check-ins for one person, every day of the challenge: a daily habit counts its days,
+ * a weekly habit (gym) its weeks (met, short, this week, still ahead).
+ */
+export function habitCounts(w: World, personId: string, rule: Rule): Counts {
+  const out = { ...ZERO };
+  const c = w.challenge;
+  if (rule.kind === 'weekly') {
+    for (const week of weeksOf(c)) {
+      const need = weekTarget(rule, week, c);
+      if (!need) continue;
+      if (week.start > w.today) {
+        out.ahead++;
+        continue;
+      }
+      const have = w.entries.filter(
+        (e) =>
+          e.personId === personId &&
+          e.ruleId === rule.id &&
+          e.day >= week.start &&
+          e.day <= week.end &&
+          countsForWeek(e),
+      ).length;
+      if (have >= need) out.done++;
+      else if (isClosed(c, week.end, w.now)) out.missed++;
+      else out.open++;
+    }
+    return out;
+  }
+  for (const d of habitDays(w, personId, rule)) {
+    if (d.tone === null || d.tone === 'none') continue;
+    if (d.tone === 'disputed') out.review++;
+    else out[d.tone]++;
+  }
+  return out;
+}
+
+/** Every habit of one person, added up: the whole challenge. */
+export function wholeCounts(w: World, personId: string): Counts {
+  const out = { ...ZERO };
+  for (const rule of rulesFor(w.challenge, personId)) {
+    const c = habitCounts(w, personId, rule);
+    for (const k of Object.keys(out) as (keyof Counts)[]) out[k] += c[k];
+  }
+  return out;
+}
+
+export const totalOf = (c: Counts) =>
+  c.done + c.excused + c.missed + c.review + c.open + c.ahead;
+
+/** "128 of 255 done · 38 missed · 12 forgiven · 7 waiting" (parts at 0 left out, but missed). */
+export function countsLine(c: Counts) {
+  return [
+    `${c.done} of ${totalOf(c)} done`,
+    `${c.missed} missed`,
+    c.excused > 0 ? `${c.excused} forgiven` : '',
+    c.review > 0 ? `${c.review} waiting` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** The parts of a StackedBar, in the legend's order. */
+export const barParts = (c: Counts) => [
+  { tone: 'done' as const, value: c.done },
+  { tone: 'excused' as const, value: c.excused },
+  { tone: 'missed' as const, value: c.missed },
+  { tone: 'wait' as const, value: c.review },
+  { tone: 'accent' as const, value: c.open },
+  { tone: 'ahead' as const, value: c.ahead },
+];

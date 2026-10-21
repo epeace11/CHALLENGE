@@ -77,7 +77,7 @@ Round 2, October 20, 2026 (version 1 is the page above; `v2.tsx` and `v3.tsx` ar
 2. One step at a time: a wizard that glides between Name and dates, Rules, What a miss costs (the "about $150" number opens how it adds up) and Check and invite, with a labelled step bar, Back, and one filled button per screen; deadline and time zone are rows on the check screen that open sheets.
 3. Checklist: four big rows (Name and dates, Rules, What a miss costs, Deadline and time zone), each showing its value in plain words and a tick when ready; a row opens in place, one at a time, and Done closes it; Invite Jordan is pinned and opens the first row that needs attention.
 
-Pick: waiting for Erin and Kazzy.
+Pick: 3, October 21, 2026, with two changes from Erin: a "Name your challenge" screen comes first (the checklist showed a name before one was entered), and the green ticks are gone because they didn't say anything; a row that isn't ready says what it needs in the missed colour instead. Built: version 3 is now the page and the others are deleted.
 
 ### Your challenges (`home`)
 
@@ -153,7 +153,7 @@ Round 2, October 20, 2026 (version 1 is the page above; `v2.tsx` and `v3.tsx` ar
 2. Scoreboard: one head-to-head card, "You get $45" and "Jordan gets $21" as big buttons with each next miss, and a bar showing who is ahead by how many points; Jordan's forgiveness request is the main action; then one list of both people's points by day, newest first.
 3. Plain sentences: "Jordan owes you a $45 gift" and "You owe Jordan a $21 gift" as two big rows that open the points behind them; under "What could change it", the forgiveness request (main action) and what each next miss adds. Nothing else.
 
-Pick: waiting for Erin and Kazzy.
+Pick: 1, October 21, 2026, without the forgiveness request card: "the forgiveness ask should not be on this page" (it is decided on Review). Built: versions 2 and 3 are deleted.
 
 ### Progress (`progress`)
 
@@ -162,10 +162,12 @@ Pick: waiting for Erin and Kazzy.
 
 Pick: 1 for now. Neither version is right; this page needs another design round.
 
-Round 2, October 20, 2026 (version 1 is the page above; `v2.tsx` and `v3.tsx` are new):
+Round 2, October 20, 2026 (this week for both of you; habits weakest first): "none of these are good." Erin asked for a much simpler calendar, just colours with no ✓ or ✗ and one legend, and pointed to the original app's Progress page (the whole challenge as one stacked bar per person, every habit worst first with both people's bars, % and streak, and both people's badges). Both were replaced.
 
-2. This week, both of you: one card per habit with this week's seven days as marks for You and for Jordan (gym as "2 of 4" bars), previous and next week glide, Log Thursday under the title, and one row for the next badge.
-3. What needs work: You/Jordan switch, one row for the streak to protect, one row that opens the month calendar in a sheet, then habits from weakest to strongest ("Missed 2 of 17 days") with a small bar; the main action is pinned.
+Round 3, October 21, 2026 (version 1 is still the page above):
+
+2. Calendar first: a You/Jordan switch above a month calendar of plain coloured squares with one legend, then the whole challenge as a stacked bar per person, every habit worst first with both people's bars, % and streak (each habit opens its sheet), and both people's badges.
+3. Original order: the whole challenge first, then habits worst first, then the colour calendar with its own You/Jordan switch, then badges; tapping a person's whole-challenge row brings up their calendar.
 
 Pick: waiting for Erin and Kazzy.
 

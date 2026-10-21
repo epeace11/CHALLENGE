@@ -1,26 +1,33 @@
-// One calm form in three sections (Details, Stakes, Rules), everything changed in place.
+// Set up: name the challenge first, then a checklist of four rows that open in place.
 'use client';
-import { useState } from 'react';
-import { ArrowRight, PencilLine, Plus } from 'lucide-react';
-import type { Rule } from '@/lib/next/model';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronLeft,
+  PencilLine,
+  Plus,
+} from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
 import {
   ActionBar,
   Button,
+  DURATION,
+  EASE,
   GlassCard,
+  Glide,
   NumberField,
   PageTitle,
-  Section,
+  Presence,
   SegmentedControl,
   StatButton,
+  Stagger,
   TextField,
+  motion,
   useReducedMotion,
-  useToast,
 } from '@/components/next/ui';
-import { useBackend } from '@/components/next/backend';
-import { useNav } from '@/components/next/nav';
-import { useWorld } from '@/components/next/world';
-import { formatMoney, openDay } from '@/lib/next/selectors';
+import { formatMoney } from '@/lib/next/selectors';
+import { cn } from '@/lib/utils';
 import { DateField, Labeled } from './fields';
 import {
   DEADLINES,
@@ -28,290 +35,403 @@ import {
   MIN_DAYS,
   deadlineId,
   deadlineLine,
-  draftCap,
   draftDays,
-  matchingRule,
   rangeLine,
   zoneCity,
   zoneRegion,
 } from './draft';
-import { RuleBuilderSheet } from './builder-sheet';
-import { LibrarySheet } from './library-sheet';
 import { RuleList } from './rule-list';
-import { TimeZoneSheet } from './sheets';
-import { StakesFields, StakesHowSheet } from './stakes';
-import { useDraft } from './use-draft';
+import { SetupSheets } from './setup-sheets';
+import { StakesFields } from './stakes';
+import {
+  deadlineZoneLine,
+  detailsLine,
+  rulesLine,
+  stakesLine,
+} from './summary';
+import { partProblem, useSetup, type Part } from './use-setup';
 
-type Open = 'zone' | 'how' | 'library' | 'builder' | null;
-type Errors = Partial<Record<'name' | 'days' | 'cap' | 'rules', string>>;
+type Key = Part | 'when';
 
-/** Set up and rules, version 1. */
+/** Set up: the name on its own screen, then the checklist. */
 export default function SetupV1() {
-  const world = useWorld();
-  const { me, partner } = world;
-  const { navigate } = useNav();
-  const { host } = useBackend();
-  const [busy, setBusy] = useState(false);
-  const toast = useToast();
+  const setup = useSetup();
+  const { world, draft, patch, errors, clear } = setup;
   const still = useReducedMotion();
-  const { draft, patch, stakes, people, saveRule, removeRule, restoreRule } =
-    useDraft();
-  const [open, setOpen] = useState<Open>(null);
-  const [editing, setEditing] = useState<Rule | null>(null);
-  const [errors, setErrors] = useState<Errors>({});
-  const sheet = (name: Exclude<Open, null>) => ({
-    open: open === name,
-    onOpenChange: (next: boolean) => setOpen(next ? name : null),
-  });
-  const clear = (key: keyof Errors) => {
-    if (errors[key]) setErrors({ ...errors, [key]: undefined });
-  };
+  const [named, setNamed] = useState(false);
+  const [open, setOpen] = useState<Key | null>(null);
 
-  const remove = (rule: Rule) => {
-    const removed = removeRule(rule.id);
-    if (removed)
-      toast({
-        text: `Removed “${rule.title}”`,
-        action: {
-          label: 'Undo',
-          onClick: () => restoreRule(removed.rule, removed.index),
-        },
+  const problem = (key: Key) =>
+    key === 'when' ? undefined : partProblem(draft, key);
+  const toggle = (key: Key) => setOpen(open === key ? null : key);
+  const done = (key: Key) => {
+    if (key !== 'when' && !setup.check(key)) return;
+    setOpen(null);
+  };
+  /** Once an item has opened, brings it into view if it sits off screen or low on it. */
+  const reveal = (key: Key) => {
+    const item = document.getElementById(`setup-item-${key}`);
+    // The closing panel finishes too; only the one that is open now counts.
+    if (!item?.querySelector('[aria-expanded="true"]')) return;
+    const top = item?.getBoundingClientRect().top ?? 0;
+    if (item && (top < 0 || top > window.innerHeight * 0.6))
+      item.scrollIntoView({
+        behavior: still ? 'auto' : 'smooth',
+        block: 'start',
       });
   };
-  const toggleLibrary = (rule: Rule) => {
-    const existing = matchingRule(draft.rules, rule);
-    if (existing) remove(existing);
-    else {
-      saveRule(rule);
-      clear('rules');
-    }
-  };
-  const build = (rule: Rule | null) => {
-    setEditing(rule);
-    setOpen('builder');
-  };
 
-  const invite = () => {
-    const found: Errors = {
-      name: draft.name.trim() ? undefined : 'Name the challenge.',
-      days: draft.days ? undefined : 'Enter how many days it runs.',
-      cap:
-        draft.capOn && !draft.cap
-          ? 'Enter the most a gift can reach, or switch the cap off.'
-          : undefined,
-      rules: draft.rules.length ? undefined : 'Add at least one rule.',
-    };
-    setErrors(found);
-    const first =
-      found.name || found.days
-        ? 'details'
-        : found.cap
-          ? 'stakes'
-          : found.rules
-            ? 'rules'
-            : null;
-    if (!first && host) {
-      setBusy(true);
-      void host
-        .finishSetup({
-          name: draft.name.trim(),
-          start: draft.start,
-          days: draftDays(draft),
-          timeZone: draft.timeZone,
-          deadline: draft.deadline,
-          step: draft.step,
-          cap: draftCap(draft),
-          rules: draft.rules,
-        })
-        .then(() => setBusy(false));
-      return;
-    }
-    if (!first) return navigate('invite');
-    document
-      .getElementById(`setup-${first}`)
-      ?.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
-  };
-
-  return (
-    <PlainFrame back={{ to: 'start' }}>
-      <div className="flex flex-col gap-10">
-        <PageTitle title={`Set up ${draft.name.trim() || 'your challenge'}`} />
-
-        <Section id="setup-details" title="Details" index={1}>
-          <GlassCard className="flex flex-col gap-6">
-            <TextField
-              label="Name"
-              value={draft.name}
-              onChange={(name) => {
-                patch({ name });
-                clear('name');
-              }}
-              maxLength={40}
-              error={errors.name}
+  const items: { key: Key; title: string; value: string; body: ReactNode }[] = [
+    {
+      key: 'details',
+      title: 'Name and dates',
+      value: detailsLine(draft),
+      body: (
+        <>
+          <TextField
+            label="Name"
+            value={draft.name}
+            onChange={(name) => {
+              patch({ name });
+              clear('name');
+            }}
+            maxLength={40}
+            error={errors.name}
+          />
+          <div className="grid items-start gap-6 sm:grid-cols-2">
+            <DateField
+              label="First day"
+              value={draft.start}
+              onChange={(start) => patch({ start })}
             />
-            <div className="grid items-start gap-6 sm:grid-cols-2">
-              <DateField
-                label="First day"
-                value={draft.start}
-                onChange={(start) => patch({ start })}
-              />
-              <NumberField
-                label="Length"
-                value={draft.days}
-                onChange={(days) => {
-                  patch({ days });
-                  clear('days');
-                }}
-                unit="days"
-                step={1}
-                min={MIN_DAYS}
-                max={MAX_DAYS}
-                hint={rangeLine(draft.start, draftDays(draft))}
-                error={errors.days}
-              />
-            </div>
-            <Labeled
-              label="Log each day by 11:59 pm"
-              hint={deadlineLine(draft.deadline)}
-            >
-              <SegmentedControl
-                label="Log each day by 11:59 pm"
-                value={deadlineId(draft.deadline)}
-                onChange={(id) => {
-                  const chosen = DEADLINES.find((d) => d.id === id);
-                  if (chosen) patch({ deadline: chosen.deadline });
-                }}
-                options={DEADLINES.map((d) => ({
-                  value: d.id,
-                  label: d.label,
-                }))}
-              />
-            </Labeled>
-            <div className="flex items-center gap-3 border-t border-nx-line pt-5">
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <p className="nx-field-label">Time zone</p>
-                <p className="flex flex-wrap items-center gap-x-2 text-nx-body">
-                  {zoneCity(draft.timeZone)}
-                  <span className="text-nx-2 text-nx-ink-2">
-                    {zoneRegion(draft.timeZone)}
-                    {draft.timeZone === world.challenge.timeZone &&
-                      ' · Detected'}
-                  </span>
-                </p>
-              </div>
-              <Button
-                variant="quiet"
-                aria-label="Change time zone"
-                onClick={() => setOpen('zone')}
-              >
-                Change
-              </Button>
-            </div>
-          </GlassCard>
-        </Section>
-
-        <Section id="setup-stakes" title="Stakes" index={2}>
-          <GlassCard>
-            <StakesFields
-              step={draft.step}
-              capOn={draft.capOn}
-              cap={draft.cap}
-              capError={errors.cap}
-              onChange={(next) => {
-                patch(next);
-                clear('cap');
+            <NumberField
+              label="Length"
+              value={draft.days}
+              onChange={(days) => {
+                patch({ days });
+                clear('days');
               }}
-              readout={
-                <StatButton
-                  glass={false}
-                  size="lg"
-                  tone="accent"
-                  label="Miss 1 in 10 check-ins and each gift will be about"
-                  value={stakes.gift}
-                  format={formatMoney}
-                  hint="See how it adds up"
-                  onClick={() => setOpen('how')}
-                />
-              }
+              unit="days"
+              step={1}
+              min={MIN_DAYS}
+              max={MAX_DAYS}
+              hint={rangeLine(draft.start, draftDays(draft))}
+              error={errors.days}
             />
-          </GlassCard>
-        </Section>
-
-        <Section id="setup-rules" title="Rules" index={3}>
+          </div>
+        </>
+      ),
+    },
+    {
+      key: 'rules',
+      title: 'Rules',
+      value: rulesLine(draft.rules),
+      body: (
+        <>
           <RuleList
             rules={draft.rules}
-            me={me}
-            partner={partner}
-            variant="actions"
-            onEdit={build}
-            onRemove={remove}
+            me={world.me}
+            partner={world.partner}
+            onEdit={setup.build}
+            onRemove={setup.remove}
           />
           {errors.rules && (
             <p className="nx-field-error" role="alert">
               {errors.rules}
             </p>
           )}
-          <div className="grid gap-3 pt-1 sm:grid-cols-2">
-            <Button icon={Plus} onClick={() => setOpen('library')}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button icon={Plus} onClick={() => setup.setOpen('library')}>
               Add a rule
             </Button>
-            <Button icon={PencilLine} onClick={() => build(null)}>
+            <Button icon={PencilLine} onClick={() => setup.build(null)}>
               Build your own
             </Button>
           </div>
-        </Section>
-      </div>
+        </>
+      ),
+    },
+    {
+      key: 'stakes',
+      title: 'What a miss costs',
+      value: stakesLine(draft),
+      body: (
+        <StakesFields
+          step={draft.step}
+          capOn={draft.capOn}
+          cap={draft.cap}
+          capError={errors.cap}
+          onChange={(change) => {
+            patch(change);
+            clear('cap');
+          }}
+          readout={
+            <StatButton
+              glass={false}
+              size="lg"
+              tone="accent"
+              label="Miss 1 in 10 check-ins and each gift will be about"
+              value={setup.stakes.gift}
+              format={formatMoney}
+              hint="See how it adds up"
+              onClick={() => setup.setOpen('how')}
+            />
+          }
+        />
+      ),
+    },
+    {
+      key: 'when',
+      title: 'Deadline and time zone',
+      value: deadlineZoneLine(draft),
+      body: (
+        <>
+          <Labeled
+            label="Log each day by 11:59 pm"
+            hint={deadlineLine(draft.deadline)}
+          >
+            <SegmentedControl
+              label="Log each day by 11:59 pm"
+              value={deadlineId(draft.deadline)}
+              onChange={(id) => {
+                const chosen = DEADLINES.find((d) => d.id === id);
+                if (chosen) patch({ deadline: chosen.deadline });
+              }}
+              options={DEADLINES.map((d) => ({
+                value: d.id,
+                label: d.label,
+              }))}
+            />
+          </Labeled>
+          <div className="flex items-center gap-3 border-t border-nx-line pt-5">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <p className="nx-field-label">Time zone</p>
+              <p className="flex flex-wrap items-center gap-x-2 text-nx-body">
+                {zoneCity(draft.timeZone)}
+                <span className="text-nx-2 text-nx-ink-2">
+                  {zoneRegion(draft.timeZone)}
+                </span>
+              </p>
+            </div>
+            <Button
+              variant="quiet"
+              aria-label="Change time zone"
+              onClick={() => setup.setOpen('zone')}
+            >
+              Change
+            </Button>
+          </div>
+        </>
+      ),
+    },
+  ];
 
-      <ActionBar>
-        <Button
-          variant="primary"
-          size="lg"
-          full
-          iconEnd={ArrowRight}
-          loading={busy}
-          onClick={invite}
-        >
-          {host && !world.partnerPending
-            ? `Send to ${partner.name} to sign`
-            : `Invite ${partner.name}`}
-        </Button>
-      </ActionBar>
+  return (
+    <PlainFrame back={named ? undefined : { to: 'start' }}>
+      <Glide id={named ? 'checklist' : 'name'} direction={named ? 1 : -1}>
+        {named ? (
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="quiet"
+                icon={ChevronLeft}
+                className="-ml-3 self-start"
+                onClick={() => {
+                  setOpen(null);
+                  setNamed(false);
+                }}
+              >
+                Back
+              </Button>
+              <PageTitle
+                title={`Set up ${draft.name.trim() || 'your challenge'}`}
+              />
+            </div>
+            <Stagger className="flex flex-col gap-3">
+              {items.map((item) => (
+                <ChecklistItem
+                  key={item.key}
+                  id={`setup-item-${item.key}`}
+                  title={item.title}
+                  value={item.value}
+                  problem={problem(item.key)}
+                  open={open === item.key}
+                  still={!!still}
+                  onToggle={() => toggle(item.key)}
+                  onOpened={() => reveal(item.key)}
+                  onDone={() => done(item.key)}
+                >
+                  {item.body}
+                </ChecklistItem>
+              ))}
+            </Stagger>
+          </div>
+        ) : (
+          <NameStep
+            name={draft.name}
+            error={errors.name}
+            onChange={(name) => {
+              patch({ name });
+              clear('name');
+            }}
+            onContinue={() => {
+              if (setup.checkName()) setNamed(true);
+            }}
+          />
+        )}
+      </Glide>
 
-      <TimeZoneSheet
-        {...sheet('zone')}
-        value={draft.timeZone}
-        detected={world.challenge.timeZone}
-        now={world.now}
-        onSave={(timeZone) => patch({ timeZone })}
-      />
-      <StakesHowSheet
-        {...sheet('how')}
-        step={draft.step}
-        cap={draftCap(draft)}
-        stakes={stakes}
-        people={people}
-        days={draftDays(draft)}
-      />
-      <LibrarySheet
-        {...sheet('library')}
-        library={world.library}
-        rules={draft.rules}
-        onToggle={toggleLibrary}
-      />
-      <RuleBuilderSheet
-        {...sheet('builder')}
-        rule={editing}
-        rules={draft.rules}
-        me={me}
-        partner={partner}
-        day={openDay(world) ?? world.today}
-        onSave={(rule, isNew) => {
-          saveRule(rule);
-          clear('rules');
-          setOpen(null);
-          toast(isNew ? `Added “${rule.title}”` : `Saved “${rule.title}”`);
-        }}
-      />
+      {named && (
+        <ActionBar>
+          <Button
+            variant="primary"
+            size="lg"
+            full
+            iconEnd={ArrowRight}
+            loading={setup.busy}
+            onClick={() => setup.finish(setOpen)}
+          >
+            {setup.finishLabel}
+          </Button>
+        </ActionBar>
+      )}
+
+      <SetupSheets setup={setup} />
     </PlainFrame>
+  );
+}
+
+/** The first screen: one empty name field and Continue (Enter works too). */
+function NameStep({
+  name,
+  error,
+  onChange,
+  onContinue,
+}: {
+  name: string;
+  error?: string;
+  onChange: (name: string) => void;
+  onContinue: () => void;
+}) {
+  const field = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    field.current?.querySelector('input')?.focus();
+  }, []);
+  return (
+    <form
+      className="flex flex-col gap-8"
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        onContinue();
+      }}
+    >
+      <PageTitle title="Name your challenge" />
+      <div ref={field}>
+        <TextField
+          label="Name"
+          value={name}
+          onChange={onChange}
+          maxLength={40}
+          autoComplete="off"
+          error={error}
+        />
+      </div>
+      <Button
+        type="submit"
+        variant="primary"
+        size="lg"
+        full
+        iconEnd={ArrowRight}
+      >
+        Continue
+      </Button>
+    </form>
+  );
+}
+
+/**
+ * One thing to settle: a big row with its value (or, when it is not ready, what is missing),
+ * opening in place to change it.
+ */
+function ChecklistItem({
+  id,
+  title,
+  value,
+  problem,
+  open,
+  still,
+  onToggle,
+  onOpened,
+  onDone,
+  children,
+}: {
+  id: string;
+  title: string;
+  value: string;
+  problem?: string;
+  open: boolean;
+  still: boolean;
+  onToggle: () => void;
+  onOpened: () => void;
+  onDone: () => void;
+  children: ReactNode;
+}) {
+  const panel = useId();
+  return (
+    <GlassCard pad="none" as="section" id={id} className="scroll-mt-24">
+      <h2>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panel}
+          onClick={onToggle}
+          className="nx-press flex min-h-[76px] w-full items-center gap-4 rounded-nx px-5 py-4 text-left font-nx-sans"
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-nx-lead font-semibold text-nx-ink">
+              {title}
+            </span>
+            <span
+              className={cn(
+                'text-nx-2',
+                problem ? 'text-nx-missed' : 'text-nx-ink-2',
+              )}
+            >
+              {problem ?? value}
+            </span>
+          </span>
+          <ChevronDown
+            size={22}
+            aria-hidden="true"
+            className={cn(
+              'shrink-0 text-nx-accent transition-transform duration-200 motion-reduce:transition-none',
+              open && 'rotate-180',
+            )}
+          />
+        </button>
+      </h2>
+      <Presence initial={false}>
+        {open && (
+          <motion.div
+            key="panel"
+            id={panel}
+            className="overflow-hidden"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: still ? 0 : DURATION.base, ease: EASE }}
+            onAnimationComplete={onOpened}
+          >
+            <div className="flex flex-col gap-6 border-t border-nx-line px-5 py-5">
+              {children}
+              <Button className="w-full sm:w-auto sm:self-end" onClick={onDone}>
+                Done
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </Presence>
+    </GlassCard>
   );
 }

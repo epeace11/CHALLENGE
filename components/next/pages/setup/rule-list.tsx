@@ -1,6 +1,6 @@
 'use client';
 import { useId, type ReactNode } from 'react';
-import { ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import type { Person, Rule } from '@/lib/next/model';
 import {
   Avatar,
@@ -20,23 +20,18 @@ import styles from './setup.module.css';
 
 /**
  * The draft's rules grouped as Both of you, Maya and Jordan. Rules slide in when added and out
- * when removed.
- *
- * - `actions`: each rule shows Edit and Remove buttons.
- * - `rows`: each rule is one row that opens it for editing (Remove is in there).
+ * when removed. Each rule shows Edit and Remove buttons.
  */
 export function RuleList({
   rules,
   me,
   partner,
-  variant,
   onEdit,
   onRemove,
 }: {
   rules: Rule[];
   me: Person;
   partner: Person;
-  variant: 'actions' | 'rows';
   onEdit: (rule: Rule) => void;
   onRemove?: (rule: Rule) => void;
 }) {
@@ -72,15 +67,11 @@ export function RuleList({
                     exit={{ opacity: 0, scale: 0.97, transition: leave }}
                     transition={move}
                   >
-                    {variant === 'actions' ? (
-                      <ActionsRow
-                        rule={rule}
-                        onEdit={onEdit}
-                        onRemove={onRemove}
-                      />
-                    ) : (
-                      <OpenRow rule={rule} onEdit={onEdit} />
-                    )}
+                    <ActionsRow
+                      rule={rule}
+                      onEdit={onEdit}
+                      onRemove={onRemove}
+                    />
                   </motion.li>
                 ))}
               </Presence>
@@ -150,32 +141,5 @@ function ActionsRow({
         />
       )}
     </div>
-  );
-}
-
-function OpenRow({
-  rule,
-  onEdit,
-}: {
-  rule: Rule;
-  onEdit: (rule: Rule) => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={styles.listRow}
-      onClick={() => onEdit(rule)}
-    >
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-nx-body font-semibold">{rule.title}</span>
-        <span className="text-nx-2 text-nx-ink-2">{ruleSummary(rule)}</span>
-      </span>
-      <span className="sr-only">Edit</span>
-      <ChevronRight
-        className={styles.listChevron}
-        size={22}
-        aria-hidden="true"
-      />
-    </button>
   );
 }

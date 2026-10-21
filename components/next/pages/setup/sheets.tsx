@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
-import type { Deadline, Instant } from '@/lib/next/model';
+import type { Instant } from '@/lib/next/model';
 import { formatTime } from '@/lib/next/selectors';
 import { Button, Sheet } from '@/components/next/ui';
 import { RadioRows } from './fields';
-import { DEADLINES, TIME_ZONES, deadlineId, deadlineLine } from './draft';
+import { TIME_ZONES } from './draft';
 
 /**
  * Sheets that edit one setting at a time. Each starts from the saved value every time it opens,
@@ -85,48 +85,6 @@ export function TimeZoneSheet({
                 Detected
               </span>
             ) : undefined,
-        }))}
-      />
-    </Sheet>
-  );
-}
-
-/** When each day's check-ins close: the same night or the next. */
-export function DeadlineSheet({
-  open,
-  onOpenChange,
-  value,
-  onSave,
-}: SheetProps & {
-  value: Deadline;
-  onSave: (deadline: Deadline) => void;
-}) {
-  const [pending, setPending] = useState(deadlineId(value));
-  useResetOnOpen(open, () => setPending(deadlineId(value)));
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Log each day by 11:59 pm"
-      footer={
-        <Footer
-          onCancel={() => onOpenChange(false)}
-          onSave={() => {
-            const chosen = DEADLINES.find((d) => d.id === pending);
-            if (chosen) onSave(chosen.deadline);
-            onOpenChange(false);
-          }}
-        />
-      }
-    >
-      <RadioRows
-        label="Log each day by 11:59 pm"
-        value={pending}
-        onChange={setPending}
-        options={DEADLINES.map((d) => ({
-          value: d.id,
-          title: d.label,
-          detail: deadlineLine(d.deadline),
         }))}
       />
     </Sheet>

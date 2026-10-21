@@ -100,39 +100,93 @@
     border: 1.5px dashed var(--nx-line-strong);
   }
 
-  /* One week of one habit for one person: seven marks, each at least 48px tall. */
-  .marks {
+  /* The simple month: each day one square of colour with its date, nothing else. The colours are
+     the bar colours, so the calendar, the legend and the bars read the same. */
+  .square {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
-  }
-  @media (min-width: 640px) {
-    .marks {
-      gap: 6px;
-    }
-  }
-  .mark {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
+    place-items: center;
     min-width: 0;
     min-height: 48px;
-    border-radius: 12px;
-    font: 600 14px/1 var(--nx-font-sans);
+    border-radius: 10px;
+    font: 600 15px/1 var(--nx-font-sans);
+    font-variant-numeric: tabular-nums;
+    /* Dark text reads on every bar colour in light and dark. */
+    color: #17131f;
+    animation: cell-in var(--nx-base) var(--nx-ease) backwards;
+    animation-delay: calc(var(--row, 0) * 40ms);
   }
-  button.mark {
+  @media (min-width: 640px) {
+    .square {
+      min-height: 56px;
+      font-size: 17px;
+    }
+  }
+  .square[data-tone='done'] {
+    background: var(--nx-done-bar);
+  }
+  .square[data-tone='excused'] {
+    background: var(--nx-excused-bar);
+  }
+  .square[data-tone='missed'] {
+    background: var(--nx-missed-bar);
+  }
+  .square[data-tone='review'] {
+    background: var(--nx-wait-bar);
+  }
+  .square[data-tone='open'] {
+    background: var(--nx-accent);
+    color: var(--nx-page);
+  }
+  .square[data-tone='ahead'] {
+    background: var(--nx-sunken);
+    color: var(--nx-ink-2);
+  }
+  /* The forgiven green is dark in dark mode: light text there. */
+  :global([data-theme='dark']) .square[data-tone='excused'] {
+    color: var(--nx-ink);
+  }
+  .square[data-today] {
+    box-shadow: inset 0 0 0 2px var(--nx-accent);
+    color: var(--nx-accent);
+  }
+  button.square {
     transition:
       transform var(--nx-fast) var(--nx-ease),
       box-shadow var(--nx-base) var(--nx-ease),
       filter var(--nx-base) var(--nx-ease);
   }
-  button.mark:hover {
-    filter: brightness(0.97);
-    box-shadow: 0 0 0 2px var(--nx-accent-line);
+  button.square:hover {
+    filter: brightness(0.95);
   }
-  button.mark:active {
+  button.square:active {
     transform: scale(0.93);
+  }
+
+  /* A legend swatch: the same colour as a square. */
+  .swatch {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+  }
+  .swatch[data-tone='done'] {
+    background: var(--nx-done-bar);
+  }
+  .swatch[data-tone='excused'] {
+    background: var(--nx-excused-bar);
+  }
+  .swatch[data-tone='missed'] {
+    background: var(--nx-missed-bar);
+  }
+  .swatch[data-tone='review'] {
+    background: var(--nx-wait-bar);
+  }
+  .swatch[data-tone='open'] {
+    background: var(--nx-accent);
+  }
+  .swatch[data-tone='ahead'] {
+    background: var(--nx-sunken);
+    box-shadow: inset 0 0 0 1px var(--nx-line-strong);
   }
 }

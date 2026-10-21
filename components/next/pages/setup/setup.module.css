@@ -189,41 +189,9 @@
     animation: pop var(--nx-slow) var(--nx-ease) both;
   }
 
-  /* ── Rows inside one glass card, split by hairlines ── */
-  .listRow {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    min-height: 64px;
-    padding: 14px 16px 14px 20px;
-    text-align: left;
-    color: inherit;
-    transition: background var(--nx-base) var(--nx-ease);
-  }
-  .listRow:hover {
-    background: var(--nx-accent-soft);
-  }
-  .listRow:active .listChevron {
-    transform: translateX(2px);
-  }
-  .listChevron {
-    flex-shrink: 0;
-    color: var(--nx-accent);
-    transition: transform var(--nx-base) var(--nx-ease);
-  }
+  /* ── Rules inside one glass card, split by hairlines ── */
   .list > * + * {
     border-top: 1px solid var(--nx-line);
-  }
-  .list > :first-child .listRow,
-  .list > .listRow:first-child {
-    border-top-left-radius: calc(var(--nx-r-lg) - 1px);
-    border-top-right-radius: calc(var(--nx-r-lg) - 1px);
-  }
-  .list > :last-child .listRow,
-  .list > .listRow:last-child {
-    border-bottom-left-radius: calc(var(--nx-r-lg) - 1px);
-    border-bottom-right-radius: calc(var(--nx-r-lg) - 1px);
   }
 
   /* ── The builder's check-in preview ── */

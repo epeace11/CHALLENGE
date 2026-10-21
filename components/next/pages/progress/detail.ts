@@ -7,8 +7,7 @@ export type DetailView =
   | { kind: 'habit'; personId: string; ruleId: string }
   | { kind: 'day'; personId: string; day: DateString }
   | { kind: 'badge'; personId: string; badgeId: string }
-  | { kind: 'badges'; personId: string }
-  | { kind: 'calendar'; personId: string };
+  | { kind: 'badges'; personId: string };
 
 /** The sheet's state: whether it is open and the views it has stacked. */
 export function useDetail() {
@@ -25,6 +24,9 @@ export function useDetail() {
     /** Moves further in, keeping the way back. */
     push: (view: DetailView) =>
       setState((s) => ({ ...s, stack: [...s.stack, view], dir: 1 })),
+    /** Swaps the view on top for another (the same habit, the other person). */
+    replace: (view: DetailView) =>
+      setState((s) => ({ ...s, stack: [...s.stack.slice(0, -1), view] })),
     back: () =>
       setState((s) => ({
         ...s,

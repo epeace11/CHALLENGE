@@ -1,25 +1,21 @@
-// Both gifts side by side first; tap one to see the points behind it, newest first.
+// Both gifts side by side first; tap one to see the points behind it, newest first. Forgiveness requests are decided in Review.
 'use client';
 import { useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { AppFrame } from '@/components/next/frames';
 import {
   Enter,
-  GlassCard,
   Glide,
   PageTitle,
   Section,
   SegmentedControl,
 } from '@/components/next/ui';
-import { formatDay } from '@/lib/next/selectors';
 import { giftFor, ledger } from './ledger';
 import {
-  Fold,
   GiftCard,
   HowSheet,
   PointRowButton,
   PointSheet,
-  RequestDecision,
   StepButton,
   useSheetFor,
   type OpenPoint,
@@ -39,7 +35,6 @@ export default function GiftsV1() {
   const sheet = useSheetFor<OpenPoint>();
 
   const rows = [...ledger(world, whose)].reverse();
-  const request = ledger(world, partner.id).find((r) => r.pending);
 
   /** Shows the points behind a gift: the list switches to the payer and scrolls into view. */
   const showPoints = (payerId: string) => {
@@ -68,30 +63,6 @@ export default function GiftsV1() {
             />
           </div>
           <StepButton world={world} onClick={() => setHow(true)} />
-          <Fold show={!!request}>
-            {request && (
-              <div className="pt-5">
-                <GlassCard as="section" aria-label="Forgiveness request">
-                  <p className="nx-kicker">
-                    {partner.name} asks you to forgive
-                  </p>
-                  <h2 className="mt-1 font-nx-serif text-nx-h3">
-                    {request.rule.title}
-                  </h2>
-                  <p className="mt-1 text-nx-2 text-nx-ink-2">
-                    {formatDay(request.point.day)} · {request.why}
-                  </p>
-                  <RequestDecision
-                    world={world}
-                    row={request}
-                    gifts={gifts}
-                    onHow={() => setHow(true)}
-                    className="mt-4"
-                  />
-                </GlassCard>
-              </div>
-            )}
-          </Fold>
         </Enter>
 
         <Section title="Points" id={LIST} index={2}>
