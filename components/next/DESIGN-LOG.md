@@ -169,7 +169,7 @@ Round 3, October 21, 2026 (version 1 is still the page above):
 2. Calendar first: a You/Jordan switch above a month calendar of plain coloured squares with one legend, then the whole challenge as a stacked bar per person, every habit worst first with both people's bars, % and streak (each habit opens its sheet), and both people's badges.
 3. Original order: the whole challenge first, then habits worst first, then the colour calendar with its own You/Jordan switch, then badges; tapping a person's whole-challenge row brings up their calendar.
 
-Pick: waiting for Erin and Kazzy.
+Pick: 3, October 21, 2026, with calmer colours: "the colours are way too vibrant and aggressive." Fully muted was "not pretty", so on this page each status colour is the usual bar colour about 30% mixed into the page background (softer, still clearly colour), and the calendar dates are smaller (14px, 15px on laptops) in the normal text colour. Built: version 3 is now the page and the others are deleted. The habit sheet still uses the older calendar with ✓ and ✗.
 
 ### Monday recap (`recap`)
 

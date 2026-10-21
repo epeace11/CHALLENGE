@@ -100,6 +100,31 @@
     border: 1.5px dashed var(--nx-line-strong);
   }
 
+  /* Softer colours for this page: the kit's bar colours partly mixed into the page background, for
+     the calendar, its legend and the bars. The outer element keeps the kit colours under other
+     names, so the inner one can mix them without referring to itself. */
+  .calm {
+    --calm-done: var(--nx-done-bar);
+    --calm-excused: var(--nx-excused-bar);
+    --calm-missed: var(--nx-missed-bar);
+    --calm-wait: var(--nx-wait-bar);
+  }
+  .calm > * {
+    --nx-done-bar: color-mix(in oklab, var(--calm-done) 72%, var(--nx-page));
+    --nx-excused-bar: color-mix(
+      in oklab,
+      var(--calm-excused) 85%,
+      var(--nx-page)
+    );
+    --nx-missed-bar: color-mix(
+      in oklab,
+      var(--calm-missed) 70%,
+      var(--nx-page)
+    );
+    --nx-wait-bar: color-mix(in oklab, var(--calm-wait) 70%, var(--nx-page));
+    --nx-open-square: color-mix(in oklab, var(--nx-accent) 45%, var(--nx-page));
+  }
+
   /* The simple month: each day one square of colour with its date, nothing else. The colours are
      the bar colours, so the calendar, the legend and the bars read the same. */
   .square {
@@ -108,17 +133,16 @@
     min-width: 0;
     min-height: 48px;
     border-radius: 10px;
-    font: 600 15px/1 var(--nx-font-sans);
+    font: 500 14px/1 var(--nx-font-sans);
     font-variant-numeric: tabular-nums;
-    /* Dark text reads on every bar colour in light and dark. */
-    color: #17131f;
+    color: var(--nx-ink);
     animation: cell-in var(--nx-base) var(--nx-ease) backwards;
     animation-delay: calc(var(--row, 0) * 40ms);
   }
   @media (min-width: 640px) {
     .square {
       min-height: 56px;
-      font-size: 17px;
+      font-size: 15px;
     }
   }
   .square[data-tone='done'] {
@@ -134,16 +158,11 @@
     background: var(--nx-wait-bar);
   }
   .square[data-tone='open'] {
-    background: var(--nx-accent);
-    color: var(--nx-page);
+    background: var(--nx-open-square, var(--nx-accent-soft));
   }
   .square[data-tone='ahead'] {
     background: var(--nx-sunken);
     color: var(--nx-ink-2);
-  }
-  /* The forgiven green is dark in dark mode: light text there. */
-  :global([data-theme='dark']) .square[data-tone='excused'] {
-    color: var(--nx-ink);
   }
   .square[data-today] {
     box-shadow: inset 0 0 0 2px var(--nx-accent);
@@ -183,7 +202,7 @@
     background: var(--nx-wait-bar);
   }
   .swatch[data-tone='open'] {
-    background: var(--nx-accent);
+    background: var(--nx-open-square, var(--nx-accent-soft));
   }
   .swatch[data-tone='ahead'] {
     background: var(--nx-sunken);
