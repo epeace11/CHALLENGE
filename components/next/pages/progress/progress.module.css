@@ -100,39 +100,70 @@
     border: 1.5px dashed var(--nx-line-strong);
   }
 
-  /* Softer colours for this page: the kit's bar colours partly mixed into the page background, for
-     the calendar, its legend and the bars. The outer element keeps the kit colours under other
-     names, so the inner one can mix them without referring to itself. */
-  .calm {
-    --calm-done: var(--nx-done-bar);
-    --calm-excused: var(--nx-excused-bar);
-    --calm-missed: var(--nx-missed-bar);
-    --calm-wait: var(--nx-wait-bar);
+  /* This page's own colours, one palette per version (Garden, Jewel, Dusk), for the calendar, its
+     legend and the bars. Each sets the kit's bar colours for everything inside the page, light and
+     dark. Pastels in light mode carry dark dates; deeper tones in dark mode carry light dates. */
+  .palette[data-palette='garden'] {
+    --nx-done-bar: #9fd8b6;
+    --nx-excused-bar: #d3ece0;
+    --nx-missed-bar: #f3aaa8;
+    --nx-wait-bar: #f5d78f;
+    --nx-open-square: #cfc3f6;
   }
-  .calm > * {
-    --nx-done-bar: color-mix(in oklab, var(--calm-done) 72%, var(--nx-page));
-    --nx-excused-bar: color-mix(
-      in oklab,
-      var(--calm-excused) 85%,
-      var(--nx-page)
-    );
-    --nx-missed-bar: color-mix(
-      in oklab,
-      var(--calm-missed) 70%,
-      var(--nx-page)
-    );
-    --nx-wait-bar: color-mix(in oklab, var(--calm-wait) 70%, var(--nx-page));
-    --nx-open-square: color-mix(in oklab, var(--nx-accent) 45%, var(--nx-page));
+  .palette[data-palette='jewel'] {
+    --nx-done-bar: #62c39b;
+    --nx-excused-bar: #b2dcc8;
+    --nx-missed-bar: #ea8795;
+    --nx-wait-bar: #f0c266;
+    --nx-open-square: #ad9cf2;
+  }
+  .palette[data-palette='dusk'] {
+    --nx-done-bar: #8ccac4;
+    --nx-excused-bar: #cbe5e2;
+    --nx-missed-bar: #f2a990;
+    --nx-wait-bar: #f6d09d;
+    --nx-open-square: #cbbbef;
+  }
+  :global([data-theme='dark']) .palette[data-palette='garden'] {
+    --nx-done-bar: #3f8f69;
+    --nx-excused-bar: #2b4b3c;
+    --nx-missed-bar: #a9535c;
+    --nx-wait-bar: #a9853d;
+    --nx-open-square: #5e50a8;
+  }
+  :global([data-theme='dark']) .palette[data-palette='jewel'] {
+    --nx-done-bar: #2c9e75;
+    --nx-excused-bar: #245a47;
+    --nx-missed-bar: #c2566b;
+    --nx-wait-bar: #cf9a3b;
+    --nx-open-square: #7564d8;
+  }
+  :global([data-theme='dark']) .palette[data-palette='dusk'] {
+    --nx-done-bar: #3b8a86;
+    --nx-excused-bar: #25504d;
+    --nx-missed-bar: #b0624f;
+    --nx-wait-bar: #b48b50;
+    --nx-open-square: #6b59b9;
   }
 
-  /* The simple month: each day one square of colour with its date, nothing else. The colours are
-     the bar colours, so the calendar, the legend and the bars read the same. */
+  /* The simple month: each day one rounded square of colour with its date, nothing else, with a
+     soft sheen (lighter at the top) and a hairline highlight. The colours are the bar colours, so
+     the calendar, the legend and the bars read the same. */
   .square {
+    --sq: var(--nx-sunken);
     display: grid;
     place-items: center;
     min-width: 0;
     min-height: 48px;
-    border-radius: 10px;
+    border-radius: 12px;
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--sq), white 16%),
+      var(--sq)
+    );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.28),
+      0 1px 2px rgb(20 16 40 / 0.08);
     font: 500 14px/1 var(--nx-font-sans);
     font-variant-numeric: tabular-nums;
     color: var(--nx-ink);
@@ -146,22 +177,23 @@
     }
   }
   .square[data-tone='done'] {
-    background: var(--nx-done-bar);
+    --sq: var(--nx-done-bar);
   }
   .square[data-tone='excused'] {
-    background: var(--nx-excused-bar);
+    --sq: var(--nx-excused-bar);
   }
   .square[data-tone='missed'] {
-    background: var(--nx-missed-bar);
+    --sq: var(--nx-missed-bar);
   }
   .square[data-tone='review'] {
-    background: var(--nx-wait-bar);
+    --sq: var(--nx-wait-bar);
   }
   .square[data-tone='open'] {
-    background: var(--nx-open-square, var(--nx-accent-soft));
+    --sq: var(--nx-open-square, var(--nx-accent-soft));
   }
   .square[data-tone='ahead'] {
     background: var(--nx-sunken);
+    box-shadow: none;
     color: var(--nx-ink-2);
   }
   .square[data-today] {
@@ -175,7 +207,7 @@
       filter var(--nx-base) var(--nx-ease);
   }
   button.square:hover {
-    filter: brightness(0.95);
+    filter: brightness(1.04);
   }
   button.square:active {
     transform: scale(0.93);

@@ -171,6 +171,14 @@ Round 3, October 21, 2026 (version 1 is still the page above):
 
 Pick: 3, October 21, 2026, with calmer colours: "the colours are way too vibrant and aggressive." Fully muted was "not pretty", so on this page each status colour is the usual bar colour about 30% mixed into the page background (softer, still clearly colour), and the calendar dates are smaller (14px, 15px on laptops) in the normal text colour. Built: version 3 is now the page and the others are deleted. The habit sheet still uses the older calendar with ✓ and ✗.
 
+Colour round, October 21, 2026: softened kit colours were "not pretty"; Erin wants them "more beautiful". The page above is the same in all three; only its own palette changes (calendar squares with a soft sheen, legend and bars), light and dark:
+
+1. Garden: soft sage, rose, honey and lavender pastels.
+2. Jewel: richer emerald, raspberry, amber and violet.
+3. Dusk: teal, coral, peach and lilac.
+
+Pick: waiting for Erin and Kazzy.
+
 ### Monday recap (`recap`)
 
 1. 'You won last week' as the headline, then one tappable line per result with you and Jordan side by side, this week's gym with the main action, and the Monday notification last.

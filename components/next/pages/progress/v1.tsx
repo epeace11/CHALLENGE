@@ -1,4 +1,4 @@
-// Original order: the whole challenge first, then each habit worst first, then the simple month with its own You / Jordan switch, then badges.
+// Garden palette: soft sage, rose, honey and lavender pastels (the page: whole challenge, habits worst first, calendar, badges).
 'use client';
 import styles from './progress.module.css';
 import { AppFrame } from '@/components/next/frames';
@@ -15,13 +15,23 @@ import {
   useCalendar,
 } from './parts';
 
-/** Progress, version 1. */
+export type Palette = 'garden' | 'jewel' | 'dusk';
+
+/** Progress, version 1: the page in the Garden palette. Versions 2 and 3 change only the palette. */
 export default function ProgressV1() {
+  return <ProgressPage palette="garden" />;
+}
+
+/** Progress in one of its palettes. */
+export function ProgressPage({ palette }: { palette: Palette }) {
   const detail = useDetail();
   const cal = useCalendar();
   return (
     <AppFrame>
-      <div className={`flex flex-col gap-8 ${styles.calm}`}>
+      <div
+        className={`flex flex-col gap-8 ${styles.palette}`}
+        data-palette={palette}
+      >
         <div className="flex flex-col gap-5">
           <PageTitle title="Progress" />
           <MainAction />
