@@ -593,7 +593,7 @@ const PLANNED = {
   rules: 1,
   review: 1,
   gifts: 1,
-  progress: 3,
+  progress: 1,
   recap: 1,
   verdict: 1,
   settings: 1,
