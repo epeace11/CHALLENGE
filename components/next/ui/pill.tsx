@@ -1,14 +1,4 @@
 'use client';
-import {
-  Check,
-  CircleDashed,
-  Clock3,
-  HeartHandshake,
-  Minus,
-  TriangleAlert,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
 import type { PillStatus } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 
@@ -20,16 +10,6 @@ const LABEL: Record<PillStatus, string> = {
   disputed: 'Disputed',
   open: 'Open',
   none: 'No answer',
-};
-
-const ICON: Record<PillStatus, LucideIcon> = {
-  done: Check,
-  missed: X,
-  review: Clock3,
-  forgiven: HeartHandshake,
-  disputed: TriangleAlert,
-  open: CircleDashed,
-  none: Minus,
 };
 
 /**
@@ -46,10 +26,9 @@ export function StatusPill({
   label?: string;
   className?: string;
 }) {
-  const Icon = ICON[status];
+  // Words and colour only: no check marks or other icons inside the pill.
   return (
     <span className={cn('nx-pill', className)} data-status={status}>
-      <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
       {label ?? LABEL[status]}
     </span>
   );

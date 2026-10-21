@@ -1,5 +1,6 @@
 // Both gifts side by side first; tap one to see the points behind it, newest first. Forgiveness requests are decided in Review.
 'use client';
+import { useWorld } from '@/components/next/world';
 import { useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { AppFrame } from '@/components/next/frames';
@@ -20,14 +21,12 @@ import {
   useSheetFor,
   type OpenPoint,
 } from './parts';
-import { useGifts } from './use-gifts';
 
 const LIST = 'gift-points';
 
 /** Gifts, version 1. */
 export default function GiftsV1() {
-  const gifts = useGifts();
-  const { world } = gifts;
+  const world = useWorld();
   const { me, partner } = world;
   const still = useReducedMotion();
   const [whose, setWhose] = useState(partner.id);
@@ -94,11 +93,7 @@ export default function GiftsV1() {
         </Section>
       </div>
 
-      <PointSheet
-        key={sheet.target?.row.point.id}
-        sheet={sheet}
-        gifts={gifts}
-      />
+      <PointSheet key={sheet.target?.row.point.id} sheet={sheet} />
       <HowSheet open={how} onOpenChange={setHow} world={world} />
     </AppFrame>
   );

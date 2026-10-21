@@ -18,11 +18,9 @@ import {
   CountUp,
   Sheet,
   StatusPill,
-  TextField,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import { forgiveEffect, type Gift, type PointRow } from './ledger';
-import type { Gifts } from './use-gifts';
 
 /* ── Hooks ─────────────────────────────────────────────────────────────── */
 
@@ -249,18 +247,12 @@ export function PointRowButton({
 /* ── Sheets ────────────────────────────────────────────────────────────── */
 
 /**
- * One point, opened from a list. The partner's point: forgive it (or decide their request). The
- * viewer's point: ask the partner to forgive it, with a reason. Forgiven points just say so.
+ * One point, opened from a list: why it is a point, what forgiving it would do to the gift, and
+ * any request about it. Forgiveness is decided on Review, so a request waiting on the viewer opens
+ * Review from here.
  */
-export function PointSheet({
-  sheet,
-  gifts,
-}: {
-  sheet: SheetFor<OpenPoint>;
-  gifts: Gifts;
-}) {
-  const [reason, setReason] = useState('');
-  const [error, setError] = useState(false);
+export function PointSheet({ sheet }: { sheet: SheetFor<OpenPoint> }) {
+  const { navigate } = useNav();
   const opened = sheet.target;
   if (!opened) return null;
   const { row, world } = opened;
@@ -268,71 +260,27 @@ export function PointSheet({
   const mine = row.point.personId === world.me.id;
   const effect = forgiveEffect(world, row.point);
   const drop = effect.now - effect.after;
-  const close = () => sheet.setOpen(false);
-  const canAsk = mine && !row.forgiven && !row.pending;
-  const ask = () => {
-    const words = reason.trim();
-    if (!words) return setError(true);
-    gifts.ask(row, words);
-    close();
-  };
-
-  let footer: ReactNode = null;
-  if (!row.forgiven && !mine)
-    footer = row.pending ? (
-      <>
-        <Button
-          onClick={() => {
-            gifts.decline(row);
-            close();
-          }}
-        >
-          Decline
-        </Button>
-        <Button
-          variant="primary"
-          onClick={() => {
-            gifts.forgive(row);
-            close();
-          }}
-        >
-          Forgive
-        </Button>
-      </>
-    ) : (
-      <>
-        <Button onClick={close}>Cancel</Button>
-        <Button
-          variant="primary"
-          onClick={() => {
-            gifts.forgive(row);
-            close();
-          }}
-        >
-          Forgive
-        </Button>
-      </>
-    );
-  if (canAsk)
-    footer = (
-      <>
-        <Button onClick={close}>Cancel</Button>
-        <Button variant="primary" onClick={ask}>
-          Ask {partner.name} to forgive
-        </Button>
-      </>
-    );
+  const waitingOnMe = !mine && !row.forgiven && !!row.pending;
 
   return (
     <Sheet
       open={sheet.open}
-      onOpenChange={(next) => {
-        sheet.setOpen(next);
-        if (!next) setError(false);
-      }}
+      onOpenChange={sheet.setOpen}
       title={row.rule.title}
       description={`${formatDay(row.point.day)} · ${row.why}`}
-      footer={footer}
+      footer={
+        waitingOnMe ? (
+          <Button
+            variant="primary"
+            onClick={() => {
+              sheet.setOpen(false);
+              navigate('review');
+            }}
+          >
+            Open Review
+          </Button>
+        ) : undefined
+      }
     >
       <div className="flex flex-col gap-4">
         {row.note && (
@@ -375,30 +323,6 @@ export function PointSheet({
                 className="self-start"
               />
             )}
-          </>
-        )}
-        {canAsk && (
-          <>
-            {row.latest?.status === 'denied' && (
-              <p className="text-nx-2 text-nx-ink-2">
-                {partner.name} declined when you asked on{' '}
-                {formatDate(
-                  dateIn(world.challenge.timeZone, row.latest.createdAt),
-                )}
-                .
-              </p>
-            )}
-            <TextField
-              label={`Why should ${partner.name} forgive it?`}
-              multiline
-              rows={3}
-              value={reason}
-              onChange={(v) => {
-                setReason(v);
-                if (v.trim()) setError(false);
-              }}
-              error={error ? 'Write your reason first.' : undefined}
-            />
           </>
         )}
       </div>

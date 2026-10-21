@@ -2,6 +2,10 @@
 
 Kazzy picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, October 21, 2026
+
+- **No icons in status labels.** Every status pill (Done, Missed, Met, Needs 4, Waiting…) is its words and colour only, with no ✓, ✗, — or other icon, on every page.
+
 ## Decisions, October 18, 2026
 
 - **Calmer buttons, like today's app.** Erin found the purple buttons too aggressive and preferred the old design. In every look the main button is now today's dark slate in light mode and a soft light grey with dark text in dark mode, with no coloured glow (`--nx-primary`). Secondary buttons are light glass with a thin grey border and ink text, not purple. Each look's own colour (`--nx-fill`) stays on small things only: theme swatches, badges, today's marker, the progress dots.
@@ -153,7 +157,7 @@ Round 2, October 20, 2026 (version 1 is the page above; `v2.tsx` and `v3.tsx` ar
 2. Scoreboard: one head-to-head card, "You get $45" and "Jordan gets $21" as big buttons with each next miss, and a bar showing who is ahead by how many points; Jordan's forgiveness request is the main action; then one list of both people's points by day, newest first.
 3. Plain sentences: "Jordan owes you a $45 gift" and "You owe Jordan a $21 gift" as two big rows that open the points behind them; under "What could change it", the forgiveness request (main action) and what each next miss adds. Nothing else.
 
-Pick: 1, October 21, 2026, without the forgiveness request card: "the forgiveness ask should not be on this page" (it is decided on Review). Built: versions 2 and 3 are deleted.
+Pick: 1, October 21, 2026, without the forgiveness request card: "the forgiveness ask should not be on this page" (it is decided on Review). Built: versions 2 and 3 are deleted. Then forgiveness only on Review: a point's sheet no longer forgives, declines or asks; it explains the point, shows any request, and a request waiting on you has Open Review.
 
 ### Progress (`progress`)
 
