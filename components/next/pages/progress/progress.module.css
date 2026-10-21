@@ -32,47 +32,6 @@
     }
   }
 
-  /* One day. At least 48px tall, so every day is an easy tap on a phone. */
-  .cell {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    min-width: 0;
-    min-height: 50px;
-    border-radius: 12px;
-    font: 600 15px/1 var(--nx-font-sans);
-    font-variant-numeric: tabular-nums;
-    animation: cell-in var(--nx-base) var(--nx-ease) backwards;
-    animation-delay: calc(var(--row, 0) * 40ms);
-  }
-  @media (min-width: 640px) {
-    .cell {
-      min-height: 58px;
-      font-size: 17px;
-    }
-  }
-  button.cell {
-    transition:
-      transform var(--nx-fast) var(--nx-ease),
-      box-shadow var(--nx-base) var(--nx-ease),
-      filter var(--nx-base) var(--nx-ease);
-  }
-  button.cell:hover {
-    filter: brightness(0.97);
-    box-shadow: 0 0 0 2px var(--nx-accent-line);
-  }
-  button.cell:active {
-    transform: scale(0.93);
-  }
-  button.cell[data-marked] {
-    box-shadow:
-      0 0 0 2px var(--nx-page),
-      0 0 0 4px var(--nx-accent);
-  }
-
   .weekday {
     display: grid;
     place-items: center;
@@ -149,6 +108,18 @@
   .square[data-tone='open'] {
     --sq: var(--nx-open-square, var(--nx-accent-soft));
   }
+  .square[data-tone='disputed'] {
+    --sq: var(--nx-wait-bar);
+  }
+  .square[data-tone='none'] {
+    --sq: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--nx-line-strong);
+    color: var(--nx-ink-2);
+  }
+  .square[data-tone='off'] {
+    --sq: var(--nx-sunken);
+    opacity: 0.45;
+  }
   .square[data-tone='ahead'] {
     --sq: var(--nx-ahead-square, var(--nx-sunken));
   }
@@ -190,6 +161,9 @@
   }
   .swatch[data-tone='open'] {
     background: var(--nx-open-square, var(--nx-accent-soft));
+  }
+  .swatch[data-tone='none'] {
+    box-shadow: inset 0 0 0 1.5px var(--nx-line-strong);
   }
   .swatch[data-tone='ahead'] {
     background: var(--nx-ahead-square, var(--nx-sunken));

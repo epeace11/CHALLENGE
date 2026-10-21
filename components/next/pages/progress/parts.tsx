@@ -25,7 +25,7 @@ import {
   shift,
 } from '@/lib/next/selectors';
 import { InlineBar } from './bar';
-import { Medal } from './day-grid';
+import { Medal } from './medal';
 import type { Detail } from './detail';
 import {
   barParts,

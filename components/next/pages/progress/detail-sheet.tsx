@@ -33,10 +33,11 @@ import {
   weeksOf,
   countsForWeek,
 } from '@/lib/next/selectors';
-import { DayGrid, Legend, Medal } from './day-grid';
+import { Medal } from './medal';
+import { SimpleLegend, SimpleMonth, type SquareTone } from './simple-month';
+import styles from './progress.module.css';
 import type { Detail, DetailView } from './detail';
 import {
-  LEGEND,
   dayCheckins,
   habitDays,
   habitIcon,
@@ -46,7 +47,6 @@ import {
   runLength,
   sheetAction,
   type MainAction,
-  type Tone,
 } from './data';
 
 function titleOf(w: World, view: DetailView) {
@@ -235,16 +235,11 @@ function HabitBody({
   );
   if (!rule || !stat) return null;
   const days = habitDays(world, view.personId, rule);
-  const tones = new Set(days.map((d) => d.tone));
-  const legend: { tone: Tone; label: string }[] = [
-    ...LEGEND.filter((l) => tones.has(l.tone)),
-    ...(tones.has('disputed')
-      ? [{ tone: 'disputed' as const, label: 'Disputed' }]
-      : []),
-    ...(tones.has('none')
-      ? [{ tone: 'none' as const, label: 'No visit' }]
-      : []),
-  ];
+  const squares = days.map((d) => ({
+    day: d.day,
+    color: (d.tone ?? 'off') as SquareTone,
+  }));
+  const tones = new Set(squares.map((d) => d.color));
   const c = world.challenge;
   const shared =
     swap &&
@@ -336,15 +331,17 @@ function HabitBody({
               : ''}
         </p>
       )}
-      <DayGrid
-        days={days}
-        weekStart={c.weekStart}
-        today={world.today}
-        marked={from}
-        label={`${rule.title}, day by day`}
-        onOpen={(day) => push({ kind: 'day', personId: view.personId, day })}
-      />
-      {legend.length > 0 && <Legend tones={legend} />}
+      <div className={`flex flex-col gap-4 ${styles.palette}`}>
+        <SimpleMonth
+          days={squares}
+          weekStart={c.weekStart}
+          today={world.today}
+          marked={from}
+          label={`${rule.title}, day by day`}
+          onOpen={(day) => push({ kind: 'day', personId: view.personId, day })}
+        />
+        <SimpleLegend tones={tones} />
+      </div>
     </div>
   );
 }

@@ -7,8 +7,14 @@ import styles from './progress.module.css';
 
 const LETTER = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+/**
+ * A square's colour: a calendar day's, or a habit's day (disputed days take the waiting colour; 'off'
+ * is a day the habit doesn't ask for).
+ */
+export type SquareTone = DayColor | 'disputed' | 'none' | 'off';
+
 /** What each colour means, in the order of the bars. One list for the calendar and the bars. */
-export const SIMPLE_LEGEND: { tone: DayColor; label: string }[] = [
+export const SIMPLE_LEGEND: { tone: SquareTone; label: string }[] = [
   { tone: 'done', label: 'Done' },
   { tone: 'excused', label: 'Forgiven' },
   { tone: 'missed', label: 'Missed' },
@@ -17,9 +23,17 @@ export const SIMPLE_LEGEND: { tone: DayColor; label: string }[] = [
   { tone: 'ahead', label: 'Not yet' },
 ];
 
-const WORDS = Object.fromEntries(
-  SIMPLE_LEGEND.map((l) => [l.tone, l.label.toLowerCase()]),
-) as Record<DayColor, string>;
+/** Only in a weekly habit's calendar: days without a visit, which cost nothing. */
+const NO_VISIT = { tone: 'none' as const, label: 'No visit' };
+
+const WORDS: Record<SquareTone, string> = {
+  ...(Object.fromEntries(
+    SIMPLE_LEGEND.map((l) => [l.tone, l.label.toLowerCase()]),
+  ) as Record<DayColor, string>),
+  disputed: 'disputed',
+  none: 'no visit',
+  off: 'not asked that day',
+};
 
 /**
  * The challenge's days in week rows, each one square of colour with its date and nothing else.
@@ -31,11 +45,14 @@ export function SimpleMonth({
   weekStart,
   today,
   label,
+  marked,
   onOpen,
 }: {
-  days: { day: DateString; color: DayColor }[];
+  days: { day: DateString; color: SquareTone }[];
   weekStart: Weekday;
   today: DateString;
+  /** A day to ring, such as the day the calendar was opened from. */
+  marked?: DateString;
   /** Names the calendar for screen readers ("Your calendar"). */
   label: string;
   onOpen: (day: DateString) => void;
@@ -70,13 +87,13 @@ export function SimpleMonth({
               </span>
             </>
           );
-          if (d.color === 'ahead')
+          if (d.color === 'ahead' || d.color === 'off')
             return (
               <span
                 key={d.day}
                 className={styles.square}
                 data-tone="ahead"
-                data-today={isToday || undefined}
+                data-today={isToday || d.day === marked || undefined}
                 style={style}
               >
                 {inside}
@@ -88,6 +105,7 @@ export function SimpleMonth({
               type="button"
               className={styles.square}
               data-tone={d.color}
+              data-today={isToday || d.day === marked || undefined}
               style={style}
               onClick={() => onOpen(d.day)}
             >
@@ -101,13 +119,26 @@ export function SimpleMonth({
 }
 
 /** The one legend: a swatch of each colour and its word. */
-export function SimpleLegend({ className }: { className?: string }) {
+export function SimpleLegend({
+  tones,
+  className,
+}: {
+  /** Only these colours, for a calendar that doesn't use them all (a habit's). */
+  tones?: Set<SquareTone>;
+  className?: string;
+}) {
+  const items = tones
+    ? [
+        ...SIMPLE_LEGEND.filter((l) => tones.has(l.tone)),
+        ...(tones.has('none') ? [NO_VISIT] : []),
+      ]
+    : SIMPLE_LEGEND;
   // Size and colour stay outside cn(): tailwind-merge reads text-nx-2 and text-nx-ink-2 as one group.
   return (
     <ul
       className={`text-nx-2 text-nx-ink-2 ${cn('flex flex-wrap gap-x-4 gap-y-2', className)}`}
     >
-      {SIMPLE_LEGEND.map(({ tone, label }) => (
+      {items.map(({ tone, label }) => (
         <li key={tone} className="inline-flex items-center gap-2">
           <span className={styles.swatch} data-tone={tone} aria-hidden="true" />
           {label}

@@ -169,7 +169,7 @@ Round 3, October 21, 2026 (version 1 is still the page above):
 2. Calendar first: a You/Jordan switch above a month calendar of plain coloured squares with one legend, then the whole challenge as a stacked bar per person, every habit worst first with both people's bars, % and streak (each habit opens its sheet), and both people's badges.
 3. Original order: the whole challenge first, then habits worst first, then the colour calendar with its own You/Jordan switch, then badges; tapping a person's whole-challenge row brings up their calendar.
 
-Pick: 3, October 21, 2026, with calmer colours: "the colours are way too vibrant and aggressive." Fully muted was "not pretty", so on this page each status colour is the usual bar colour about 30% mixed into the page background (softer, still clearly colour), and the calendar dates are smaller (14px, 15px on laptops) in the normal text colour. Built: version 3 is now the page and the others are deleted. The habit sheet still uses the older calendar with ✓ and ✗.
+Pick: 3, October 21, 2026, with calmer colours: "the colours are way too vibrant and aggressive." Fully muted was "not pretty", so on this page each status colour is the usual bar colour about 30% mixed into the page background (softer, still clearly colour), and the calendar dates are smaller (14px, 15px on laptops) in the normal text colour. Built: version 3 is now the page and the others are deleted.
 
 Colour round, October 21, 2026: softened kit colours were "not pretty"; Erin wants them "more beautiful". The page above is the same in all three; only its own palette changes (calendar squares with a soft sheen, legend and bars), light and dark:
 
@@ -177,7 +177,7 @@ Colour round, October 21, 2026: softened kit colours were "not pretty"; Erin wan
 2. Jewel: richer emerald, raspberry, amber and violet.
 3. Dusk: teal, coral, peach and lilac.
 
-Pick: none of the three. Erin chose her own palette, the same in light and dark, with dark dates on every square and flat squares (no sheen): done #86C79C, forgiven #B4D7E3, missed #CC718A, waiting #E2BD71, open #8D9AD0, not yet #E6E4EF. Built: it is the page's only palette, and versions 2 and 3 are deleted.
+Pick: none of the three. Erin chose her own palette, the same in light and dark, with dark dates on every square and flat squares (no sheen): done #86C79C, forgiven #B4D7E3, missed #CC718A, waiting #E2BD71, open #8D9AD0, not yet #E6E4EF. Built: it is the page's only palette, and versions 2 and 3 are deleted. The calendar in each habit's sheet now uses the same plain squares and palette, with no ✓, ✗ or other marks ("there should not be characters on this"); days a weekly habit had no visit are an outlined square, and days a habit doesn't ask for are faint.
 
 ### Monday recap (`recap`)
 

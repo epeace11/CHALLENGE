@@ -1,27 +1,20 @@
 import {
   BookOpen,
   CalendarCheck,
-  Check,
-  CircleDashed,
-  Clock3,
   Dumbbell,
   Flame,
   Footprints,
   Heart,
-  HeartHandshake,
   House,
-  Minus,
   Moon,
   PiggyBank,
   Rocket,
   ShieldCheck,
   Smartphone,
   Sparkles,
-  TriangleAlert,
   Trophy,
   Utensils,
   Wine,
-  X,
   type LucideIcon,
 } from 'lucide-react';
 import type { DateString, Entry, Rule, World } from '@/lib/next/model';
@@ -65,65 +58,6 @@ export type Tone =
   | 'open'
   | 'none'
   | 'ahead';
-
-export const TONE: Record<
-  Tone,
-  { cell: string; icon: LucideIcon | null; words: string }
-> = {
-  done: {
-    cell: 'bg-nx-done-soft text-nx-done',
-    icon: Check,
-    words: 'done',
-  },
-  missed: {
-    cell: 'bg-nx-missed-soft text-nx-missed',
-    icon: X,
-    words: 'missed',
-  },
-  review: {
-    cell: 'bg-nx-wait-soft text-nx-wait',
-    icon: Clock3,
-    words: 'waiting for review',
-  },
-  disputed: {
-    cell: 'bg-nx-wait-soft text-nx-wait',
-    icon: TriangleAlert,
-    words: 'disputed',
-  },
-  excused: {
-    cell: 'bg-nx-excused-soft text-nx-excused',
-    icon: HeartHandshake,
-    words: 'forgiven',
-  },
-  open: {
-    cell: 'bg-nx-accent-soft text-nx-accent ring-2 ring-inset ring-nx-accent',
-    icon: CircleDashed,
-    words: 'open to log',
-  },
-  none: {
-    cell: 'bg-nx-sunken text-nx-ink-2',
-    icon: Minus,
-    words: 'no visit',
-  },
-  ahead: {
-    cell: 'bg-nx-ahead-soft text-nx-ahead',
-    icon: null,
-    words: 'not yet',
-  },
-};
-
-/** Today in a calendar: not loggable yet, so marked rather than coloured. */
-export const TODAY_CELL =
-  'bg-nx-ahead-soft text-nx-accent ring-1 ring-inset ring-nx-accent-line';
-
-/** The calendar's legend, in reading order. */
-export const LEGEND: { tone: Tone; label: string }[] = [
-  { tone: 'done', label: 'Done' },
-  { tone: 'missed', label: 'Missed' },
-  { tone: 'review', label: 'Waiting' },
-  { tone: 'excused', label: 'Forgiven' },
-  { tone: 'open', label: 'Open' },
-];
 
 /** A pill status as a cell tone. */
 export const toneOf = (s: PillStatus): Tone =>
