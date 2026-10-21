@@ -67,7 +67,6 @@
     --nx-missed-bar: #cc718a;
     --nx-wait-bar: #e2bd71;
     --nx-open-square: #8d9ad0;
-    --nx-ahead-square: #e6e4ef;
     --nx-square-ink: #23203a;
   }
 
@@ -80,7 +79,18 @@
     min-width: 0;
     min-height: 48px;
     border-radius: 12px;
-    background: var(--sq);
+    border: 1px solid rgb(255 255 255 / 0.3);
+    /* Frosted colour: a lighter top-left catching the light, the colour see-through toward the
+       bottom right, a hairline highlight and a soft glow of its own colour. */
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--sq), white 14%),
+      color-mix(in srgb, var(--sq) 74%, transparent)
+    );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      0 6px 14px -8px color-mix(in srgb, var(--sq) 70%, transparent);
+    backdrop-filter: blur(10px) saturate(140%);
     font: 500 14px/1 var(--nx-font-sans);
     font-variant-numeric: tabular-nums;
     color: var(--nx-square-ink, var(--nx-ink));
@@ -112,16 +122,25 @@
     --sq: var(--nx-wait-bar);
   }
   .square[data-tone='none'] {
-    --sq: transparent;
-    box-shadow: inset 0 0 0 1.5px var(--nx-line-strong);
+    border: 1.5px solid var(--nx-line-strong);
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
     color: var(--nx-ink-2);
   }
   .square[data-tone='off'] {
-    --sq: var(--nx-sunken);
-    opacity: 0.45;
+    border-color: var(--nx-glass-border);
+    background: var(--nx-glass);
+    box-shadow: none;
+    color: var(--nx-ink-2);
+    opacity: 0.5;
   }
+  /* Days still to come are plain glass, like the cards. */
   .square[data-tone='ahead'] {
-    --sq: var(--nx-ahead-square, var(--nx-sunken));
+    border-color: var(--nx-line);
+    background: var(--nx-glass);
+    box-shadow: var(--nx-glass-shadow);
+    color: var(--nx-ink-2);
   }
   .square[data-today] {
     box-shadow: inset 0 0 0 2px var(--nx-accent);
@@ -166,6 +185,7 @@
     box-shadow: inset 0 0 0 1.5px var(--nx-line-strong);
   }
   .swatch[data-tone='ahead'] {
-    background: var(--nx-ahead-square, var(--nx-sunken));
+    border: 1px solid var(--nx-line-strong);
+    background: var(--nx-glass);
   }
 }

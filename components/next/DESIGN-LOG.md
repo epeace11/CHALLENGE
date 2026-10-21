@@ -177,7 +177,7 @@ Colour round, October 21, 2026: softened kit colours were "not pretty"; Erin wan
 2. Jewel: richer emerald, raspberry, amber and violet.
 3. Dusk: teal, coral, peach and lilac.
 
-Pick: none of the three. Erin chose her own palette, the same in light and dark, with dark dates on every square and flat squares (no sheen): done #86C79C, forgiven #B4D7E3, missed #CC718A, waiting #E2BD71, open #8D9AD0, not yet #E6E4EF. Built: it is the page's only palette, and versions 2 and 3 are deleted. The calendar in each habit's sheet now uses the same plain squares and palette, with no ✓, ✗ or other marks ("there should not be characters on this"); days a weekly habit had no visit are an outlined square, and days a habit doesn't ask for are faint.
+Pick: none of the three. Erin chose her own palette, the same in light and dark, with dark dates on every square and done #86C79C, forgiven #B4D7E3, missed #CC718A, waiting #E2BD71, open #8D9AD0. Then "more glassmorphic": each square is frosted colour (lighter top-left, see-through toward the bottom right, a white hairline and a soft glow of its colour), and days not yet come are plain glass like the cards, not white. Built: it is the page's only palette, and versions 2 and 3 are deleted. The calendar in each habit's sheet now uses the same plain squares and palette, with no ✓, ✗ or other marks ("there should not be characters on this"); days a weekly habit had no visit are an outlined square, and days a habit doesn't ask for are faint.
 
 ### Monday recap (`recap`)
 
