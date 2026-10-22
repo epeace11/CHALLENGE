@@ -18,6 +18,7 @@ import {
 } from '@/components/next/ui';
 import { PasswordField } from './fields';
 import { MIN_PASSWORD, type Method } from './form';
+import { ResetPanel } from './reset';
 import { SentPanel } from './sent';
 import { useSignupForm } from './use-signup-form';
 
@@ -31,6 +32,12 @@ export default function SignupV2() {
   const f = useSignupForm();
   const still = useReducedMotion();
   const [method, setMethod] = useState<Method>('password');
+  const [resetting, setResettingState] = useState(false);
+  const [resetDirection, setResetDirection] = useState<1 | -1>(1);
+  const setResetting = (on: boolean) => {
+    setResetDirection(on ? 1 : -1);
+    setResettingState(on);
+  };
   const signup = f.mode === 'signup';
   const slide = { duration: still ? 0 : DURATION.base, ease: EASE };
   const action =
@@ -42,10 +49,12 @@ export default function SignupV2() {
 
   return (
     <PlainFrame
-      back={{ to: 'landing' }}
+      back={
+        resetting ? { onClick: () => setResetting(false) } : { to: 'landing' }
+      }
       center
       aside={
-        f.sentTo ? undefined : (
+        f.sentTo || resetting ? undefined : (
           <Button
             variant="quiet"
             className="-mr-3"
@@ -57,8 +66,19 @@ export default function SignupV2() {
       }
     >
       <div className="pt-2">
-        <Glide id={f.sentTo ? 'sent' : f.mode} direction={f.direction}>
-          {f.sentTo ? (
+        <Glide
+          id={resetting ? 'reset' : f.sentTo ? 'sent' : f.mode}
+          direction={
+            resetting || resetDirection < 0 ? resetDirection : f.direction
+          }
+        >
+          {resetting ? (
+            <ResetPanel
+              email={f.draft.email.trim()}
+              onBack={() => setResetting(false)}
+              onDone={f.finish}
+            />
+          ) : f.sentTo ? (
             <SentPanel
               email={f.sentTo}
               mode={f.mode}
@@ -156,6 +176,15 @@ export default function SignupV2() {
                             }
                             error={f.errorFor('password')}
                           />
+                          {!signup && (
+                            <Button
+                              variant="quiet"
+                              className="mt-1 -ml-3"
+                              onClick={() => setResetting(true)}
+                            >
+                              Forgot your password?
+                            </Button>
+                          )}
                         </motion.div>
                       )}
                     </Presence>

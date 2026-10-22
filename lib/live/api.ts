@@ -2,7 +2,7 @@ import { parse as parseExif } from 'exifr';
 import { supabase } from '@/lib/supabase';
 import { compress } from '@/lib/proof';
 import type { Command, SetupDraft, Template } from '@/components/next/backend';
-import type { Rule } from '@/lib/next/model';
+import type { Challenge, Rule } from '@/lib/next/model';
 import type {
   ChallengeRow,
   ProofUrls,
@@ -223,6 +223,38 @@ export async function verifyCode(a: { email: string; code: string }) {
   if (confirm.error) throw new Error(signIn.error.message);
 }
 
+/**
+ * Emails a password reset: a six-digit code (the Reset password template needs {{ .Token }}) and a
+ * link back to /app?reset=1, which signs in and asks for the new password.
+ */
+export async function sendReset(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${location.origin}/app?reset=1`,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Signs in with the code from the reset email and sets the new password. */
+export async function resetPassword(a: {
+  email: string;
+  code: string;
+  password: string;
+}) {
+  const { error } = await supabase.auth.verifyOtp({
+    email: a.email,
+    token: a.code,
+    type: 'recovery',
+  });
+  if (error) throw new Error(error.message);
+  await setPassword(a.password);
+}
+
+/** A new password for the signed-in account. */
+export async function setPassword(password: string) {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}
+
 export const signOut = () => supabase.auth.signOut();
 
 /* ── Setting up ────────────────────────────────────────────────────────── */
@@ -346,28 +378,52 @@ export async function startChallenge(
   });
 }
 
-/** Saves Set up and ends it: the viewer signs, and the partner is invited or asked to sign. */
+/**
+ * Saves Set up and ends it: the viewer signs, and the partner is invited or asked to sign. Only what
+ * changed from `was` (the challenge as saved) is sent, because any change to the terms clears both
+ * signatures: saving Set up again without changing anything keeps them.
+ */
 export async function finishSetup(
   challengeId: string,
   d: SetupDraft,
   meId: string,
   partnerId: string,
+  was: Challenge | null,
 ) {
+  const rules = d.rules.map((r) => ruleInput(r, meId, partnerId));
+  const same = <T>(a: T, b: T) =>
+    !!was && JSON.stringify(a) === JSON.stringify(b);
+  const changed = <T>(value: T, before: T | undefined) =>
+    same(value, before) ? null : value;
+  const capSame = !!was && was.cap === d.cap;
   await rpc('nx_update_challenge', {
     p_challenge: challengeId,
     p_name: d.name,
-    p_start: d.start,
-    p_days: d.days,
-    p_time_zone: d.timeZone,
-    p_step: d.step,
-    p_cap: d.cap,
-    p_clear_cap: d.cap === null,
-    p_deadline_days: d.deadline.daysAfter,
-    p_deadline_time: d.deadline.time,
-    p_rules: d.rules.map((r) => ruleInput(r, meId, partnerId)),
+    p_start: changed(d.start, was?.start),
+    p_days: changed(d.days, was?.days),
+    p_time_zone: changed(d.timeZone, was?.timeZone),
+    p_step: changed(d.step, was?.step),
+    p_cap: capSame ? null : d.cap,
+    p_clear_cap: !capSame && d.cap === null,
+    p_deadline_days: changed(d.deadline.daysAfter, was?.deadline.daysAfter),
+    p_deadline_time: changed(
+      d.deadline.time.slice(0, 5),
+      was?.deadline.time.slice(0, 5),
+    ),
+    p_rules: changed(
+      rules,
+      was?.rules.map((r) => ruleInput(r, meId, partnerId)),
+    ),
   });
   await rpc('nx_finish_setup', { p_challenge: challengeId });
 }
+
+/**
+ * Cancels a challenge (supabase/next/cancel-challenge.sql): deleted before Day 1, ended now while it
+ * runs. Says which.
+ */
+export const cancelChallenge = (challengeId: string) =>
+  rpc<'deleted' | 'ended'>('nx_cancel_challenge', { p_challenge: challengeId });
 
 /* ── Invites ───────────────────────────────────────────────────────────── */
 

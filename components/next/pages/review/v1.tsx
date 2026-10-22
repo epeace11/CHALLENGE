@@ -34,6 +34,7 @@ import {
   type DisputeItem,
   type ReviewItem,
 } from './queue';
+import { PointActions } from './points';
 import { useReview } from './use-review';
 
 const KIND: Record<ReviewItem['kind'], string> = {
@@ -192,6 +193,10 @@ export default function ReviewV2() {
 
           <Enter index={3}>
             <WaitingForPartner review={review} />
+          </Enter>
+
+          <Enter index={4}>
+            <PointActions world={world} />
           </Enter>
 
           {current && (

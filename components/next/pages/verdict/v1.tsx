@@ -48,10 +48,12 @@ import {
   type VerdictSheet,
 } from './sheets';
 import styles from './verdict.module.css';
+import { pastToShow } from './which';
 
 /** The verdict, version 2. */
 export default function VerdictV2() {
   const world = useWorld();
+  const shownPast = pastToShow(world);
   const { navigate } = useNav();
   const backend = useBackend();
   const undoAction = useUndoAction();
@@ -59,7 +61,7 @@ export default function VerdictV2() {
   // Which gifts are marked given, by who receives them: saved with the challenge in the live app.
   const [given, setGiven] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(
-      (world.past[0]?.verdict.people ?? []).map((p) => [
+      (shownPast?.verdict.people ?? []).map((p) => [
         p.personId,
         !!p.giftGivenAt,
       ]),
@@ -68,7 +70,7 @@ export default function VerdictV2() {
   // The gift just marked, and a count so its burst plays again each time.
   const [burst, setBurst] = useState<{ id: string; n: number } | null>(null);
   const [sheet, setSheet] = useState<VerdictSheet>(null);
-  const v = verdictOf(world);
+  const v = verdictOf(world, shownPast);
   /** A new challenge with the same rules and stakes (the live app), or Set up (the preview). */
   const runAgain = () =>
     v && backend.host

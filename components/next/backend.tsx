@@ -90,10 +90,23 @@ export type Host = {
   /** Signs in with the 6-digit code from that email. */
   verifyCode: (a: { email: string; code: string }) => Promise<boolean>;
   signOut: () => Promise<void>;
+  /** Emails a password reset code (and link). */
+  sendReset: (email: string) => Promise<boolean>;
+  /** Signs in with the reset code and sets the new password. */
+  resetPassword: (a: {
+    email: string;
+    code: string;
+    password: string;
+  }) => Promise<boolean>;
   /** Creates a new challenge in setup from a template, and opens Set up. */
   startFrom: (template: Template) => Promise<boolean>;
   /** Saves Set up and moves on: the invite, or the pact when the partner is already in. */
   finishSetup: (draft: SetupDraft) => Promise<boolean>;
+  /**
+   * Cancels the challenge for both people: deleted before Day 1, ended now while it runs (the days
+   * that have closed count, and the verdict opens).
+   */
+  cancelChallenge: () => Promise<boolean>;
   /** The invite link for the partner, made on first ask. */
   inviteLink: () => Promise<{ link: string; code: string } | null>;
   /** The partner accepts the invite they opened. */

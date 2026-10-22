@@ -1,8 +1,8 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { PencilLine, Plus, Trash2 } from 'lucide-react';
 import type { DateString, JournalNote } from '@/lib/next/model';
-import { addNote, removeNote } from '@/lib/next/actions';
+import { addNote, editNote, removeNote } from '@/lib/next/actions';
 import { formatWeekday, personById } from '@/lib/next/selectors';
 import {
   Avatar,
@@ -19,7 +19,7 @@ import {
 import { useBackend, useUndoAction } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 
-/** The day's notes by both people, oldest first, and adding or removing one (with Undo). */
+/** The day's notes by both people, oldest first, and adding, changing or removing one (with Undo). */
 export function useNotes(day: DateString) {
   const world = useWorld();
   const backend = useBackend();
@@ -40,19 +40,62 @@ export function useNotes(day: DateString) {
     backend.act({ type: 'removeNote', noteId: id }, (w) => removeNote(w, id));
     toast({ text: 'Note removed', ...undoAction() });
   };
-  return { notes, add, remove };
+  /** Saves new words for one of the viewer's notes; an empty note is removed instead. */
+  const edit = (id: string, text: string) => {
+    backend.act({ type: 'editNote', noteId: id, text: text.trim() }, (w) =>
+      editNote(w, id, text),
+    );
+    toast({
+      text: text.trim() ? 'Note saved' : 'Note removed',
+      ...undoAction(),
+    });
+  };
+  return { notes, add, remove, edit };
 }
 
+type NoteActions = Pick<ReturnType<typeof useNotes>, 'remove' | 'edit'>;
+
+/** One note. The viewer's own notes have Change and Remove; Change turns the note into a field. */
 function NoteItem({
   note,
-  onRemove,
+  actions,
 }: {
   note: JournalNote;
-  onRemove: (id: string) => void;
+  actions: NoteActions;
 }) {
   const world = useWorld();
   const person = personById(world, note.personId),
     mine = note.personId === world.me.id;
+  const [draft, setDraft] = useState<string | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  if (draft !== null)
+    return (
+      <div ref={box}>
+        <Card pad="sm" className="flex flex-col gap-3">
+          <TextField
+            label="Your note"
+            multiline
+            maxLength={1000}
+            value={draft}
+            onChange={setDraft}
+          />
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="quiet" onClick={() => setDraft(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={draft.trim() === note.text}
+              onClick={() => {
+                actions.edit(note.id, draft);
+                setDraft(null);
+              }}
+            >
+              Save note
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
   return (
     <Card pad="sm" className="flex items-start gap-3">
       {person && <Avatar person={person} size="sm" decorative />}
@@ -63,13 +106,28 @@ function NoteItem({
         <p className="text-nx-body text-nx-ink">{note.text}</p>
       </div>
       {mine && (
-        <IconButton
-          icon={Trash2}
-          label="Remove note"
-          plain
-          className="-my-1 -mr-1"
-          onClick={() => onRemove(note.id)}
-        />
+        <div className="-my-1 -mr-1 flex">
+          <IconButton
+            icon={PencilLine}
+            label="Change note"
+            plain
+            onClick={() => {
+              setDraft(note.text);
+              // The cursor goes to the end, to carry on writing.
+              requestAnimationFrame(() => {
+                const field = box.current?.querySelector('textarea');
+                field?.focus();
+                field?.setSelectionRange(note.text.length, note.text.length);
+              });
+            }}
+          />
+          <IconButton
+            icon={Trash2}
+            label="Remove note"
+            plain
+            onClick={() => actions.remove(note.id)}
+          />
+        </div>
       )}
     </Card>
   );
@@ -78,11 +136,11 @@ function NoteItem({
 /** Notes as a list that grows and shrinks smoothly. */
 export function NoteList({
   notes,
-  onRemove,
+  actions,
   empty,
 }: {
   notes: JournalNote[];
-  onRemove: (id: string) => void;
+  actions: NoteActions;
   empty: string;
 }) {
   return (
@@ -90,7 +148,7 @@ export function NoteList({
       <Presence mode="popLayout" initial={false}>
         {notes.map((n) => (
           <Item key={n.id}>
-            <NoteItem note={n} onRemove={onRemove} />
+            <NoteItem note={n} actions={actions} />
           </Item>
         ))}
       </Presence>
@@ -111,7 +169,7 @@ export function DayJournal({
   index?: number;
   title?: string;
 }) {
-  const { notes, add, remove } = useNotes(day);
+  const { notes, add, ...actions } = useNotes(day);
   const partner = useWorld().partner.name;
   const [writing, setWriting] = useState(false);
   const [text, setText] = useState('');
@@ -140,7 +198,7 @@ export function DayJournal({
     >
       <NoteList
         notes={notes}
-        onRemove={remove}
+        actions={actions}
         empty={`No notes for ${formatWeekday(day)} yet.`}
       />
       {writing && (
@@ -184,7 +242,7 @@ export function JournalSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { notes, add, remove } = useNotes(day);
+  const { notes, add, ...actions } = useNotes(day);
   const partner = useWorld().partner.name;
   const [text, setText] = useState('');
   return (
@@ -211,7 +269,7 @@ export function JournalSheet({
       <div className="flex flex-col gap-5">
         <NoteList
           notes={notes}
-          onRemove={remove}
+          actions={actions}
           empty={`No notes for ${formatWeekday(day)} yet.`}
         />
         <TextField

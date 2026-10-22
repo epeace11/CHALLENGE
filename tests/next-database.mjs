@@ -30,6 +30,7 @@ for (const script of [
   'invite-links.sql',
   'gifts-given.sql',
   'fixes-oct-18.sql',
+  'cancel-challenge.sql',
 ])
   await db.exec(
     readFileSync(
@@ -772,6 +773,62 @@ assert.equal(
   )[0].n,
   0,
   'no misses before both had signed',
+);
+
+// Cancelling. Ending a running challenge keeps the days that have closed and drops later answers;
+// only its own couple can, and once it's over it stays over. A challenge still in setup is deleted.
+await as(sam, `select nx_save_checkin($1,$2,'2026-11-18',true)`, [
+  dry,
+  dryPray,
+]);
+await fails(as(maya, `select nx_cancel_challenge($1)`, [dry]), /isn't yours/);
+assert.equal(
+  (await one(priya, `select nx_cancel_challenge($1) r`, [dry])).r,
+  'ended',
+);
+assert.deepEqual(
+  await one(priya, `select status, days from challenges where id=$1`, [dry]),
+  { status: 'finished', days: 1 },
+);
+assert.deepEqual(
+  (
+    await as(
+      priya,
+      `select day::text d from entries where challenge_id=$1 group by day order by day`,
+      [dry],
+    )
+  ).map((r) => r.d),
+  ['2026-11-17'],
+  "the open day's answers are gone",
+);
+assert.equal(
+  (
+    await one(
+      priya,
+      `select count(*)::int n from points where challenge_id=$1 and not forgiven and not voided`,
+      [dry],
+    )
+  ).n,
+  2,
+  "the closed day's misses still count (Sam's prayer, Priya's steps)",
+);
+await fails(as(sam, `select nx_cancel_challenge($1)`, [dry]), /already over/);
+const { nx_create_challenge: next } = await one(
+  priya,
+  `select nx_create_challenge('Next One','classic',null,'2026-12-01',30,'America/Toronto',1,null,$1::jsonb)`,
+  [rules],
+);
+assert.equal(
+  (await one(sam, `select nx_cancel_challenge($1) r`, [next])).r,
+  'deleted',
+);
+assert.equal(
+  (
+    await one(priya, `select count(*)::int n from challenges where id=$1`, [
+      next,
+    ])
+  ).n,
+  0,
 );
 
 // An invitee who had started on their own: their saved challenge comes along, their setup goes, and

@@ -14,7 +14,7 @@ import {
   Settings,
   type LucideIcon,
 } from 'lucide-react';
-import { dayNumber, reviewQueue } from '@/lib/next/selectors';
+import { dayNumber, formatDayShort, reviewQueue } from '@/lib/next/selectors';
 import { useNav, type PageId } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Menu } from '@/components/next/ui/menu';
@@ -117,7 +117,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
               className="nx-day-link self-start"
               onClick={() => navigate('progress')}
             >
-              Day {dayNumber(c, world.today)} of {c.days}
+              {world.today < c.start
+                ? `Starts ${formatDayShort(c.start)}`
+                : `Day ${dayNumber(c, world.today)} of ${c.days}`}
               <ChevronRight size={16} aria-hidden="true" />
             </button>
           </div>

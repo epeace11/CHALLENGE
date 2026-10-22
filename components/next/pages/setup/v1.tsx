@@ -2,7 +2,7 @@
 'use client';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, ChevronDown, PencilLine, Plus } from 'lucide-react';
-import { PlainFrame } from '@/components/next/frames';
+import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import {
   ActionBar,
   Button,
@@ -232,6 +232,7 @@ export default function SetupV1() {
             }
           : { to: 'start' }
       }
+      aside={<AccountMenu cancel />}
     >
       <Glide id={named ? 'checklist' : 'name'} direction={named ? 1 : -1}>
         {named ? (

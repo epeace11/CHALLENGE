@@ -17,10 +17,22 @@ import {
   StatButton,
 } from '@/components/next/ui';
 import { overviewOf, shortTitle } from './data';
+import { BeforeStart } from './before-start';
 import { DaySheet, WeekLegend, WeekStrip } from './week';
 
-/** Overview, version 1. */
+/** Overview, version 1. Before Day 1 it shows the wait instead. */
 export default function OverviewV1() {
+  const world = useWorld();
+  if (world.today < world.challenge.start)
+    return (
+      <AppFrame>
+        <BeforeStart world={world} />
+      </AppFrame>
+    );
+  return <Running />;
+}
+
+function Running() {
   const world = useWorld();
   const { navigate } = useNav();
   const o = useMemo(() => overviewOf(world), [world]);

@@ -93,8 +93,9 @@ export function useAccount(world: World) {
       toast('Signed out');
       navigate('signup');
     },
-    leave: () => {
-      toast(`You left ${world.challenge.name}`);
+    leave: async () => {
+      if (host) return void (await host.cancelChallenge());
+      toast(`${world.challenge.name} ended`);
       navigate('home');
     },
     deleteAccount: () => {

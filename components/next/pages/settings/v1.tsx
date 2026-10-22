@@ -160,7 +160,20 @@ export default function SettingsV1() {
               className="-ml-3 self-start text-nx-danger"
               onClick={() => setOpen('leave')}
             >
-              Leave challenge
+              End the challenge
+            </Button>
+          </Section>
+        )}
+
+        {later && world.challenge.status === 'running' && (
+          <Section title={c.name} index={4}>
+            <Button
+              variant="quiet"
+              icon={LogOut}
+              className="-ml-3 self-start text-nx-danger"
+              onClick={() => setOpen('leave')}
+            >
+              End the challenge
             </Button>
           </Section>
         )}

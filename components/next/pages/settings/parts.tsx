@@ -1,5 +1,5 @@
 'use client';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { ChevronDown, Clock3, LogOut, Trash2 } from 'lucide-react';
 import type { World } from '@/lib/next/model';
 import {
@@ -176,20 +176,37 @@ export function LeaveSheet({
   world: World;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onLeave: () => void;
+  onLeave: () => Promise<void> | void;
 }) {
-  const gifts = giftsUnder(world, world.challenge);
+  const [busy, setBusy] = useState(false);
+  const c = world.challenge;
+  const partner = world.partner.name;
+  // Nothing has counted before Day 1 is over, so the challenge is deleted instead.
+  const early = world.today <= c.start;
   return (
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title={`Leave ${world.challenge.name}?`}
-      description={`It ends for you and ${world.partner.name}. The gifts stay where they are now: you get ${formatMoney(gifts.me)}, ${world.partner.name} gets ${formatMoney(gifts.partner)}.`}
+      title={`End ${c.name}?`}
+      description={
+        early
+          ? `It’s deleted for you and ${partner}, since no day has counted yet. This can’t be undone.`
+          : `It ends now for you and ${partner}. The days that are over count, and the verdict opens. This can’t be undone.`
+      }
       footer={
         <>
-          <Button onClick={() => onOpenChange(false)}>Stay</Button>
-          <Button variant="danger" icon={LogOut} onClick={onLeave}>
-            Leave challenge
+          <Button onClick={() => onOpenChange(false)}>Keep going</Button>
+          <Button
+            variant="danger"
+            icon={LogOut}
+            loading={busy}
+            onClick={async () => {
+              setBusy(true);
+              await onLeave();
+              setBusy(false);
+            }}
+          >
+            End challenge
           </Button>
         </>
       }

@@ -4,7 +4,7 @@ import { Copy, PencilLine, Send } from 'lucide-react';
 import type { World } from '@/lib/next/model';
 import { formatDay } from '@/lib/next/selectors';
 import type { Host } from '@/components/next/backend';
-import { PlainFrame } from '@/components/next/frames';
+import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
 import {
   ActionBar,
@@ -52,7 +52,7 @@ export function Waiting({ world, host }: { world: World; host: Host }) {
 
   if (joined)
     return (
-      <PlainFrame center>
+      <PlainFrame center aside={<AccountMenu cancel />}>
         <div className="flex flex-col gap-6">
           <PageTitle
             title={`Waiting for ${partner} to sign`}
@@ -66,7 +66,7 @@ export function Waiting({ world, host }: { world: World; host: Host }) {
     );
 
   return (
-    <PlainFrame>
+    <PlainFrame aside={<AccountMenu cancel />}>
       <div className="flex flex-col gap-6 pb-6">
         <PageTitle
           title={`Invite ${partner}`}

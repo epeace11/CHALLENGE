@@ -28,6 +28,7 @@ import {
 } from './helpers';
 import { useRunning } from './use-running';
 import styles from './home.module.css';
+import { showVerdictFor } from '../verdict/which';
 
 /** Your challenges, version 2. */
 export default function HomeV2() {
@@ -151,7 +152,10 @@ export default function HomeV2() {
                     }
                     title={verdictLine(world, past)}
                     detail="See the verdict"
-                    onClick={() => navigate('verdict')}
+                    onClick={() => {
+                      showVerdictFor(past.challenge.id);
+                      navigate('verdict');
+                    }}
                   />
                   {saved && (
                     <Row

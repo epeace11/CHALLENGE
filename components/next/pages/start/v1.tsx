@@ -9,7 +9,7 @@ import {
   Plus,
   type LucideIcon,
 } from 'lucide-react';
-import { PlainFrame } from '@/components/next/frames';
+import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -51,7 +51,10 @@ export default function Start() {
   }, [step]);
 
   return (
-    <PlainFrame back={{ to: 'home', label: 'Your challenges' }}>
+    <PlainFrame
+      back={{ to: 'home', label: 'Your challenges' }}
+      aside={<AccountMenu />}
+    >
       <div className="flex flex-col gap-6">
         <PageTitle
           title="Start a challenge"

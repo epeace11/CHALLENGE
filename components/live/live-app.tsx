@@ -25,7 +25,15 @@ import {
 } from '@/components/next/nav';
 import { pageById } from '@/components/next/pages/registry';
 import { setSignupMode } from '@/components/next/pages/signup/mode';
-import { NxRoot, useToast } from '@/components/next/ui';
+import { showVerdictFor } from '@/components/next/pages/verdict/which';
+import { WifiOff } from 'lucide-react';
+import {
+  Button,
+  EmptyState,
+  GlassCard,
+  NxRoot,
+  useToast,
+} from '@/components/next/ui';
 import { HostedWorld } from '@/components/next/world';
 import { world as signedOutWorld } from '@/lib/next/demo';
 import * as api from '@/lib/live/api';
@@ -40,6 +48,7 @@ import {
   type Rows,
   type SharedRow,
 } from '@/lib/live/world';
+import { NewPassword } from './new-password';
 import { Waiting } from './waiting';
 
 /**
@@ -64,6 +73,8 @@ let sharedToken: string | null = null;
 let loads = 0;
 /** Fired a few seconds after a load fails, to try again. */
 const RETRY_EVENT = 'nx-retry';
+/** Opened from a password reset email's link (?reset=1): ask for the new password once signed in. */
+let resetOpened = false;
 /** Where to go once signed in: the page that sent someone to Sign up (the shared challenge). */
 let afterSignIn: PageId | null = null;
 
@@ -130,6 +141,8 @@ const RUNNING: PageId[] = [
   'settings',
   'home',
   'practice',
+  // A past challenge's verdict, opened from Your challenges.
+  'verdict',
 ];
 
 /**
@@ -186,7 +199,7 @@ function resolveAccount(
     case 'running':
       return pick(RUNNING, 'overview');
     case 'finished':
-      return pick([...RUNNING, 'verdict', 'start'], 'verdict');
+      return pick([...RUNNING, 'start'], 'verdict');
   }
 }
 
@@ -194,6 +207,10 @@ export function LiveApp() {
   const [loaded, setLoaded] = useState<Loaded>({ kind: 'loading' });
   const [wantedChallenge, setWantedChallenge] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<World | null>(null);
+  /** The last load failed (offline, or the database didn't answer); it tries again by itself. */
+  const [failed, setFailed] = useState(false);
+  /** Signed in from a reset link and still choosing the new password. */
+  const [resetChoosing, setResetting] = useState(true);
   const query = useSyncExternalStore(subscribeUrl, search, noSearch);
   const p = new URLSearchParams(query).get('page');
   const page: PageId | null = isPageId(p) ? p : null;
@@ -220,9 +237,11 @@ export function LiveApp() {
     const rows = await api.loadRows().catch(() => undefined);
     if (mine !== loads) return;
     if (rows === undefined) {
+      setFailed(true);
       setTimeout(() => window.dispatchEvent(new Event(RETRY_EVENT)), 4000);
       return;
     }
+    setFailed(false);
     if (!rows) return setLoaded({ kind: 'out', preview, shared });
     const urls = await api.proofUrls(rows).catch(() => ({}));
     if (mine !== loads) return;
@@ -235,6 +254,7 @@ export function LiveApp() {
     const params = new URLSearchParams(location.search);
     const invite = params.get('invite'),
       shared = params.get('shared');
+    if (params.has('reset')) resetOpened = true;
     if (invite) writeStored(INVITE_KEY, invite);
     if (shared) writeStored(SHARED_KEY, shared);
     inviteToken = invite ?? readStored(INVITE_KEY);
@@ -306,6 +326,7 @@ export function LiveApp() {
       : built.world;
   }, [overlay, loaded, built]);
 
+  const resetting = resetChoosing && resetOpened && loaded.kind === 'in';
   const shown = resolve(
     page,
     loaded,
@@ -317,6 +338,7 @@ export function LiveApp() {
     const url = new URL(location.href);
     url.searchParams.delete('invite');
     url.searchParams.delete('shared');
+    url.searchParams.delete('reset');
     if (next) url.searchParams.set('page', next);
     else url.searchParams.delete('page');
     history.pushState(null, '', url);
@@ -336,7 +358,26 @@ export function LiveApp() {
   if (!world)
     return (
       <NxRoot>
-        <div className="nx-frame" aria-busy="true" />
+        <div className="nx-frame" aria-busy={!failed}>
+          {failed && (
+            <main className="nx-main flex min-h-dvh flex-col justify-center">
+              <GlassCard pad="lg" role="alert">
+                <EmptyState
+                  icon={WifiOff}
+                  title="Can’t load The Challenge"
+                  action={
+                    <Button variant="primary" onClick={() => void reload()}>
+                      Try again
+                    </Button>
+                  }
+                >
+                  Check that you’re online. It tries again every few seconds
+                  too.
+                </EmptyState>
+              </GlassCard>
+            </main>
+          )}
+        </div>
       </NxRoot>
     );
 
@@ -353,7 +394,15 @@ export function LiveApp() {
         >
           {(host) => (
             <HostedWorld world={world}>
-              {shown === 'waiting' ? (
+              {resetting ? (
+                <NewPassword
+                  onDone={() => {
+                    resetOpened = false;
+                    setResetting(false);
+                    navigate(null);
+                  }}
+                />
+              ) : shown === 'waiting' ? (
                 <Waiting world={world} host={host} />
               ) : (
                 <Page id={shown} />
@@ -477,6 +526,15 @@ function Hosting({
         if (ok !== false) await signedIn();
         return ok !== false;
       },
+      sendReset: async (email) =>
+        (await attempt(() => api.sendReset(email))) !== false,
+      resetPassword: async (a) => {
+        const ok = await attempt(() => api.resetPassword(a));
+        if (ok === false) return false;
+        toast('Password saved');
+        await signedIn();
+        return true;
+      },
       signOut: async () => {
         await api.signOut();
         for (const key of [INVITE_KEY, SHARED_KEY, LINK_KEY])
@@ -506,12 +564,31 @@ function Hosting({
       },
       finishSetup: async (draft: SetupDraft) => {
         const { challenge, me, partner } = ids();
+        const { world: w } = latest.current;
         const ok = await attempt(() =>
-          api.finishSetup(challenge, draft, me, partner),
+          api.finishSetup(
+            challenge,
+            draft,
+            me,
+            partner,
+            w.challenge.id === challenge ? w.challenge : null,
+          ),
         );
         if (ok === false) return false;
         await reload();
         navigate(null);
+        return true;
+      },
+      cancelChallenge: async () => {
+        const { challenge } = ids();
+        const done = await attempt(() => api.cancelChallenge(challenge));
+        if (done === false) return false;
+        writeStored(LINK_KEY, null);
+        setWantedChallenge(null);
+        await reload();
+        toast(done === 'ended' ? 'Challenge ended' : 'Challenge cancelled');
+        if (done === 'ended') showVerdictFor(challenge);
+        navigate(done === 'ended' ? 'verdict' : null);
         return true;
       },
       inviteLink: async () => {

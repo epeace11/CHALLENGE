@@ -2,7 +2,7 @@
 'use client';
 import { ArrowRight, PenLine } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
-import { PlainFrame } from '@/components/next/frames';
+import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import {
   ActionBar,
   Avatar,
@@ -32,7 +32,10 @@ export default function PactV2() {
   const flow = usePact();
   const signed = !!flow.yours.signedAt;
   return (
-    <PlainFrame back={signed ? undefined : { to: 'invite' }}>
+    <PlainFrame
+      back={signed ? undefined : { to: 'invite' }}
+      aside={<AccountMenu cancel={!signed} />}
+    >
       <Glide id={signed ? 'signed' : 'sign'} direction={signed ? 1 : -1}>
         {signed ? <Signed flow={flow} /> : <ToSign flow={flow} />}
       </Glide>

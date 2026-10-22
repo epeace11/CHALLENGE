@@ -899,6 +899,36 @@ begin
   return out_id;
 end $$;
 
+/* ── Cancelling: deleted before Day 1, ended now while it runs ────────── */
+
+-- Before Day 1, the challenge and everything in it is deleted. While it runs, it ends now: the days
+-- whose deadline has passed count, later days' answers and points go, and the verdict opens. Ending
+-- one before any day has closed deletes it. Either person can do it. Returns 'deleted' or 'ended'.
+create function public.nx_cancel_challenge(p_challenge uuid) returns text
+language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge); last_closed date;
+begin
+  if c.status = 'finished' then raise exception 'This challenge is already over.'; end if;
+  if c.status in ('draft','invited','signing') then
+    delete from challenges where id = c.id;
+    return 'deleted';
+  end if;
+  perform nx_tick(c.id);
+  -- The latest day whose deadline has passed (as in nx_tick).
+  last_closed := least(nx_last_day(c), nx_today(c) - c.deadline_days - case when nx_now() > nx_lock_time(c, nx_today(c) - c.deadline_days) then 0 else 1 end);
+  if last_closed < c.start_date then
+    delete from challenges where id = c.id;
+    return 'deleted';
+  end if;
+  delete from points where challenge_id = c.id and day > last_closed;
+  delete from entries where challenge_id = c.id and day > last_closed;
+  update challenges set days = last_closed - start_date + 1, status = 'finished' where id = c.id;
+  -- The last, shorter week's shortfalls, at its share of the target.
+  perform nx_tick(c.id);
+  return 'ended';
+end $$;
+
+
 /* ── Reads ─────────────────────────────────────────────────────────────── */
 
 do $$ declare t text; begin
@@ -941,7 +971,7 @@ do $$ declare f text; begin
     'nx_save_checkin(uuid,uuid,date,boolean,numeric,text,jsonb,text)','nx_review(uuid,text,text)',
     'nx_resolve_dispute(uuid,text,text)','nx_ask_forgiveness(uuid,text)','nx_decide_forgiveness(uuid,boolean)',
     'nx_forgive_point(uuid)','nx_add_note(uuid,date,text)','nx_edit_note(uuid,text)','nx_remove_note(uuid)',
-    'nx_save_challenge(uuid,text)','nx_set_share_link(uuid,boolean)'] loop
+    'nx_save_challenge(uuid,text)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)'] loop
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;
