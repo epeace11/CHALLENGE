@@ -11,6 +11,7 @@ import { useFit } from './use-fit';
  * setting up, invite, pact, practice, the verdict): a quiet top bar with the product's name, or a
  * Back button when `back` is set, and one centred column, the same width as every other page.
  *
+ * - `back`: a page to go back to (`to`), or a step back within the page (`onClick`).
  * - `center`: centres short content vertically (sign in, an invite).
  * - `aside`: something small on the right of the top bar ("Sign in").
  */
@@ -21,7 +22,7 @@ export function PlainFrame({
   center,
 }: {
   children: ReactNode;
-  back?: { to: PageId; label?: string };
+  back?: { label?: string } & ({ to: PageId } | { onClick: () => void });
   aside?: ReactNode;
   center?: boolean;
 }) {
@@ -35,7 +36,7 @@ export function PlainFrame({
             variant="quiet"
             icon={ChevronLeft}
             className="-ml-3"
-            onClick={() => navigate(back.to)}
+            onClick={() => ('to' in back ? navigate(back.to) : back.onClick())}
           >
             {back.label ?? 'Back'}
           </Button>

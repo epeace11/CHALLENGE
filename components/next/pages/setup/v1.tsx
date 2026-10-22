@@ -1,13 +1,7 @@
 // Set up: name the challenge first, then a checklist of four rows that open in place.
 'use client';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import {
-  ArrowRight,
-  ChevronDown,
-  ChevronLeft,
-  PencilLine,
-  Plus,
-} from 'lucide-react';
+import { ArrowRight, ChevronDown, PencilLine, Plus } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
 import {
   ActionBar,
@@ -227,22 +221,22 @@ export default function SetupV1() {
   ];
 
   return (
-    <PlainFrame back={named ? undefined : { to: 'start' }}>
+    <PlainFrame
+      back={
+        named
+          ? {
+              onClick: () => {
+                setOpen(null);
+                setNamed(false);
+              },
+            }
+          : { to: 'start' }
+      }
+    >
       <Glide id={named ? 'checklist' : 'name'} direction={named ? 1 : -1}>
         {named ? (
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-2">
-              <Button
-                variant="quiet"
-                icon={ChevronLeft}
-                className="-ml-3 self-start"
-                onClick={() => {
-                  setOpen(null);
-                  setNamed(false);
-                }}
-              >
-                Back
-              </Button>
               <PageTitle
                 title={`Set up ${draft.name.trim() || 'your challenge'}`}
               />
