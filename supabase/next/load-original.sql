@@ -1,6 +1,6 @@
 -- Step 2 of bringing The Original into PROD CHALLENGE. Run this in PROD CHALLENGE, after
--- supabase/next/import-original.sql (which adds nx_import_original) and after the two have paired
--- with an invite, so the Original joins their couple as a finished challenge.
+-- supabase/next/import-original.sql (which adds nx_import_original). If the two have paired, the
+-- Original joins their couple; if neither has a couple in the app yet, the import pairs them.
 --
 -- Before running: put the two new accounts' emails in the two lines marked EMAIL, and paste the
 -- value from supabase/next/export-original.sql over the words between the two $original$ markers
@@ -39,8 +39,11 @@ begin
   select id into erin from auth.users where lower(email) = lower('ERIN-EMAIL');   -- EMAIL
   select id into kazzy from auth.users where lower(email) = lower('KAZZY-EMAIL'); -- EMAIL
   if erin is null or kazzy is null then raise exception 'No account with one of those emails. Check the two EMAIL lines.'; end if;
-  if not exists(select 1 from couple_members a join couple_members b using (couple_id) where a.person_id = erin and b.person_id = kazzy) then
-    raise exception 'These two haven''t paired yet. Send the invite and accept it in the app first, then run this again.';
+  -- Paired already: the Original joins that couple. Neither in a couple yet: the import pairs them, and
+  -- the next challenge either starts goes straight to signing. In some other couple: it would be hidden.
+  if not exists(select 1 from couple_members a join couple_members b using (couple_id) where a.person_id = erin and b.person_id = kazzy)
+     and exists(select 1 from couple_members where person_id in (erin, kazzy)) then
+    raise exception 'One of you already has a challenge in the app without the other. Pair with the invite first, then run this again.';
   end if;
   raise notice 'The Original is challenge %', public.nx_import_original(erin, kazzy);
 end $$;

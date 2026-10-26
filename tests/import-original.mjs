@@ -159,14 +159,26 @@ const load = file('next/load-original.sql')
   .replace('PASTE HERE', blob)
   .replace("'ERIN-EMAIL'", "'erin@example.com'")
   .replace("'KAZZY-EMAIL'", "'kazzy@example.com'");
-await assert.rejects(fresh.exec(load), /haven't paired yet/);
-await fresh.exec('rollback');
+// Erin set up something on her own first: the Original would hide it, so it stops.
 await fresh.exec(
   `insert into profiles(id,name,hue) values('${erin}','Erin',265),('${kazzy}','Kazzy',25);
    with c as (insert into couples default values returning id)
-   insert into couple_members(couple_id,person_id) select id,'${erin}'::uuid from c union all select id,'${kazzy}'::uuid from c;`,
+   insert into couple_members(couple_id,person_id) select id,'${erin}'::uuid from c;`,
 );
+await assert.rejects(fresh.exec(load), /without the other/);
+await fresh.exec('rollback');
+// Neither in a couple: the import pairs them.
+await fresh.exec(`delete from couples`);
 await fresh.exec(load);
+assert.equal(
+  (
+    await fresh.query(
+      `select count(distinct couple_id)::int c, count(*)::int m from couple_members`,
+    )
+  ).rows[0].m,
+  2,
+  'the import pairs the two in one couple',
+);
 const titles = Object.fromEntries(
   JSON.parse(blob).rules.map((r) => [r.title, r.id]),
 );

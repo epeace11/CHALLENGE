@@ -4,8 +4,8 @@
 --
 --   select public.nx_import_original('<Erin''s new account id>', '<Kazzy''s new account id>');
 --
--- Run it after the two have paired with an invite: the Original joins their couple as a finished
--- challenge. (Before pairing it makes a couple of its own, which the next invite would hide.)
+-- The Original joins the couple the two share, or a new couple of the two if they haven't paired yet
+-- (load-original.sql stops if either is in a couple without the other, which the Original would hide).
 -- It returns the new challenge's id. Screenshots move separately: each old file
 -- challenge-proof/<old account id>/<file> goes to proofs/<new challenge id>/<new account id>/<file>.
 -- tests/import-original.mjs checks that the imported challenge scores exactly as the old one did.
