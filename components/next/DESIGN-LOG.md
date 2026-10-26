@@ -2,6 +2,11 @@
 
 Kazzy picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, October 25, 2026
+
+- **A challenge being set up shows on Your challenges.** Its card says "Not started yet" with its name, start date and length (or who it waits for), and one filled button: Keep setting up, or Sign the pact. While it is being set up the page has the plain frame, since there is nothing for the tabs yet. Back from Start now reaches Your challenges instead of bouncing to "Name your challenge".
+- **thechallenge.win/ opens the new app.** The home page forwards to `/app` (keeping an invite or shared link), and the home-screen icon is named The Challenge and opens `/app`.
+
 ## Decisions, October 21, 2026
 
 - **A page that fits never scrolls.** Checked all 19 pages at 375x667, 390x664, 390x844, 430x932 and 1280x800, and the steps inside Set up and Start: none scrolls unless its content is taller than the screen (in the preview, the 1 2 3 bar takes 60px of the screen; the app has no such bar). Set up's checklist was the one that missed by a little: its Back now sits in the top bar (PlainFrame's `back` takes an `onClick` for a step back within a page) instead of on its own row under "The Challenge", so it fits.

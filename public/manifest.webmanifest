@@ -1,8 +1,8 @@
 {
-  "name": "30 DAY CHALLENGE",
+  "name": "The Challenge",
   "short_name": "Challenge",
-  "description": "Erin and Kazzy's daily accountability challenge.",
-  "start_url": "/",
+  "description": "A challenge for two: check in every day, review each other, and settle up with a gift.",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#f6f8fb",
   "theme_color": "#f6f8fb",

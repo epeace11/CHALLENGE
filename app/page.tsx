@@ -1,6 +1,10 @@
 'use client';
-import { App } from '@/components/app/app';
+import { useEffect } from 'react';
 
+/** The home page opens the app, keeping any link's ?invite=, ?shared= or #… on the way. */
 export default function Page() {
-  return <App />;
+  useEffect(() => {
+    location.replace(`/app${location.search}${location.hash}`);
+  }, []);
+  return null;
 }

@@ -3,13 +3,14 @@ import './globals.css';
 import { NoZoom } from '@/components/no-zoom';
 import { themeScript } from '@/components/theme-toggle';
 export const metadata: Metadata = {
-  title: '30 DAY CHALLENGE',
-  description: 'Erin and Kazzy’s daily accountability challenge.',
+  title: 'The Challenge',
+  description:
+    'A challenge for two: check in every day, review each other, and settle up with a gift.',
   manifest: '/manifest.webmanifest',
   icons: { icon: '/favicon.svg', apple: '/apple-touch-icon.png' },
   appleWebApp: {
     capable: true,
-    title: '30 DAY CHALLENGE',
+    title: 'The Challenge',
     statusBarStyle: 'default',
   },
 };

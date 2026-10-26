@@ -1,9 +1,15 @@
 // One card per challenge with everything about it together (Summer Sprint's verdict, rules and share link in one place); the main action sits under the title.
 'use client';
 import { useState, type ReactNode } from 'react';
-import { ChevronRight, ListChecks, Plus, Trophy } from 'lucide-react';
+import {
+  ArrowRight,
+  ChevronRight,
+  ListChecks,
+  Plus,
+  Trophy,
+} from 'lucide-react';
 import type { SavedChallenge } from '@/lib/next/model';
-import { AppFrame } from '@/components/next/frames';
+import { AccountMenu, AppFrame, PlainFrame } from '@/components/next/frames';
 import {
   Button,
   CountUp,
@@ -54,9 +60,20 @@ export default function HomeV2() {
   const others = world.saved.filter(
     (s) => !finished.some((f) => f.saved?.id === s.id),
   );
+  const status = world.challenge.status;
+  // Before Day 1 there is nothing for the tabs to show yet, so the page has the plain frame.
+  const settingUp = status !== 'running' && status !== 'finished';
+  const frame = (children: ReactNode) =>
+    settingUp ? (
+      <PlainFrame aside={<AccountMenu cancel={status === 'draft'} />}>
+        {children}
+      </PlainFrame>
+    ) : (
+      <AppFrame>{children}</AppFrame>
+    );
 
-  return (
-    <AppFrame>
+  return frame(
+    <>
       <div className="grid gap-6">
         <div className="flex flex-col gap-6">
           <PageTitle title="Your challenges" />
@@ -72,6 +89,12 @@ export default function HomeV2() {
               >
                 Start a new challenge
               </Button>
+            </Enter>
+          )}
+
+          {settingUp && (
+            <Enter index={2}>
+              <NotStarted />
             </Enter>
           )}
 
@@ -221,7 +244,54 @@ export default function HomeV2() {
         onOpenChange={setOpen}
         onStart={() => shown && startFrom(shown)}
       />
-    </AppFrame>
+    </>,
+  );
+}
+
+/** The challenge being set up, invited or signed: where it stands and the one step left. */
+function NotStarted() {
+  const world = useWorld();
+  const { navigate } = useNav();
+  const c = world.challenge;
+  const partner = world.partner.name;
+  const signed = (id: string) =>
+    world.pact.signatures.some((s) => s.personId === id && s.signedAt);
+  const step =
+    c.status === 'draft'
+      ? { label: 'Keep setting up', to: 'setup' as const }
+      : c.status === 'invited'
+        ? {
+            label: 'Keep setting up',
+            to: 'setup' as const,
+            note: `Waiting for ${partner} to join`,
+          }
+        : signed(world.me.id)
+          ? {
+              label: 'See the rules',
+              to: 'setup' as const,
+              note: `Waiting for ${partner} to sign`,
+            }
+          : { label: 'Sign the pact', to: 'pact' as const };
+  return (
+    <ChallengeCard
+      kicker="Not started yet"
+      name={c.name}
+      detail={
+        'note' in step && step.note
+          ? step.note
+          : `Starts ${formatDate(c.start)} · ${c.days} days`
+      }
+    >
+      <Button
+        variant="primary"
+        size="lg"
+        iconEnd={ArrowRight}
+        className="w-full sm:w-auto"
+        onClick={() => navigate(step.to)}
+      >
+        {step.label}
+      </Button>
+    </ChallengeCard>
   );
 }
 

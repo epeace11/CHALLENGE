@@ -189,13 +189,20 @@ function resolveAccount(
   const c = built.current;
   if (!c) return pick(['start', 'settings'], 'start');
   switch (c.status) {
+    // Your challenges (and a past verdict from it) stay open while the next one is set up.
     case 'draft':
-      return pick(['setup', 'start', 'settings'], 'setup');
+      return pick(['setup', 'start', 'settings', 'home', 'verdict'], 'setup');
     case 'invited':
     case 'signing':
       if (built.iSigned)
-        return pick(['setup', 'practice', 'settings'], 'waiting');
-      return pick(['pact', 'practice', 'setup', 'settings'], 'pact');
+        return pick(
+          ['setup', 'practice', 'settings', 'home', 'verdict'],
+          'waiting',
+        );
+      return pick(
+        ['pact', 'practice', 'setup', 'settings', 'home', 'verdict'],
+        'pact',
+      );
     case 'running':
       return pick(RUNNING, 'overview');
     case 'finished':
