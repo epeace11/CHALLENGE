@@ -4,6 +4,8 @@
 --
 --   select public.nx_import_original('<Erin''s new account id>', '<Kazzy''s new account id>');
 --
+-- Run it after the two have paired with an invite: the Original joins their couple as a finished
+-- challenge. (Before pairing it makes a couple of its own, which the next invite would hide.)
 -- It returns the new challenge's id. Screenshots move separately: each old file
 -- challenge-proof/<old account id>/<file> goes to proofs/<new challenge id>/<new account id>/<file>.
 -- tests/import-original.mjs checks that the imported challenge scores exactly as the old one did.
@@ -21,8 +23,16 @@ begin
   if old_erin is null or old_kazzy is null then raise exception 'The old tables are missing.'; end if;
 
   insert into profiles(id, name, hue) values (p_erin, 'Erin', 265), (p_kazzy, 'Kazzy', 25) on conflict (id) do nothing;
-  insert into couples default values returning id into couple;
-  insert into couple_members(couple_id, person_id) values (couple, p_erin), (couple, p_kazzy);
+  -- Into the couple the two already share (paired by an invite), or a new one if they haven't paired yet.
+  select m.couple_id into couple from couple_members m
+  where m.person_id = p_erin
+    and exists(select 1 from couple_members x where x.couple_id = m.couple_id and x.person_id = p_kazzy)
+    and (select count(*) from couple_members y where y.couple_id = m.couple_id) = 2
+  order by m.joined_at desc limit 1;
+  if couple is null then
+    insert into couples default values returning id into couple;
+    insert into couple_members(couple_id, person_id) values (couple, p_erin), (couple, p_kazzy);
+  end if;
   insert into challenges(couple_id, name, look, theme, start_date, days, time_zone, deadline_days, deadline_time,
                          step, cap, week_start, status, created_by)
   values (couple, 'The Original', 'sleep', 'original', cfg.start_date, cfg.end_date - cfg.start_date + 1, 'America/Toronto',

@@ -66,6 +66,15 @@ await db.exec(
 );
 await db.exec(file('next/schema.sql'));
 await db.exec(file('next/import-original.sql'));
+// They have already paired with an invite: the Original goes into that couple, not a new one.
+const paired = (
+  await db.query(
+    `with p as (insert into profiles(id,name,hue) values('${erin}','Erin',265),('${kazzy}','Kazzy',25)),
+          c as (insert into couples default values returning id),
+          m as (insert into couple_members(couple_id,person_id) select id,'${erin}'::uuid from c union all select id,'${kazzy}'::uuid from c)
+     select id from c`,
+  )
+).rows[0].id;
 const id = (
   await db.query(`select nx_import_original($1,$2) id`, [erin, kazzy])
 ).rows[0].id;
@@ -100,6 +109,11 @@ assert.deepEqual(
 const c = (await db.query(`select * from challenges where id=$1`, [id]))
   .rows[0];
 assert.equal(c.status, 'finished');
+assert.equal(c.couple_id, paired, 'into the couple they already share');
+assert.equal(
+  (await db.query(`select count(*)::int n from couples`)).rows[0].n,
+  1,
+);
 assert.equal(c.days, 30);
 const steps = (
   await db.query(
@@ -123,6 +137,59 @@ assert.equal(
 await assert.rejects(
   db.query(`select nx_import_original($1,$2)`, [erin, kazzy]),
   /already imported/,
+);
+
+// The way it reaches PROD CHALLENGE: export-original.sql reads the old project into one JSON value,
+// and load-original.sql, in a project without the old tables, imports it from that value.
+const blob = (await db.query(file('next/export-original.sql'))).rows[0]
+  .original;
+const fresh = new PGlite();
+await fresh.exec(
+  `create role anon;create role authenticated;create role service_role;create schema auth;create schema storage;
+   create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
+   create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   create table storage.objects(bucket_id text,name text);
+   create table storage.buckets(id text,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+   create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;
+   insert into auth.users values('${erin}','Erin@example.com','{}'),('${kazzy}','kazzy@example.com','{}');`,
+);
+await fresh.exec(file('next/schema.sql'));
+await fresh.exec(file('next/import-original.sql'));
+await fresh.exec(
+  file('next/load-original.sql')
+    .replace('PASTE HERE', blob)
+    .replace("'ERIN-EMAIL'", "'erin@example.com'")
+    .replace("'KAZZY-EMAIL'", "'kazzy@example.com'"),
+);
+const titles = Object.fromEntries(
+  JSON.parse(blob).rules.map((r) => [r.title, r.id]),
+);
+const loaded = (
+  await fresh.query(
+    `select r.title, pr.name who, p.day::text as day, p.slot, p.voided, p.forgiven, p.reason
+     from points p join profiles pr on pr.id=p.person_id join rules r on r.id=p.rule_id order by 1,2,3,4`,
+  )
+).rows
+  .map(({ title, ...p }) => ({ rule: titles[title], ...p }))
+  .sort((a, b) =>
+    [a.rule, a.who, a.day, a.slot].join() <
+    [b.rule, b.who, b.day, b.slot].join()
+      ? -1
+      : 1,
+  );
+assert.deepEqual(loaded, before, 'the pasted export brings every point too');
+assert.equal(
+  (await fresh.query(`select status from challenges`)).rows[0].status,
+  'finished',
+);
+assert.equal(
+  (
+    await fresh.query(
+      `select count(*)::int n from pg_tables where tablename like 'challenge\\_%'`,
+    )
+  ).rows[0].n,
+  0,
+  'the old rows are not kept',
 );
 
 console.log('import original: ok');
