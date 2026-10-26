@@ -39,6 +39,9 @@ begin
   select id into erin from auth.users where lower(email) = lower('ERIN-EMAIL');   -- EMAIL
   select id into kazzy from auth.users where lower(email) = lower('KAZZY-EMAIL'); -- EMAIL
   if erin is null or kazzy is null then raise exception 'No account with one of those emails. Check the two EMAIL lines.'; end if;
+  if not exists(select 1 from couple_members a join couple_members b using (couple_id) where a.person_id = erin and b.person_id = kazzy) then
+    raise exception 'These two haven''t paired yet. Send the invite and accept it in the app first, then run this again.';
+  end if;
   raise notice 'The Original is challenge %', public.nx_import_original(erin, kazzy);
 end $$;
 

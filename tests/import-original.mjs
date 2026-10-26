@@ -155,12 +155,18 @@ await fresh.exec(
 );
 await fresh.exec(file('next/schema.sql'));
 await fresh.exec(file('next/import-original.sql'));
+const load = file('next/load-original.sql')
+  .replace('PASTE HERE', blob)
+  .replace("'ERIN-EMAIL'", "'erin@example.com'")
+  .replace("'KAZZY-EMAIL'", "'kazzy@example.com'");
+await assert.rejects(fresh.exec(load), /haven't paired yet/);
+await fresh.exec('rollback');
 await fresh.exec(
-  file('next/load-original.sql')
-    .replace('PASTE HERE', blob)
-    .replace("'ERIN-EMAIL'", "'erin@example.com'")
-    .replace("'KAZZY-EMAIL'", "'kazzy@example.com'"),
+  `insert into profiles(id,name,hue) values('${erin}','Erin',265),('${kazzy}','Kazzy',25);
+   with c as (insert into couples default values returning id)
+   insert into couple_members(couple_id,person_id) select id,'${erin}'::uuid from c union all select id,'${kazzy}'::uuid from c;`,
 );
+await fresh.exec(load);
 const titles = Object.fromEntries(
   JSON.parse(blob).rules.map((r) => [r.title, r.id]),
 );
