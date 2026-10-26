@@ -13,7 +13,7 @@ create temporary table original_blob on commit drop as select $original$PASTE HE
 create temporary table challenge_config(id integer, start_date date, end_date date) on commit drop;
 create temporary table challenge_profiles(id uuid, name text) on commit drop;
 create temporary table challenge_rules(id text, title text, person text, weeknights boolean, weekends boolean,
-  weekly boolean, proof_required boolean) on commit drop;
+  weekly boolean, proof_required boolean, sundays boolean, starts date) on commit drop;
 create temporary table challenge_entries(id uuid, user_id uuid, rule_id text, day date, done boolean, status text,
   note text, proof text, proposed_done boolean, proposed_note text, proposed_proof text, updated_at timestamptz) on commit drop;
 create temporary table challenge_points(id uuid, user_id uuid, rule_id text, day date, reason text, forgiven boolean,

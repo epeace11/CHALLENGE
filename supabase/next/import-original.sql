@@ -11,7 +11,7 @@
 -- tests/import-original.mjs checks that the imported challenge scores exactly as the old one did.
 begin;
 
-create function public.nx_import_original(p_erin uuid, p_kazzy uuid) returns uuid
+create or replace function public.nx_import_original(p_erin uuid, p_kazzy uuid) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
   cfg record; couple uuid; c challenges; old_erin uuid; old_kazzy uuid;
@@ -56,16 +56,18 @@ begin
     ('steps', 9, 'Did you walk at least 10,000 steps?', 'Reach 10,000 steps and attach a step-count screenshot.', 'Movement', null, null),
     ('calories', 10, 'Did you stay within 2,300 calories and track your macros?', 'Both are required. Attach your ChatGPT macro screenshot.', 'Food', null, null),
     ('gym', 11, 'Did you go to the gym today?', 'Condo or regular gym. One visit per day, counted per Monday–Sunday week.', 'Movement', 4, null),
-    ('steps_weekly', 12, 'Did you walk at least 10,000 steps today?', 'Reach 10,000 steps and attach a step-count screenshot.', 'Movement', 3, '2026-09-28')
+    ('steps_weekly', 12, 'Did you walk at least 10,000 steps today?', 'Reach 10,000 steps and attach a step-count screenshot.', 'Movement', 3, '2026-09-28'),
+    ('hands', 13, 'Did you take your Sunday hands photo?', 'Sundays: a photo of your hands, showing you''ve been caring for your cuticles (fidget tool, oil, not picking).', 'Body', null, null)
   ), made as (
     insert into rules(challenge_id, position, title, question, description, rule_group, kind, days, weekly_target, who, proof, starts_on)
     select c.id, w.position, o.title, w.question, w.description, w.grp,
            case when o.weekly then 'weekly' else 'yesno' end,
-           case when o.weeknights then array[0,1,2,3,4] when o.weekends then array[5,6] else array[0,1,2,3,4,5,6] end,
+           case when o.weeknights then array[0,1,2,3,4] when o.weekends then array[5,6]
+                when (to_jsonb(o)->>'sundays')::boolean then array[0] else array[0,1,2,3,4,5,6] end,
            w.weekly_target,
            case o.person when 'Erin' then p_erin when 'Kazzy' then p_kazzy end,
            case when o.proof_required then 'required' else 'none' end,
-           w.starts_on
+           coalesce(w.starts_on, (to_jsonb(o)->>'starts')::date)
     from challenge_rules o join words w on w.old_id = o.id
     returning id, position
   )
@@ -73,6 +75,15 @@ begin
   if (select count(*) from old_rule_map) <> (select count(*) from challenge_rules) then
     raise exception 'A rule in challenge_rules has no wording here. Add it to the list above.';
   end if;
+
+  -- A No on a weekly day (the gym) whose forgiveness was approved, or still waiting, counted as a
+  -- visit in the old app (its 'day_forgiveness' point never cost anything). The new engine counts done
+  -- answers only, so such a day comes across as a confirmed visit and its free point stays behind.
+  create temporary table old_forgiven_day(entry_id uuid) on commit drop;
+  insert into old_forgiven_day
+  select q.entry_id from challenge_points q
+  where q.reason = 'day_forgiveness' and q.entry_id is not null and not q.voided
+    and (q.forgiven or exists(select 1 from challenge_requests r where r.point_id = q.id and r.status = 'pending'));
 
   -- Answers. A screenshot path <old account>/<file> becomes <challenge>/<new account>/<file>.
   create temporary table old_entry_map(old_id uuid, new_id uuid) on commit drop;
@@ -84,8 +95,9 @@ begin
     insert into entries(id, challenge_id, person_id, rule_id, day, done, status, note, proofs, logged_at,
                         correction_done, correction_note, correction_proofs, correction_at)
     select s.new_id, c.id, s.person, m.new_id, s.day,
-           case when s.status = 'unlogged' then null else s.done end,
-           s.status, s.note,
+           case when s.id in (select entry_id from old_forgiven_day) then true
+                when s.status = 'unlogged' then null else s.done end,
+           case when s.id in (select entry_id from old_forgiven_day) then 'confirmed' else s.status end, s.note,
            coalesce((select jsonb_agg(jsonb_build_object('path', c.id || '/' || s.person || '/' || split_part(f, '/', 2)))
                      from unnest(string_to_array(s.proof, E'\n')) f), '[]'),
            s.updated_at,
@@ -104,6 +116,7 @@ begin
     select p.*, gen_random_uuid() new_id,
            case p.user_id when old_erin then p_erin else p_kazzy end person
     from challenge_points p
+    where p.reason <> 'day_forgiveness'
   ), moved as (
     insert into points(id, challenge_id, person_id, rule_id, day, reason, entry_id, slot, forgiven, voided, created_at)
     select s.new_id, c.id, s.person, m.new_id, s.day,
