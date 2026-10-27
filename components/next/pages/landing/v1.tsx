@@ -1,5 +1,6 @@
 // How it works as four short lines with icons, then the main action; then the themes as small tiles,
-// two to a row, so the whole page fits on one screen, phones included.
+// two to a row, so the whole page fits on one screen, phones included. On wider screens sizes and
+// spacing grow with the screen's height, so a big screen is filled instead of leaving the page small.
 'use client';
 import { ArrowRight, CircleHelp, Ticket } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
@@ -24,26 +25,26 @@ export default function LandingV2() {
         </Button>
       }
     >
-      <div className="grid gap-5 sm:gap-8 sm:pt-4">
-        <div className="flex flex-col gap-4 sm:gap-6">
+      <div className="grid gap-5 sm:gap-[clamp(28px,5vh,64px)] sm:pt-[clamp(8px,4vh,56px)]">
+        <div className="flex flex-col gap-4 sm:gap-[clamp(20px,3.2vh,40px)]">
           <Enter>
             <HeroTitle>A habit challenge for couples</HeroTitle>
           </Enter>
           <div className="flex flex-col gap-1">
             <Stagger
               as="ul"
-              className="flex flex-col gap-2 sm:gap-2.5"
+              className="flex flex-col gap-2 sm:gap-[clamp(10px,1.6vh,20px)]"
               start={1}
             >
               {STEPS.map(({ icon: Icon, title }) => (
                 <span key={title} className="flex items-center gap-4">
                   <span
-                    className="grid size-9 shrink-0 place-items-center rounded-nx-sm bg-nx-accent-soft text-nx-accent sm:size-10"
+                    className="grid size-9 shrink-0 place-items-center rounded-nx-sm bg-nx-accent-soft text-nx-accent sm:size-[clamp(40px,4.4vh,52px)]"
                     aria-hidden="true"
                   >
                     <Icon size={18} />
                   </span>
-                  <span className="text-nx-body text-nx-ink sm:text-nx-lead">
+                  <span className="text-nx-body text-nx-ink sm:text-[length:clamp(19px,2.2vh,24px)]">
                     {title}
                   </span>
                 </span>
@@ -87,11 +88,14 @@ export default function LandingV2() {
           >
             <h2
               id="landing-themes"
-              className="text-nx-2 text-nx-ink-2 sm:text-nx-body"
+              className="text-nx-2 text-nx-ink-2 sm:text-[length:clamp(17px,1.8vh,20px)]"
             >
               Or start from a theme
             </h2>
-            <Stagger className="grid grid-cols-2 gap-2.5" start={5}>
+            <Stagger
+              className="grid grid-cols-2 gap-2.5 sm:gap-[clamp(10px,1.4vh,16px)]"
+              start={5}
+            >
               {world.themes.map((theme) => (
                 <ThemeTile
                   key={theme.id}

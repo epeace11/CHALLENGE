@@ -57,16 +57,21 @@ export function ThemeTile({
     <button
       type="button"
       data-look={theme.look}
-      className="nx-glass nx-tappable flex h-full min-h-11 w-full items-center gap-3.5 px-3.5 py-3 text-left"
+      className="nx-glass nx-tappable flex h-full min-h-11 w-full items-center gap-3.5 px-3.5 py-3 text-left sm:gap-4 sm:p-[clamp(14px,2vh,22px)]"
       onClick={onClick}
     >
       {/* On phones the name gets the whole width, so it fits in two lines. */}
-      <ThemeIcon theme={theme} className="hidden sm:grid" />
+      <ThemeIcon
+        theme={theme}
+        className="hidden sm:grid sm:size-[clamp(44px,4.8vh,56px)]"
+      />
       <span className="flex min-w-0 flex-col">
-        <span className="text-nx-2 leading-snug font-semibold text-nx-ink sm:text-nx-body">
+        <span className="text-nx-2 leading-snug font-semibold text-nx-ink sm:text-[length:clamp(17px,1.8vh,20px)]">
           {theme.name}
         </span>
-        <span className="text-nx-min text-nx-ink-2 sm:text-nx-2">{facts}</span>
+        <span className="text-nx-min text-nx-ink-2 sm:text-[length:clamp(15px,1.5vh,17px)]">
+          {facts}
+        </span>
       </span>
     </button>
   );
