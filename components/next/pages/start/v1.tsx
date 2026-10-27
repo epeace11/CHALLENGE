@@ -52,7 +52,12 @@ export default function Start() {
 
   return (
     <PlainFrame
-      back={{ to: 'home', label: 'Your challenges' }}
+      // A new account has no challenges yet (the live app's blank one has no id), so no way back.
+      back={
+        host && !world.challenge.id
+          ? undefined
+          : { to: 'home', label: 'Your challenges' }
+      }
       aside={<AccountMenu />}
     >
       <div className="flex flex-col gap-6">

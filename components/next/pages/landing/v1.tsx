@@ -19,6 +19,7 @@ export default function LandingV2() {
 
   return (
     <PlainFrame
+      brandTo="landing"
       aside={
         <Button variant="quiet" className="-mr-3" onClick={signIn}>
           Sign in

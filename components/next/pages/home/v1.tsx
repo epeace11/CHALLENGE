@@ -252,6 +252,7 @@ export default function HomeV2() {
 function NotStarted() {
   const world = useWorld();
   const { navigate } = useNav();
+  const { live } = useBackend();
   const c = world.challenge;
   const partner = world.partner.name;
   const signed = (id: string) =>
@@ -260,11 +261,18 @@ function NotStarted() {
     c.status === 'draft'
       ? { label: 'Keep setting up', to: 'setup' as const }
       : c.status === 'invited'
-        ? {
-            label: 'Keep setting up',
-            to: 'setup' as const,
-            note: `Waiting for ${partner} to join`,
-          }
+        ? signed(world.me.id)
+          ? {
+              // The live app opens the invite link page by default; the preview shows the Invite page.
+              label: 'Send the invite link',
+              to: live ? null : ('invite' as const),
+              note: `Waiting for ${partner} to join`,
+            }
+          : {
+              label: 'Keep setting up',
+              to: 'setup' as const,
+              note: `Waiting for ${partner} to join`,
+            }
         : signed(world.me.id)
           ? {
               label: 'See the rules',

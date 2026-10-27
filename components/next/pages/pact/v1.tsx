@@ -3,6 +3,7 @@
 import { ArrowRight, PenLine } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
+import { useBackend } from '@/components/next/backend';
 import {
   ActionBar,
   Avatar,
@@ -30,10 +31,12 @@ import { usePact, type PactFlow } from './use-pact';
 /** Sign the pact, version 2. */
 export default function PactV2() {
   const flow = usePact();
+  const { live } = useBackend();
   const signed = !!flow.yours.signedAt;
   return (
     <PlainFrame
-      back={signed ? undefined : { to: 'invite' }}
+      // In the live app the invite has been accepted, so Back goes to Your challenges.
+      back={signed ? undefined : { to: live ? 'home' : 'invite' }}
       aside={<AccountMenu cancel={!signed} />}
     >
       <Glide id={signed ? 'signed' : 'sign'} direction={signed ? 1 : -1}>

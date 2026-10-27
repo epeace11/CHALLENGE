@@ -194,10 +194,11 @@ function resolveAccount(
       return pick(['setup', 'start', 'settings', 'home', 'verdict'], 'setup');
     case 'invited':
     case 'signing':
+      // Signed: Your challenges says who it waits for; before the partner joins, the invite link.
       if (built.iSigned)
         return pick(
           ['setup', 'practice', 'settings', 'home', 'verdict'],
-          'waiting',
+          c.status === 'signing' ? 'home' : 'waiting',
         );
       return pick(
         ['pact', 'practice', 'setup', 'settings', 'home', 'verdict'],

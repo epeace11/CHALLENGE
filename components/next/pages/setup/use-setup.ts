@@ -167,9 +167,10 @@ export function useSetup() {
       .then(() => setBusy(false));
   };
 
+  // With the partner already in, finishing signs it; they sign next time they open the app.
   const finishLabel =
     host && !world.partnerPending
-      ? `Send to ${world.partner.name} to sign`
+      ? 'Sign and finish'
       : `Invite ${world.partner.name}`;
 
   return {

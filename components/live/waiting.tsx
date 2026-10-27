@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { Copy, PencilLine, Send } from 'lucide-react';
 import type { World } from '@/lib/next/model';
-import { formatDay } from '@/lib/next/selectors';
 import type { Host } from '@/components/next/backend';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
@@ -15,8 +14,8 @@ import {
 } from '@/components/next/ui';
 
 /**
- * After setup, for the person who set it up: send the invite link while the partner has no account,
- * then wait for them to sign. One main action: Send the link.
+ * After setup, for the person who set it up, while the partner has no account yet: send the invite
+ * link. One main action: Send the link. (Once they're in, Your challenges shows who it waits for.)
  */
 export function Waiting({ world, host }: { world: World; host: Host }) {
   const { navigate } = useNav();
@@ -49,21 +48,6 @@ export function Waiting({ world, host }: { world: World; host: Host }) {
     await navigator.clipboard.writeText(invite.link);
     toast('Link copied');
   };
-
-  if (joined)
-    return (
-      <PlainFrame center aside={<AccountMenu cancel />}>
-        <div className="flex flex-col gap-6">
-          <PageTitle
-            title={`Waiting for ${partner} to sign`}
-            detail={`${world.challenge.name} starts ${formatDay(world.challenge.start)} once you've both signed.`}
-          />
-          <Button onClick={() => navigate('practice')}>
-            Try a practice day
-          </Button>
-        </div>
-      </PlainFrame>
-    );
 
   return (
     <PlainFrame aside={<AccountMenu cancel />}>

@@ -14,17 +14,20 @@ import { useFit } from './use-fit';
  * - `back`: a page to go back to (`to`), or a step back within the page (`onClick`).
  * - `center`: centres short content vertically (sign in, an invite).
  * - `aside`: something small on the right of the top bar ("Sign in").
+ * - `brandTo`: where the product's name leads: Your challenges, or the landing page before signing in.
  */
 export function PlainFrame({
   children,
   back,
   aside,
   center,
+  brandTo = 'home',
 }: {
   children: ReactNode;
   back?: { label?: string } & ({ to: PageId } | { onClick: () => void });
   aside?: ReactNode;
   center?: boolean;
+  brandTo?: PageId;
 }) {
   const { navigate } = useNav();
   const fit = useFit<HTMLDivElement>();
@@ -41,7 +44,13 @@ export function PlainFrame({
             {back.label ?? 'Back'}
           </Button>
         ) : (
-          <span className="nx-brand">The Challenge</span>
+          <button
+            type="button"
+            className="nx-brand nx-press -mx-2 min-h-11 rounded-nx-sm px-2"
+            onClick={() => navigate(brandTo)}
+          >
+            The Challenge
+          </button>
         )}
         {aside && (
           <div className="ml-auto flex items-center gap-2">{aside}</div>

@@ -111,7 +111,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <header className="nx-app-header">
         <div className="nx-main nx-topbar">
           <div className="flex min-w-0 flex-col">
-            <p className="nx-brand truncate">{c.name}</p>
+            {/* The challenge's name leads to Your challenges, like the product's name before Day 1. */}
+            <button
+              type="button"
+              className="nx-brand nx-press self-start truncate text-left"
+              onClick={() => navigate('home')}
+            >
+              {c.name}
+            </button>
             <button
               type="button"
               className="nx-day-link self-start"
