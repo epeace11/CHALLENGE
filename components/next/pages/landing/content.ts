@@ -29,7 +29,7 @@ export const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
   },
   {
     icon: Gift,
-    title: 'Each miss adds to the gift you owe them',
+    title: 'Each miss adds to their gift',
     text: 'Each miss is a point. The first point adds $1, the second $2, and so on. You choose the amount when you set up.',
   },
 ];

@@ -1,20 +1,14 @@
-// How it works as four short lines with icons, then the main action; then the themes, two to a row
-// on wider screens so the whole page fits on one screen.
+// How it works as four short lines with icons, then the main action; then the themes as small tiles,
+// two to a row, so the whole page fits on one screen, phones included.
 'use client';
 import { ArrowRight, CircleHelp, Ticket } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
 import { useWorld } from '@/components/next/world';
-import {
-  Button,
-  Enter,
-  RowButton,
-  Section,
-  Stagger,
-} from '@/components/next/ui';
+import { Button, Enter, Stagger } from '@/components/next/ui';
 import { STEPS, themeFacts } from './content';
 import { HeroTitle } from './hero-title';
 import { HowItWorksSheet } from './how-it-works';
-import { ThemeIcon } from './themes';
+import { ThemeTile } from './themes';
 import { useLanding } from './use-landing';
 
 /** Landing page, version 2. */
@@ -30,20 +24,24 @@ export default function LandingV2() {
         </Button>
       }
     >
-      <div className="grid gap-8 pt-2 sm:pt-4">
-        <div className="flex flex-col gap-6">
+      <div className="grid gap-5 sm:gap-8 sm:pt-4">
+        <div className="flex flex-col gap-4 sm:gap-6">
           <Enter>
             <HeroTitle>A habit challenge for couples</HeroTitle>
           </Enter>
-          <div className="flex flex-col gap-2">
-            <Stagger as="ul" className="flex flex-col gap-3" start={1}>
+          <div className="flex flex-col gap-1">
+            <Stagger
+              as="ul"
+              className="flex flex-col gap-2 sm:gap-2.5"
+              start={1}
+            >
               {STEPS.map(({ icon: Icon, title }) => (
                 <span key={title} className="flex items-center gap-4">
                   <span
-                    className="grid size-10 shrink-0 place-items-center rounded-nx-sm bg-nx-accent-soft text-nx-accent sm:size-11"
+                    className="grid size-9 shrink-0 place-items-center rounded-nx-sm bg-nx-accent-soft text-nx-accent sm:size-10"
                     aria-hidden="true"
                   >
-                    <Icon size={20} />
+                    <Icon size={18} />
                   </span>
                   <span className="text-nx-body text-nx-ink sm:text-nx-lead">
                     {title}
@@ -82,20 +80,29 @@ export default function LandingV2() {
           </Enter>
         </div>
 
-        <Section title="Or start from a theme" index={4}>
-          <Stagger className="grid gap-2.5 sm:grid-cols-2" start={5}>
-            {world.themes.map((theme) => (
-              <RowButton
-                key={theme.id}
-                data-look={theme.look}
-                leading={<ThemeIcon theme={theme} />}
-                title={theme.name}
-                detail={themeFacts(theme)}
-                onClick={start}
-              />
-            ))}
-          </Stagger>
-        </Section>
+        <Enter index={4}>
+          <section
+            className="flex flex-col gap-2.5"
+            aria-labelledby="landing-themes"
+          >
+            <h2
+              id="landing-themes"
+              className="text-nx-2 text-nx-ink-2 sm:text-nx-body"
+            >
+              Or start from a theme
+            </h2>
+            <Stagger className="grid grid-cols-2 gap-2.5" start={5}>
+              {world.themes.map((theme) => (
+                <ThemeTile
+                  key={theme.id}
+                  theme={theme}
+                  facts={themeFacts(theme)}
+                  onClick={start}
+                />
+              ))}
+            </Stagger>
+          </section>
+        </Enter>
       </div>
 
       <HowItWorksSheet open={how} onOpenChange={setHow} onStart={start} />
