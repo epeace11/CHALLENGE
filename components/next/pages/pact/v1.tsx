@@ -110,9 +110,9 @@ function ToSign({ flow }: { flow: PactFlow }) {
             onClick={() => flow.open('first')}
           />
           <StatButton
-            label="Step"
+            label="First miss"
             value={flow.step}
-            hint={`Then ${second}, ${third} and so on`}
+            hint={`Then ${second}, ${third}…`}
             onClick={() => flow.open('step')}
           />
         </div>

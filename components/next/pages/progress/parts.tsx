@@ -20,6 +20,7 @@ import {
   calendar,
   formatDate,
   formatWeekday,
+  keepNumbersWithWords,
   openDay,
   rulesFor,
   shift,
@@ -174,7 +175,7 @@ export function WholeChallenge({ cal }: { cal: CalendarState }) {
             aria-label={`${youOr(world, p)}: ${line}. Show the calendar`}
             detail={
               <>
-                <span className="block">{line}</span>
+                <span className="block">{keepNumbersWithWords(line)}</span>
                 <StackedBar
                   className="mt-2.5"
                   parts={barParts(counts)}

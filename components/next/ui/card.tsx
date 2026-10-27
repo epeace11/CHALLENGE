@@ -2,6 +2,7 @@
 import type { ComponentProps, HTMLAttributes, ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { keepNumbersWithWords } from '@/lib/next/format';
 
 type Pad = 'none' | 'sm' | 'md' | 'lg';
 const PAD: Record<Pad, string> = {
@@ -79,6 +80,10 @@ export function TapCard({
  * trailing value (on the right from 640px, under the detail on phones), and a chevron. At least
  * 60px tall. Use for lists that open something.
  */
+/** Plain text keeps each number with its word; anything else is shown as given. */
+const tidy = (node: ReactNode) =>
+  typeof node === 'string' ? keepNumbersWithWords(node) : node;
+
 export function RowButton({
   title,
   detail,
@@ -110,8 +115,14 @@ export function RowButton({
     >
       {leading && <span className="flex shrink-0 items-center">{leading}</span>}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-nx-body font-semibold text-nx-ink">{title}</span>
-        {detail && <span className="text-nx-2 text-nx-ink-2">{detail}</span>}
+        <span className="text-pretty text-nx-body font-semibold text-nx-ink">
+          {tidy(title)}
+        </span>
+        {detail && (
+          <span className="text-pretty text-nx-2 text-nx-ink-2">
+            {tidy(detail)}
+          </span>
+        )}
         {/* On phones the trailing value goes under the text, so the title keeps its width. */}
         {trailing && (
           <span className="mt-1.5 self-start text-nx-body text-nx-ink-2 sm:hidden">

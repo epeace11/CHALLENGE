@@ -57,6 +57,13 @@ export function formatMoney(dollars: number) {
   );
 }
 
+/**
+ * For display only: a number stays on the same line as the word after it ("2 waiting", "60 min"),
+ * so a line never breaks between them. Strings saved or compared keep plain spaces.
+ */
+export const keepNumbersWithWords = (s: string) =>
+  s.replace(/(\d) (?=[^\s·–—-])/g, '$1\u00a0');
+
 /** "1 point", "6 points". Pass `many` when adding "s" is wrong. */
 export const plural = (n: number, one: string, many = one + 's') =>
   `${formatNumber(n)} ${n === 1 ? one : many}`;

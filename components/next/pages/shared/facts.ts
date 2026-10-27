@@ -61,9 +61,11 @@ export const proofText = (rule: Rule) =>
       ? 'Screenshot optional'
       : 'No screenshot';
 
-/** "Every day · Yes or No · No screenshot": its days, how you answer, and the proof. */
+/** "Every day · Yes or No · Screenshot required": its days, how you answer, and any proof it asks for. */
 export const ruleFacts = (rule: Rule) =>
-  [formatWhen(rule), answerText(rule), proofText(rule)].join(' · ');
+  [formatWhen(rule), answerText(rule), rule.proof !== 'none' && proofText(rule)]
+    .filter(Boolean)
+    .join(' · ');
 
 /** "$2 + $4 + $6": what the first `n` misses cost one by one. */
 export const costSteps = (n: number, step: number) =>

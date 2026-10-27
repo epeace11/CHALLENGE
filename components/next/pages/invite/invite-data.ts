@@ -121,7 +121,10 @@ export function topicOptions(c: Challenge) {
     settings: [
       { value: 'start', label: `Start date (${formatDay(c.start)})` },
       { value: 'length', label: `Length (${c.days} days)` },
-      { value: 'step', label: `Dollar step (${formatMoney(c.step)})` },
+      {
+        value: 'step',
+        label: `What the first miss costs (${formatMoney(c.step)})`,
+      },
       { value: 'deadline', label: `Deadline (${formatDeadline(c.deadline)})` },
       { value: 'other', label: 'Something else' },
     ] satisfies { value: Topic; label: string }[],
@@ -135,7 +138,7 @@ export function topicLabel(c: Challenge, topic: Topic) {
   return {
     start: 'Start date',
     length: 'Length',
-    step: 'Dollar step',
+    step: 'What the first miss costs',
     deadline: 'Deadline',
     other: 'Something else',
   }[topic as Exclude<Topic, `rule:${string}`>];

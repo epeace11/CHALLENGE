@@ -68,13 +68,13 @@ export const stepLine = (step: number) =>
 export const capLine = (cap: number | null) =>
   cap === null ? 'No cap' : `No gift goes over ${formatMoney(cap)}`;
 
-/** What would change, in plain words: "Dollar step: $1 → $2". Empty when nothing would. */
+/** What would change, in plain words: "First miss: $1 → $2". Empty when nothing would. */
 export function changesOf(now: Terms, next: Terms) {
   const out: string[] = [];
   if (next.name.trim() !== now.name) out.push(`Name: ${next.name.trim()}`);
   if (next.step !== now.step)
     out.push(
-      `Dollar step: ${formatMoney(now.step)} → ${formatMoney(next.step)}`,
+      `First miss: ${formatMoney(now.step)} → ${formatMoney(next.step)}`,
     );
   if (next.cap !== now.cap)
     out.push(

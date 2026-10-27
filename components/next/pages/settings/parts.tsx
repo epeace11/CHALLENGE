@@ -92,7 +92,7 @@ export function TermsFields({
         error={error?.field === 'name' ? error.text : undefined}
       />
       <NumberField
-        label="Dollar step"
+        label="First miss costs"
         value={terms.step}
         onChange={(step) => onChange({ ...terms, step: step ?? 0 })}
         unit="dollars"

@@ -130,7 +130,7 @@ export default function SettingsV1() {
                 onClick={() => setOpen('terms')}
               />
               <RowButton
-                title={`Dollar step: ${formatMoney(c.step)}`}
+                title={`First miss: ${formatMoney(c.step)}`}
                 detail={stepLine(c.step)}
                 onClick={() => setOpen('terms')}
               />

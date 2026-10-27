@@ -195,7 +195,7 @@ export default function PracticeV2() {
         <PracticeBanner className={styles.sticky} />
         <PageTitle title="Practice day" />
 
-        <ol className="flex flex-col gap-7" key={p.run}>
+        <ol className="flex flex-col gap-6" key={p.run}>
           <Step state={state('answer')} title="Answer three check-ins">
             {p.saved > 0 && (
               <div className="relative flex flex-col gap-2">

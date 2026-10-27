@@ -47,9 +47,9 @@ export default function InviteV2() {
               onClick={() => flow.open('dates')}
             />
             <StatButton
-              label="Step"
+              label="First miss"
               value={flow.step}
-              hint={`Then ${second}, ${third} and so on`}
+              hint={`Then ${second}, ${third}…`}
               onClick={() => flow.open('gift')}
             />
           </div>
