@@ -15,22 +15,22 @@ export const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
   {
     icon: ListChecks,
     title: 'You set the rules together',
-    text: 'Start from a theme or write your own. You both sign before day one.',
+    text: 'Pick the rules, then you both sign.',
   },
   {
     icon: CircleCheckBig,
     title: 'You each check in every day',
-    text: 'Answer each rule for the day before. Some rules ask for a screenshot.',
+    text: 'Answer each rule for yesterday.',
   },
   {
     icon: UserCheck,
     title: 'Your partner checks your answers',
-    text: 'They approve each answer, or dispute one that looks wrong.',
+    text: 'They approve or dispute each one.',
   },
   {
     icon: Gift,
     title: 'Each miss adds to their gift',
-    text: 'Each miss is a point. The first point adds $1, the second $2, and so on. You choose the amount when you set up.',
+    text: 'The first costs $1, the next $2.',
   },
 ];
 

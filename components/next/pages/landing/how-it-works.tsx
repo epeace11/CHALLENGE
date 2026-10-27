@@ -31,9 +31,10 @@ function GiftExample() {
   const [misses, setMisses] = useState(EXAMPLE_MISSES);
   const total = giftTotal(misses, EXAMPLE_STEP);
   return (
-    <Card className="flex flex-col gap-4">
+    <Card className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
       <NumberField
         label="If you miss"
+        className="sm:w-60 sm:shrink-0"
         unit={misses === 1 ? 'check-in' : 'check-ins'}
         value={misses}
         onChange={(n) => setMisses(n ?? 0)}
@@ -41,13 +42,19 @@ function GiftExample() {
         min={0}
         max={30}
       />
-      <div className="flex flex-col gap-1.5" aria-live="polite">
-        <p className="text-nx-2 font-semibold">The gift you owe your partner</p>
+      <div
+        className="flex min-w-0 items-baseline justify-between gap-3 sm:flex-col sm:items-end sm:gap-1 sm:text-right"
+        aria-live="polite"
+      >
+        <p className="text-nx-2 font-semibold">The gift you owe</p>
         <p className="font-nx-serif text-nx-num text-nx-accent">
           <CountUp value={total} format={formatMoney} />
         </p>
+        {/* On phones the sum is left out, so the sheet fits without scrolling. */}
         {misses > 0 && (
-          <p className="text-nx-2 text-nx-ink-2">{breakdown(misses)}</p>
+          <p className="hidden text-nx-2 text-nx-ink-2 sm:block">
+            {breakdown(misses)}
+          </p>
         )}
       </div>
     </Card>
@@ -75,12 +82,12 @@ export function HowItWorksSheet({
         </Button>
       }
     >
-      <div className="flex flex-col gap-6">
-        <ol className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4 sm:gap-5">
+        <ol className="flex flex-col gap-3 sm:gap-4">
           {STEPS.map(({ icon: Icon, title, text }) => (
-            <li key={title} className="flex gap-4">
+            <li key={title} className="flex gap-3.5 sm:gap-4">
               <span
-                className="grid size-10 shrink-0 place-items-center rounded-nx-sm bg-nx-accent-soft text-nx-accent"
+                className="grid size-9 shrink-0 place-items-center rounded-nx-sm bg-nx-accent-soft text-nx-accent sm:size-10"
                 aria-hidden="true"
               >
                 <Icon size={20} />
