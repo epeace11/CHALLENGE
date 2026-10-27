@@ -143,16 +143,19 @@ export function CalendarCard({
     <div id={cal.anchor} tabIndex={-1} className="scroll-mt-24 outline-none">
       <GlassCard pad="sm" className="flex flex-col gap-4 sm:p-5">
         {top}
-        <SimpleMonth
-          key={cal.personId}
-          days={calendar(world, cal.personId)}
-          weekStart={world.challenge.weekStart}
-          today={world.today}
-          label={isMe ? 'Your calendar' : `${world.partner.name}’s calendar`}
-          onOpen={(day) =>
-            detail.show({ kind: 'day', personId: cal.personId, day })
-          }
-        />
+        {/* On phones the month spans most of the card's padding, so each day is a 44px target. */}
+        <div className="-mx-3 sm:mx-0">
+          <SimpleMonth
+            key={cal.personId}
+            days={calendar(world, cal.personId)}
+            weekStart={world.challenge.weekStart}
+            today={world.today}
+            label={isMe ? 'Your calendar' : `${world.partner.name}’s calendar`}
+            onOpen={(day) =>
+              detail.show({ kind: 'day', personId: cal.personId, day })
+            }
+          />
+        </div>
         <SimpleLegend />
       </GlassCard>
     </div>

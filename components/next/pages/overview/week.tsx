@@ -68,7 +68,8 @@ export function WeekStrip({
   return (
     <div
       className={cn(
-        'grid grid-cols-[32px_repeat(7,minmax(0,1fr))] gap-x-1 sm:gap-x-2',
+        // On phones the strip spans the card's padding and the days touch, so each day is a 44px target.
+        'grid grid-cols-[24px_repeat(7,minmax(0,1fr))] sm:grid-cols-[32px_repeat(7,minmax(0,1fr))] sm:gap-x-2',
         className,
       )}
     >
@@ -79,8 +80,16 @@ export function WeekStrip({
       >
         <span className="h-5" />
         <span className="h-7" />
-        <Avatar person={world.me} size="sm" decorative />
-        <Avatar person={world.partner} size="sm" decorative />
+        {[world.me, world.partner].map((p) => (
+          <span key={p.id} className="grid h-8 place-items-center">
+            <Avatar
+              person={p}
+              size="sm"
+              decorative
+              className="[--nx-avatar:24px] sm:[--nx-avatar:32px]"
+            />
+          </span>
+        ))}
       </div>
       {days.map((d, i) => {
         const inner = (

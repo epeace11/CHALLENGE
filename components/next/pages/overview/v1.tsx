@@ -216,7 +216,11 @@ function Running() {
 
           <Section title="This week" index={4}>
             <GlassCard pad="sm" className="flex flex-col gap-3">
-              <WeekStrip days={o.week} onOpen={setDay} />
+              <WeekStrip
+                days={o.week}
+                onOpen={setDay}
+                className="-mx-4 sm:mx-0"
+              />
               <WeekLegend days={o.week} className="px-1 pb-1" />
             </GlassCard>
           </Section>

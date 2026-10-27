@@ -24,7 +24,8 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
+    /* Tight on phones, so each day is at least a 44px target. */
+    gap: 2px;
   }
   @media (min-width: 640px) {
     .grid {
