@@ -5,6 +5,7 @@ Kazzy picks one version of every page at `/preview` with the 1 2 3 buttons. Writ
 ## Decisions, October 25, 2026
 
 - **A challenge being set up shows on Your challenges.** Its card says "Not started yet" with its name, start date and length (or who it waits for), and one filled button: Keep setting up, or Sign the pact. While it is being set up the page has the plain frame, since there is nothing for the tabs yet. Back from Start now reaches Your challenges instead of bouncing to "Name your challenge".
+- **A draft keeps what you typed.** Set up saves a challenge still being set up a second after each change and when you leave, so a name typed and left shows on Your challenges under that name, and Keep setting up opens it with the name filled in. Create new challenge on Start reopens that draft instead of clearing it (a theme or saved challenge still replaces it).
 - **thechallenge.win/ opens the new app.** The home page forwards to `/app` (keeping an invite or shared link), and the home-screen icon is named The Challenge and opens `/app`.
 
 ## Decisions, October 21, 2026

@@ -553,6 +553,11 @@ function Hosting({
       startFrom: async (template: Template) => {
         const { world: w, built: b } = latest.current;
         const draft = b?.current?.status === 'draft' ? b.current.id : null;
+        // Starting from scratch again opens the draft as it was left, instead of clearing it.
+        if (draft && template.kind === 'blank') {
+          navigate('setup');
+          return true;
+        }
         const id = await attempt(() =>
           api.startChallenge(
             template,
@@ -567,6 +572,17 @@ function Hosting({
         setWantedChallenge(id);
         await reload();
         navigate('setup');
+        return true;
+      },
+      saveDraft: async (draft: SetupDraft) => {
+        const { challenge, me, partner } = ids();
+        const { world: w } = latest.current;
+        if (w.challenge.status !== 'draft') return false;
+        const ok = await attempt(() =>
+          api.saveSetup(challenge, draft, me, partner, w.challenge),
+        );
+        if (ok === false) return false;
+        await reload();
         return true;
       },
       finishSetup: async (draft: SetupDraft) => {

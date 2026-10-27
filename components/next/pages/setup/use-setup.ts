@@ -1,12 +1,24 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Rule } from '@/lib/next/model';
 import { useToast } from '@/components/next/ui';
-import { useBackend } from '@/components/next/backend';
+import { useBackend, type SetupDraft } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { draftCap, draftDays, matchingRule, type Draft } from './draft';
 import { useDraft } from './use-draft';
+
+/** The draft as the live app saves it; a length still being typed keeps the saved one. */
+const toSetup = (d: Draft, savedDays: number): SetupDraft => ({
+  name: d.name.trim(),
+  start: d.start,
+  days: d.days ? draftDays(d) : savedDays,
+  timeZone: d.timeZone,
+  deadline: d.deadline,
+  step: d.step,
+  cap: draftCap(d),
+  rules: d.rules,
+});
 
 /** The parts of setting up that can need attention, in page order. */
 export type Part = 'details' | 'rules' | 'stakes';
@@ -63,6 +75,27 @@ export function useSetup() {
   const [editing, setEditing] = useState<Rule | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
+
+  // A challenge still in setup is saved a moment after each change and when the page closes, so
+  // leaving keeps it on Your challenges with its name and rules.
+  const autosave = !!host && world.challenge.status === 'draft';
+  const first = useRef(draft);
+  const pending = useRef<SetupDraft | null>(null);
+  const flush = useRef(() => {});
+  useEffect(() => {
+    flush.current = () => {
+      const d = pending.current;
+      pending.current = null;
+      if (d && host) void host.saveDraft(d);
+    };
+  }, [host]);
+  useEffect(() => {
+    if (!autosave || draft === first.current) return;
+    pending.current = toSetup(draft, world.challenge.days);
+    const t = setTimeout(() => flush.current(), 1000);
+    return () => clearTimeout(t);
+  }, [autosave, draft, world.challenge.days]);
+  useEffect(() => () => flush.current(), []);
 
   const sheet = (name: SetupSheet) => ({
     open: open === name,
@@ -126,18 +159,11 @@ export function useSetup() {
     const first = firstProblem(found);
     if (first) return onProblem(first);
     if (!host) return navigate('invite');
+    // Finishing saves everything, so a save still waiting would only repeat it.
+    pending.current = null;
     setBusy(true);
     void host
-      .finishSetup({
-        name: draft.name.trim(),
-        start: draft.start,
-        days: draftDays(draft),
-        timeZone: draft.timeZone,
-        deadline: draft.deadline,
-        step: draft.step,
-        cap: draftCap(draft),
-        rules: draft.rules,
-      })
+      .finishSetup(toSetup(draft, world.challenge.days))
       .then(() => setBusy(false));
   };
 

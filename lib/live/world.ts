@@ -19,7 +19,7 @@ import type {
   Weekday,
   World,
 } from '../next/model.ts';
-import { LIBRARY, THEMES } from '../next/catalog.ts';
+import { BLANK_NAME, LIBRARY, THEMES } from '../next/catalog.ts';
 import { dateIn, lastDay, shift } from '../next/calendar.ts';
 import { world as sample } from '../next/demo.ts';
 import {
@@ -420,7 +420,7 @@ export function blankChallenge(today: string, timeZone: string): Challenge {
   return {
     id: '',
     coupleId: '',
-    name: 'Our challenge',
+    name: BLANK_NAME,
     look: 'classic',
     theme: null,
     start: shift(today, 1),

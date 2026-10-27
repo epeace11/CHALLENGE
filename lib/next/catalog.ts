@@ -5,6 +5,9 @@ import type { Rule, RuleGroup, Target, Theme, Weekday } from './model.ts';
  * they can start from. Every rule here is for both people; a couple narrows it at setup.
  */
 
+/** The name a challenge started from scratch has until the couple names it. */
+export const BLANK_NAME = 'Our challenge';
+
 export const EVERY_DAY: Weekday[] = [0, 1, 2, 3, 4, 5, 6];
 /** Sunday to Thursday: the nights before a work day. */
 export const SUN_THU: Weekday[] = [0, 1, 2, 3, 4];

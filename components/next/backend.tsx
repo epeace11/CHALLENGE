@@ -100,6 +100,8 @@ export type Host = {
   }) => Promise<boolean>;
   /** Creates a new challenge in setup from a template, and opens Set up. */
   startFrom: (template: Template) => Promise<boolean>;
+  /** Saves a challenge still in setup without moving on, so leaving keeps it as a draft. */
+  saveDraft: (draft: SetupDraft) => Promise<boolean>;
   /** Saves Set up and moves on: the invite, or the pact when the partner is already in. */
   finishSetup: (draft: SetupDraft) => Promise<boolean>;
   /**

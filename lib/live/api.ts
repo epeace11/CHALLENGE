@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { compress } from '@/lib/proof';
 import type { Command, SetupDraft, Template } from '@/components/next/backend';
 import type { Challenge, Rule } from '@/lib/next/model';
+import { BLANK_NAME } from '@/lib/next/catalog';
 import type {
   ChallengeRow,
   ProofUrls,
@@ -328,7 +329,7 @@ export function templateFields(template: Template) {
     };
   }
   return {
-    name: 'Our challenge',
+    name: BLANK_NAME,
     look: 'classic' as const,
     theme: null,
     days: 30,
@@ -379,11 +380,11 @@ export async function startChallenge(
 }
 
 /**
- * Saves Set up and ends it: the viewer signs, and the partner is invited or asked to sign. Only what
- * changed from `was` (the challenge as saved) is sent, because any change to the terms clears both
- * signatures: saving Set up again without changing anything keeps them.
+ * Saves Set up as it stands. Only what changed from `was` (the challenge as saved) is sent, because
+ * any change to the terms clears both signatures: saving Set up again without changing anything keeps
+ * them.
  */
-export async function finishSetup(
+export async function saveSetup(
   challengeId: string,
   d: SetupDraft,
   meId: string,
@@ -415,6 +416,17 @@ export async function finishSetup(
       was?.rules.map((r) => ruleInput(r, meId, partnerId)),
     ),
   });
+}
+
+/** Saves Set up and ends it: the viewer signs, and the partner is invited or asked to sign. */
+export async function finishSetup(
+  challengeId: string,
+  d: SetupDraft,
+  meId: string,
+  partnerId: string,
+  was: Challenge | null,
+) {
+  await saveSetup(challengeId, d, meId, partnerId, was);
   await rpc('nx_finish_setup', { p_challenge: challengeId });
 }
 
