@@ -1,5 +1,11 @@
 'use client';
-import type { CSSProperties, ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import {
   BookOpen,
   Check,
@@ -8,6 +14,7 @@ import {
   Footprints,
   House,
   Moon,
+  PenLine,
   PiggyBank,
   Smartphone,
   Utensils,
@@ -368,6 +375,80 @@ export function CountdownButton({
       </span>
       <span className="nx-stat-hint">{day}</span>
       <ChevronRight className="nx-row-chevron" size={20} aria-hidden="true" />
+    </button>
+  );
+}
+
+/* ── Signing ───────────────────────────────────────────────────────────── */
+
+/** How long a finger or mouse holds Sign before it counts. */
+const HOLD_MS = 900;
+
+/**
+ * Sign as a deliberate act: a press fills the button and signs once it is full, and letting go
+ * early empties it again, so a stray tap never signs. A keyboard or screen reader activates it
+ * like any button (they never tap by accident). Under reduced motion it still needs the hold, but
+ * the fill shows at once instead of sweeping across.
+ */
+export function HoldToSign({
+  onSign,
+  className,
+}: {
+  onSign: () => void;
+  className?: string;
+}) {
+  const [holding, setHolding] = useState(false);
+  const timer = useRef<number | null>(null);
+  const still = useReducedMotion();
+  const stop = () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+    setHolding(false);
+  };
+  useEffect(() => stop, []);
+  return (
+    <button
+      type="button"
+      className={cn('nx-btn overflow-hidden', className)}
+      data-variant="primary"
+      data-size="lg"
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        setHolding(true);
+        timer.current = window.setTimeout(() => {
+          timer.current = null;
+          setHolding(false);
+          onSign();
+        }, HOLD_MS);
+      }}
+      onPointerUp={stop}
+      onPointerLeave={stop}
+      onPointerCancel={stop}
+      onContextMenu={(e) => e.preventDefault()}
+      // detail 0: Enter, Space or a screen reader, never a pointer.
+      onClick={(e) => e.detail === 0 && onSign()}
+    >
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 origin-left bg-nx-ink/15"
+        style={{
+          transform: `scaleX(${holding ? 1 : 0})`,
+          transition: still
+            ? 'none'
+            : holding
+              ? `transform ${HOLD_MS}ms linear`
+              : 'transform 200ms ease-out',
+        }}
+      />
+      <PenLine
+        size={20}
+        strokeWidth={2}
+        aria-hidden="true"
+        className="relative"
+      />
+      <span className="nx-btn-label relative">
+        {holding ? 'Keep holding' : 'Hold to sign'}
+      </span>
     </button>
   );
 }

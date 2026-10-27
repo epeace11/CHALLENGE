@@ -1,12 +1,12 @@
-// Read first, each person's rules on their own card with their signature, Sign pinned to the bottom; signing glides to a countdown screen.
+// Read first: when it starts and what a gift could come to, the terms, then one list of rules with both signatures under it.
+// Hold to sign, pinned to the bottom; signing glides to a countdown screen.
 'use client';
-import { ArrowRight, PenLine } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
 import {
   ActionBar,
-  Avatar,
   Button,
   GlassCard,
   Glide,
@@ -15,10 +15,10 @@ import {
   Section,
   StatButton,
 } from '@/components/next/ui';
-import type { Signer } from './pact-data';
 import {
   CheckBadge,
   CountdownButton,
+  HoldToSign,
   RuleLine,
   SealRing,
   SignatureRow,
@@ -68,19 +68,14 @@ export default function PactV2() {
             </div>
           ) : (
             <div className="flex sm:justify-end">
-              <Button
-                variant="primary"
-                size="lg"
-                icon={PenLine}
+              <HoldToSign
                 className="w-full sm:w-auto sm:min-w-56"
-                onClick={() => {
+                onSign={() => {
                   // The signed screen starts at the top of the page.
                   window.scrollTo({ top: 0 });
                   flow.sign();
                 }}
-              >
-                Sign
-              </Button>
+              />
             </div>
           )}
         </Glide>
@@ -95,7 +90,6 @@ export default function PactV2() {
 
 function ToSign({ flow }: { flow: PactFlow }) {
   const c = flow.challenge;
-  const [, second, third] = flow.steps;
   return (
     <div className="flex flex-col gap-9">
       <PageTitle
@@ -113,9 +107,9 @@ function ToSign({ flow }: { flow: PactFlow }) {
             onClick={() => flow.open('first')}
           />
           <StatButton
-            label="First miss"
-            value={flow.step}
-            hint={`Then ${second}, ${third}…`}
+            label="At stake"
+            value={`~${flow.stakes}`}
+            hint="Each gift, if you miss 1 in 10"
             onClick={() => flow.open('step')}
           />
         </div>
@@ -128,44 +122,36 @@ function ToSign({ flow }: { flow: PactFlow }) {
       </Section>
 
       <Section title="The rules" index={3}>
-        <div className="grid gap-4 md:grid-cols-2">
-          {flow.signers.map((s) => (
-            <PersonCard key={s.person.id} signer={s} flow={flow} />
+        <GlassCard className="flex flex-col">
+          {c.rules.map((r) => (
+            <RuleLine
+              key={r.id}
+              rule={r}
+              tag={ruleTag(r, flow)}
+              onOpen={flow.openRule}
+            />
           ))}
-        </div>
+          <div className="mt-3 flex flex-col gap-4 border-t border-nx-line pt-4">
+            {flow.signers.map((s) => (
+              <SignatureRow
+                key={s.person.id}
+                signer={s}
+                timeZone={c.timeZone}
+              />
+            ))}
+          </div>
+        </GlassCard>
       </Section>
     </div>
   );
 }
 
-/** One person: every rule they check in on, and their signature at the bottom. */
-function PersonCard({ signer, flow }: { signer: Signer; flow: PactFlow }) {
-  const name = signer.you ? 'You' : signer.person.name;
-  const tag = (r: Rule) =>
-    r.who === 'both'
-      ? undefined
-      : signer.you
-        ? 'Only you'
-        : `Only ${signer.person.name}`;
-  return (
-    <GlassCard as="article" className="flex flex-col" aria-label={name}>
-      <header className="flex items-center gap-3 pb-2">
-        <Avatar person={signer.person} decorative />
-        <h3 className="font-nx-serif text-nx-h3">{name}</h3>
-      </header>
-      <div className="flex flex-1 flex-col">
-        {signer.rules.map((r) => (
-          <RuleLine key={r.id} rule={r} tag={tag(r)} onOpen={flow.openRule} />
-        ))}
-      </div>
-      <SignatureRow
-        signer={signer}
-        timeZone={flow.challenge.timeZone}
-        avatar={false}
-        className="mt-3"
-      />
-    </GlassCard>
-  );
+/** One list for both of you: a rule only one person checks in on says whose it is. */
+function ruleTag(rule: Rule, flow: PactFlow) {
+  if (rule.who === 'both') return undefined;
+  return rule.who === flow.you.id
+    ? 'Only you'
+    : `Only ${flow.theirs.person.name}`;
 }
 
 /* ── After signing: the signatures and the countdown (Go to Overview is in the bar) */

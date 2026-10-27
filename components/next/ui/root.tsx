@@ -28,11 +28,14 @@ export const isHydrated = () => hydrated;
  */
 export function NxRoot({
   look = 'classic',
+  styleName,
   className,
   style,
   children,
 }: {
   look?: Look;
+  /** The preview's design round: 'warm' or 'bold' (styles/next-styles.css); none is the kit as it is. */
+  styleName?: 'warm' | 'bold';
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -42,7 +45,12 @@ export function NxRoot({
     hydrated = true;
   }, []);
   return (
-    <div className={cn('nx', className)} data-look={look} style={style}>
+    <div
+      className={cn('nx', className)}
+      data-look={look}
+      data-style={styleName}
+      style={style}
+    >
       <MotionConfig
         reducedMotion="user"
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}

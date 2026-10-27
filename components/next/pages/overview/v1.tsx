@@ -133,7 +133,38 @@ function Running() {
           </Enter>
 
           <div className="-mt-5 flex flex-col gap-8">
-            <Enter index={2} className="grid gap-3 sm:grid-cols-2">
+            <Section
+              title="Gifts"
+              index={2}
+              action={
+                <Button
+                  variant="quiet"
+                  className="-mr-3"
+                  onClick={() => navigate('gifts')}
+                >
+                  {o.aheadLine}
+                </Button>
+              }
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <StatButton
+                  label="You get"
+                  value={o.mine.gets}
+                  format={formatMoney}
+                  hint={`From ${partner}’s ${plural(o.theirs.points, 'point')}`}
+                  onClick={() => navigate('gifts')}
+                />
+                <StatButton
+                  label={`${partner} gets`}
+                  value={o.theirs.gets}
+                  format={formatMoney}
+                  hint={`From your ${plural(o.mine.points, 'point')}`}
+                  onClick={() => navigate('gifts')}
+                />
+              </div>
+            </Section>
+
+            <Enter index={3} className="grid gap-3 sm:grid-cols-2">
               <StatButton
                 label="Waiting for you"
                 value={o.waiting}
@@ -181,37 +212,6 @@ function Running() {
                 )
               )}
             </Enter>
-
-            <Section
-              title="Gifts"
-              index={3}
-              action={
-                <Button
-                  variant="quiet"
-                  className="-mr-3"
-                  onClick={() => navigate('gifts')}
-                >
-                  {o.aheadLine}
-                </Button>
-              }
-            >
-              <div className="grid grid-cols-2 gap-3">
-                <StatButton
-                  label="Your gift"
-                  value={o.mine.gets}
-                  format={formatMoney}
-                  hint={`From ${partner}’s ${plural(o.theirs.points, 'point')}`}
-                  onClick={() => navigate('gifts')}
-                />
-                <StatButton
-                  label={`${partner}’s gift`}
-                  value={o.theirs.gets}
-                  format={formatMoney}
-                  hint={`From your ${plural(o.mine.points, 'point')}`}
-                  onClick={() => navigate('gifts')}
-                />
-              </div>
-            </Section>
           </div>
 
           <Section title="This week" index={4}>

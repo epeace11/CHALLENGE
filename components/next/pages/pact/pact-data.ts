@@ -14,6 +14,7 @@ import {
   partnerOf,
   personById,
   rulesFor,
+  stakesPreview,
   zonedTime,
 } from '@/lib/next/selectors';
 
@@ -143,6 +144,8 @@ export function pactView(world: World) {
     end: formatDay(lastDay(c)),
     place: (c.timeZone.split('/').pop() ?? c.timeZone).replace(/_/g, ' '),
     step: step(1),
+    /** What a gift comes to if each of you misses 1 check-in in 10: what signing puts at stake. */
+    stakes: formatMoney(stakesPreview(c, 0.1, [you.id, inviter.id]).gift),
     steps: [step(1), step(2), step(3)] as const,
     deadlineClock: clock(c.deadline.time),
     firstCheckin: {

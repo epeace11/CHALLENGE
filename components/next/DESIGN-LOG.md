@@ -2,6 +2,28 @@
 
 Kazzy picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, October 27, 2026 (design critique)
+
+A design critique scored the app 26/40. These fix what it found:
+
+- **The point count matches everywhere.** Review's forgiveness row said "Jordan has 8 points" while Overview and Gifts said 9 (it left out the point already asked about). It now says "Jordan has 9 points · 8 not asked about yet".
+- **Disputing says what happens.** The sheet says there is no point while it's open, that it becomes a point only if the partner concedes, and that you can withdraw it. The reason box asks "What looks off to you?" and says the partner reads exactly what you write.
+- **The pact leads with what's at stake.** The second number is "At stake: ~$150, each gift, if you miss 1 in 10" (it opens the step sheet). The rules are one list, tagged "Only you" or "Only Maya" where a rule is one person's, with both signatures under it. Sign is now Hold to sign: a press fills the button and signs when full, so a stray tap never signs; a keyboard or screen reader signs at once.
+- **Gifts come first on Overview,** right under the log card, as "You get" and "Jordan gets" (the words Gifts uses), with Waiting for you and the gym week below.
+- **Your challenges names the product in its top bar** instead of repeating the running challenge's name and day right above its own card.
+- **Set up shows its steps** ("Step 1 of 2", "Step 2 of 2 · Rules from Dry Month" when the rules came from a theme), and an empty name says "Give it a name, like “Fall Reset”."
+- **A forgiven point shows a dash, not $0,** on Gifts. The landing page's fourth step reads "Misses add to the gift you give" (whose gift was unclear).
+
+### The app's style (all pages) · to pick
+
+The preview bar has a Style menu (the brush): it changes every page at once, and `?style=2` in a link opens a style directly.
+
+1. **Calm:** the kit as it is: violet glass, Georgia titles.
+2. **Warm:** paper and cocoa, Young Serif titles and numbers, solid cards, round pill buttons, terracotta accent.
+3. **Bold:** flat and high contrast, heavy Bricolage Grotesque titles and numbers, the accent as the main button, tighter corners.
+
+Kazzy's pick:
+
 ## Decisions, October 25, 2026
 
 - **A challenge being set up shows on Your challenges.** Its card says "Not started yet" with its name, start date and length (or who it waits for), and one filled button: Keep setting up, or Sign the pact. While it is being set up the page has the plain frame, since there is nothing for the tabs yet. Back from Start now reaches Your challenges instead of bouncing to "Name your challenge".

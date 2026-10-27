@@ -237,7 +237,15 @@ export function PointRowButton({
           row.forgiven ? 'text-nx-ink-2' : 'text-nx-ink',
         )}
       >
-        {formatMoney(row.cost)}
+        {/* A forgiven point costs nothing; a dash reads as "off the bill", where $0 looked like a bug. */}
+        {row.forgiven ? (
+          <>
+            <span aria-hidden="true">–</span>
+            <span className="sr-only">costs nothing</span>
+          </>
+        ) : (
+          formatMoney(row.cost)
+        )}
       </span>
       <ChevronRight className="nx-row-chevron" size={22} aria-hidden="true" />
     </button>

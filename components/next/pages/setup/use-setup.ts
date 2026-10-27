@@ -34,7 +34,7 @@ const PARTS: Record<Part, (keyof Errors)[]> = {
 /** What is wrong with the draft, field by field. */
 function problems(draft: Draft): Errors {
   return {
-    name: draft.name.trim() ? undefined : 'Name the challenge.',
+    name: draft.name.trim() ? undefined : 'Give it a name, like “Fall Reset”.',
     days: draft.days ? undefined : 'Enter how many days it runs.',
     cap:
       draft.capOn && !draft.cap

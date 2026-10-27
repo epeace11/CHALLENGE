@@ -1,6 +1,7 @@
 // Set up: name the challenge first, then a checklist of four rows that open in place.
 'use client';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import type { World } from '@/lib/next/model';
 import { ArrowRight, ChevronDown, PencilLine, Plus } from 'lucide-react';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import {
@@ -240,6 +241,7 @@ export default function SetupV1() {
             <div className="flex flex-col gap-2">
               <PageTitle
                 title={`Set up ${draft.name.trim() || 'your challenge'}`}
+                detail={setupDetail(world)}
               />
             </div>
             <Stagger className="flex flex-col gap-3">
@@ -296,6 +298,12 @@ export default function SetupV1() {
   );
 }
 
+/** "Step 2 of 2 · Rules from Dry Month": says where the rules already in the list came from. */
+function setupDetail(world: World) {
+  const theme = world.themes.find((t) => t.id === world.challenge.theme);
+  return theme ? `Step 2 of 2 · Rules from ${theme.name}` : 'Step 2 of 2';
+}
+
 /** The first screen: one empty name field and Continue (Enter works too). */
 function NameStep({
   name,
@@ -321,7 +329,7 @@ function NameStep({
         onContinue();
       }}
     >
-      <PageTitle title="Name your challenge" />
+      <PageTitle title="Name your challenge" detail="Step 1 of 2" />
       <div ref={field}>
         <TextField
           label="Name"

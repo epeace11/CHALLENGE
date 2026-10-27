@@ -6,12 +6,14 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ErrorInfo,
   type ReactNode,
 } from 'react';
 import { Menu as BaseMenu } from '@base-ui/react/menu';
 import {
+  Brush,
   Check,
   LayoutGrid,
   Moon,
@@ -47,6 +49,31 @@ import {
 const BAR_HEIGHT = 60;
 const VERSIONS_KEY = 'nx-preview-versions';
 const LOOK_KEY = 'nx-preview-look';
+const STYLE_KEY = 'nx-preview-style';
+
+/** The design round for the whole app's look: 1 is the kit as it is, 2 and 3 are styles/next-styles.css. */
+const STYLES = [
+  { n: 1, label: 'Style 1 · Calm', name: undefined },
+  { n: 2, label: 'Style 2 · Warm', name: 'warm' },
+  { n: 3, label: 'Style 3 · Bold', name: 'bold' },
+] as const;
+type StyleN = (typeof STYLES)[number]['n'];
+const isStyleN = (n: unknown): n is StyleN => n === 1 || n === 2 || n === 3;
+const STYLE_EVENT = 'nx-preview-style';
+const onStyleChange = (change: () => void) => {
+  window.addEventListener(STYLE_EVENT, change);
+  return () => window.removeEventListener(STYLE_EVENT, change);
+};
+/** ?style=2 in a shared link wins over what this browser chose last. */
+function readStyle(): StyleN {
+  const linked = Number(new URLSearchParams(location.search).get('style'));
+  if (isStyleN(linked)) return linked;
+  const saved = readStored(STYLE_KEY);
+  return isStyleN(saved) ? saved : 1;
+}
+/** Only the preview loads the fonts styles 2 and 3 use. */
+const STYLE_FONTS =
+  'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Young+Serif&display=swap';
 
 /** What is on screen: a page's version, the kit, or (neither) the page index. */
 type View = { page: PageId | null; version: number; kit?: boolean };
@@ -118,6 +145,19 @@ export function Preview({
 function PreviewShell({ initial }: { initial: View }) {
   const { world, update, reset } = useDemo();
   const [view, setView] = useState<View>(initial);
+  const styleN = useSyncExternalStore<StyleN>(
+    onStyleChange,
+    readStyle,
+    () => 1,
+  );
+  const chooseStyle = useCallback((n: StyleN) => {
+    store(STYLE_KEY, n);
+    // A choice replaces any ?style= the page was opened with.
+    const url = new URL(location.href);
+    url.searchParams.delete('style');
+    history.replaceState(null, '', url);
+    window.dispatchEvent(new Event(STYLE_EVENT));
+  }, []);
   // Last version chosen per page, kept in this browser.
   const remembered = useRef<Partial<Record<PageId, number>>>({});
 
@@ -226,12 +266,14 @@ function PreviewShell({ initial }: { initial: View }) {
   return (
     <NxRoot
       look={world.challenge.look}
+      styleName={STYLES[styleN - 1].name}
       style={
         {
           ['--nx-top-inset' as string]: entry ? `${BAR_HEIGHT}px` : '0px',
         } as CSSProperties
       }
     >
+      <link rel="stylesheet" href={STYLE_FONTS} precedence="default" />
       <NavContext.Provider value={nav}>
         {entry && Version ? (
           <>
@@ -243,6 +285,8 @@ function PreviewShell({ initial }: { initial: View }) {
               onAll={() => navigate(null)}
               look={world.challenge.look}
               onLook={setLook}
+              styleN={styleN}
+              onStyle={chooseStyle}
             />
             <div style={{ paddingTop: BAR_HEIGHT }}>
               <VersionBoundary key={`${entry.id}-${view.version}`}>
@@ -259,6 +303,8 @@ function PreviewShell({ initial }: { initial: View }) {
             onReset={reset}
             look={world.challenge.look}
             onLook={setLook}
+            styleN={styleN}
+            onStyle={chooseStyle}
           />
         )}
       </NavContext.Provider>
@@ -276,6 +322,8 @@ function VersionBar({
   onAll,
   look,
   onLook,
+  styleN,
+  onStyle,
 }: {
   title: string;
   count: number;
@@ -284,6 +332,8 @@ function VersionBar({
   onAll: () => void;
   look: Look;
   onLook: (look: Look) => void;
+  styleN: StyleN;
+  onStyle: (n: StyleN) => void;
 }) {
   return (
     <div className="nx-preview-bar" role="toolbar" aria-label="Preview">
@@ -315,6 +365,7 @@ function VersionBar({
       </div>
       <span className="nx-pb-sep hidden sm:block" aria-hidden="true" />
       <ThemeButton className="nx-pb-btn" />
+      <StyleMenu className="nx-pb-btn" styleN={styleN} onStyle={onStyle} />
       <LookMenu className="nx-pb-btn" look={look} onLook={onLook} />
     </div>
   );
@@ -357,6 +408,58 @@ function ThemeButton({ className }: { className: string }) {
         <Moon size={20} aria-hidden="true" />
       )}
     </button>
+  );
+}
+
+/** Style 1, 2 or 3: the whole app's look in this design round, on every page at once. */
+function StyleMenu({
+  className,
+  styleN,
+  onStyle,
+}: {
+  className: string;
+  styleN: StyleN;
+  onStyle: (n: StyleN) => void;
+}) {
+  const container = usePortalContainer();
+  const label = STYLES[styleN - 1].label;
+  return (
+    <BaseMenu.Root>
+      <BaseMenu.Trigger className={className} aria-label={label}>
+        <Brush size={20} aria-hidden="true" />
+        <span className="hidden sm:inline">Style {styleN}</span>
+      </BaseMenu.Trigger>
+      <BaseMenu.Portal container={container}>
+        <BaseMenu.Positioner
+          className="z-[70] outline-none"
+          side="bottom"
+          align="end"
+          sideOffset={8}
+          collisionPadding={12}
+        >
+          <BaseMenu.Popup className="nx-menu">
+            <BaseMenu.RadioGroup
+              value={styleN}
+              onValueChange={(value: StyleN) => onStyle(value)}
+            >
+              {STYLES.map((s) => (
+                <BaseMenu.RadioItem
+                  key={s.n}
+                  value={s.n}
+                  closeOnClick
+                  className="nx-menu-item"
+                >
+                  <span className="flex-1">{s.label}</span>
+                  <BaseMenu.RadioItemIndicator>
+                    <Check size={18} aria-hidden="true" />
+                  </BaseMenu.RadioItemIndicator>
+                </BaseMenu.RadioItem>
+              ))}
+            </BaseMenu.RadioGroup>
+          </BaseMenu.Popup>
+        </BaseMenu.Positioner>
+      </BaseMenu.Portal>
+    </BaseMenu.Root>
   );
 }
 
@@ -426,12 +529,16 @@ function PageIndex({
   onReset,
   look,
   onLook,
+  styleN,
+  onStyle,
 }: {
   onOpen: (id: PageId) => void;
   onKit: () => void;
   onReset: () => void;
   look: Look;
   onLook: (look: Look) => void;
+  styleN: StyleN;
+  onStyle: (n: StyleN) => void;
 }) {
   const choosing = PAGES.some((p) => p.components.length > 1);
   return (
@@ -440,6 +547,11 @@ function PageIndex({
         <div className="flex items-center gap-2">
           <h1 className="nx-page-title flex-1">Pages</h1>
           <ThemeButton className="nx-icon-btn" />
+          <StyleMenu
+            className="nx-icon-btn inline-flex w-auto gap-2 rounded-full px-3.5 text-nx-2 font-semibold"
+            styleN={styleN}
+            onStyle={onStyle}
+          />
           <LookMenu
             className="nx-icon-btn inline-flex w-auto gap-2 rounded-full px-3.5 text-nx-2 font-semibold"
             look={look}

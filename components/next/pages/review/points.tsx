@@ -37,6 +37,12 @@ function openPoints(w: World, personId: string): Open[] {
   });
 }
 
+/** "Jordan has 9 points", or "Jordan has 9 points · 8 not asked about yet": the total always matches Overview and Gifts. */
+function pointsDetail(who: string, total: number, open: number) {
+  const has = `${who} ${plural(total, 'point')}`;
+  return open === total ? has : `${has} · ${open} not asked about yet`;
+}
+
 /**
  * Forgiveness that nobody has asked about yet, under the queue: ask the partner to forgive one of
  * your points (a miss you never logged, a short gym week), or forgive one of theirs. Each row opens
@@ -82,7 +88,11 @@ export function PointActions({ world }: { world: World }) {
           glass={false}
           leading={<Avatar person={world.me} decorative />}
           title={`Ask ${partner.name} to forgive a point`}
-          detail={`You have ${plural(mine.length, 'point')}`}
+          detail={pointsDetail(
+            'You have',
+            activePoints(world, world.me.id).length,
+            mine.length,
+          )}
           onClick={() => openList('mine')}
         />
       )}
@@ -91,7 +101,11 @@ export function PointActions({ world }: { world: World }) {
           glass={false}
           leading={<Avatar person={partner} decorative />}
           title={`Forgive one of ${partner.name}’s points`}
-          detail={`${partner.name} has ${plural(theirs.length, 'point')}`}
+          detail={pointsDetail(
+            `${partner.name} has`,
+            activePoints(world, partner.id).length,
+            theirs.length,
+          )}
           onClick={() => openList('theirs')}
         />
       )}

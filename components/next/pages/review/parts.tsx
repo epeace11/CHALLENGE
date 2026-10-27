@@ -406,6 +406,8 @@ export function ReasonSheet({
   label,
   submit,
   missing,
+  hint,
+  placeholder,
   onSubmit,
   children,
 }: {
@@ -417,6 +419,8 @@ export function ReasonSheet({
   submit: string;
   /** What the error says when the field is empty. */
   missing: string;
+  hint?: string;
+  placeholder?: string;
   onSubmit: (text: string) => void;
   children?: ReactNode;
 }) {
@@ -463,6 +467,8 @@ export function ReasonSheet({
             label={label}
             multiline
             rows={3}
+            hint={hint}
+            placeholder={placeholder}
             value={text}
             onChange={(v) => {
               setText(v);
@@ -491,10 +497,12 @@ export function DisputeSheet({
       open={sheet.open}
       onOpenChange={sheet.setOpen}
       title={`Dispute ${partner}’s answer`}
-      description={`It becomes a point only if ${partner} concedes.`}
+      description={`No point while it’s open. It becomes a point only if ${partner} concedes, and you can withdraw it any time.`}
       label="Your reason"
+      hint={`${partner} reads exactly what you write.`}
+      placeholder="What looks off to you?"
       submit="Dispute"
-      missing="Write your reason first."
+      missing="Write a reason so they know what to look at."
       onSubmit={(reason) => {
         if (sheet.target) review.dispute(sheet.target, reason);
         sheet.setOpen(false);

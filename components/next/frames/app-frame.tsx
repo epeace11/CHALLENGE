@@ -110,26 +110,31 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <div ref={fit} className="nx-frame" data-frame="app">
       <header className="nx-app-header">
         <div className="nx-main nx-topbar">
-          <div className="flex min-w-0 flex-col">
-            {/* The challenge's name leads to Your challenges, like the product's name before Day 1. */}
-            <button
-              type="button"
-              className="nx-brand nx-press self-start truncate text-left"
-              onClick={() => navigate('home')}
-            >
-              {c.name}
-            </button>
-            <button
-              type="button"
-              className="nx-day-link self-start"
-              onClick={() => navigate('progress')}
-            >
-              {world.today < c.start
-                ? `Starts ${formatDayShort(c.start)}`
-                : `Day ${dayNumber(c, world.today)} of ${c.days}`}
-              <ChevronRight size={16} aria-hidden="true" />
-            </button>
-          </div>
+          {page === 'home' ? (
+            // Your challenges lists this challenge right below, so the top bar names the product.
+            <span className="nx-brand self-center">The Challenge</span>
+          ) : (
+            <div className="flex min-w-0 flex-col">
+              {/* The challenge's name leads to Your challenges, like the product's name before Day 1. */}
+              <button
+                type="button"
+                className="nx-brand nx-press self-start truncate text-left"
+                onClick={() => navigate('home')}
+              >
+                {c.name}
+              </button>
+              <button
+                type="button"
+                className="nx-day-link self-start"
+                onClick={() => navigate('progress')}
+              >
+                {world.today < c.start
+                  ? `Starts ${formatDayShort(c.start)}`
+                  : `Day ${dayNumber(c, world.today)} of ${c.days}`}
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          )}
           <nav className="nx-topnav" aria-label="Main">
             {tabs('top')}
           </nav>
