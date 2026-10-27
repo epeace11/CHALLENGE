@@ -1,4 +1,5 @@
-// How it works as four short lines with icons, then the main action; then the themes as rows.
+// How it works as four short lines with icons, then the main action; then the themes, two to a row
+// on wider screens so the whole page fits on one screen.
 'use client';
 import { ArrowRight, CircleHelp, Ticket } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
@@ -29,13 +30,13 @@ export default function LandingV2() {
         </Button>
       }
     >
-      <div className="grid gap-10 pt-4 sm:pt-10">
-        <div className="flex flex-col gap-7">
+      <div className="grid gap-8 pt-2 sm:pt-4">
+        <div className="flex flex-col gap-6">
           <Enter>
             <HeroTitle>A habit challenge for couples</HeroTitle>
           </Enter>
           <div className="flex flex-col gap-2">
-            <Stagger as="ul" className="flex flex-col gap-3 sm:gap-4" start={1}>
+            <Stagger as="ul" className="flex flex-col gap-3" start={1}>
               {STEPS.map(({ icon: Icon, title }) => (
                 <span key={title} className="flex items-center gap-4">
                   <span
@@ -82,7 +83,7 @@ export default function LandingV2() {
         </div>
 
         <Section title="Or start from a theme" index={4}>
-          <Stagger className="flex flex-col gap-2.5" start={5}>
+          <Stagger className="grid gap-2.5 sm:grid-cols-2" start={5}>
             {world.themes.map((theme) => (
               <RowButton
                 key={theme.id}
