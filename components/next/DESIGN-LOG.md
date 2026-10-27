@@ -14,15 +14,11 @@ A design critique scored the app 26/40. These fix what it found:
 - **Set up shows its steps** ("Step 1 of 2", "Step 2 of 2 · Rules from Dry Month" when the rules came from a theme), and an empty name says "Give it a name, like “Fall Reset”."
 - **A forgiven point shows a dash, not $0,** on Gifts. The landing page's fourth step reads "Misses add to the gift you give" (whose gift was unclear).
 
-### The app's style (all pages) · to pick
+### The app's style (all pages) · picked
 
-The preview bar has a Style menu (the brush): it changes every page at once, and `?style=2` in a link opens a style directly.
+Three styles were tried across every page: 1 Calm (the kit as it is: violet glass, Georgia titles), 2 Warm (paper and cocoa, Young Serif, solid cards, pill buttons) and 3 Bold (flat, high contrast, Bricolage Grotesque, the accent as the main button).
 
-1. **Calm:** the kit as it is: violet glass, Georgia titles.
-2. **Warm:** paper and cocoa, Young Serif titles and numbers, solid cards, round pill buttons, terracotta accent.
-3. **Bold:** flat and high contrast, heavy Bricolage Grotesque titles and numbers, the accent as the main button, tighter corners.
-
-Kazzy's pick:
+Pick: **Style 1 · Calm.** Styles 2 and 3 and the preview's Style menu were removed.
 
 ## Decisions, October 25, 2026
 

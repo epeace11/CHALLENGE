@@ -15,5 +15,3 @@
 @import '../styles/extras.css';
 /* The new UI (components/next): scoped under .nx, so it must stay last. */
 @import '../styles/next.css';
-/* Styles 2 and 3 of the new UI's design round, on top of its tokens. */
-@import '../styles/next-styles.css';

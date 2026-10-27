@@ -69,9 +69,9 @@
   --text-nx-num-xl: var(--nx-fs-num-xl);
   --text-nx-num-xl--line-height: 1;
 
-  --radius-nx-sm: var(--nx-r-sm);
-  --radius-nx: var(--nx-r);
-  --radius-nx-lg: var(--nx-r-lg);
+  --radius-nx-sm: 12px;
+  --radius-nx: 14px;
+  --radius-nx-lg: 18px;
 
   --shadow-nx-glass: var(--nx-glass-shadow);
   --shadow-nx-lift: var(--nx-lift-shadow);
