@@ -25,7 +25,6 @@ import { useInvite } from './use-invite';
 export default function InviteV2() {
   const flow = useInvite();
   const { challenge: c, inviter } = flow;
-  const [, second, third] = flow.steps;
   return (
     <PlainFrame aside={<AccountMenu flow={flow} />}>
       <div className="relative flex flex-col gap-9">
@@ -47,9 +46,9 @@ export default function InviteV2() {
               onClick={() => flow.open('dates')}
             />
             <StatButton
-              label="First miss"
-              value={flow.step}
-              hint={`Then ${second}, ${third}…`}
+              label="At stake"
+              value={`~${flow.stakes}`}
+              hint="Each gift, if you miss 1 in 10"
               onClick={() => flow.open('gift')}
             />
           </div>

@@ -214,7 +214,7 @@ export function SaveSheet({
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Save as"
+      title="Save for later"
       description="Same rules and stakes, ready to start again from Your challenges."
       footer={
         <>

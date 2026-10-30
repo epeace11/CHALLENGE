@@ -130,6 +130,14 @@ export function overviewOf(w: World) {
     /** The day being logged, "Thursday", and "Thursday, Nov 19". */
     day,
     dayName: day ? formatWeekday(day) : '',
+    /** The day being logged as you'd say it on the day: "yesterday", "today", or "Thursday". */
+    dayWord: !day
+      ? ''
+      : day === w.today
+        ? 'today'
+        : day === shift(w.today, -1)
+          ? 'yesterday'
+          : formatWeekday(day),
     dayLong: day ? formatDay(day) : '',
     /** Check-ins Maya still has to answer for it. */
     open,

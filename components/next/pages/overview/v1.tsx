@@ -89,7 +89,7 @@ function Running() {
                         <CountUp value={o.left} />
                       </span>
                       <span className="text-nx-lead text-nx-ink">
-                        left to log for {o.dayName}
+                        left to log for {o.dayWord}
                       </span>
                     </p>
                     <p className="flex items-center gap-1.5 text-nx-2 text-nx-ink-2">

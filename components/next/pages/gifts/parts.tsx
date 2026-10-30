@@ -291,7 +291,8 @@ export function PointSheet({ sheet }: { sheet: SheetFor<OpenPoint> }) {
       }
     >
       <div className="flex flex-col gap-4">
-        {row.note && (
+        {/* The answer's note, unless the forgiveness request below says the same words. */}
+        {row.note && row.note.trim() !== row.pending?.reason.trim() && (
           <Quote person={mine ? world.me : partner}>{row.note}</Quote>
         )}
         {row.forgiven ? (

@@ -14,6 +14,7 @@ import {
   partnerOf,
   personById,
   shift,
+  stakesPreview,
 } from '@/lib/next/selectors';
 
 /**
@@ -89,6 +90,8 @@ export function inviteView(world: World) {
     place: placeOf(c.timeZone),
     step: step(1),
     steps: [step(1), step(2), step(3)] as const,
+    /** About what each gift comes to if each of you misses 1 in 10, as the pact says it. */
+    stakes: formatMoney(stakesPreview(c, 0.1, [you.id, inviter.id]).gift),
     deadline: formatDeadline(c.deadline),
     firstCheckin: {
       day: formatDay(c.start),
@@ -96,7 +99,7 @@ export function inviteView(world: World) {
     },
     how: [
       `Check in by ${formatDeadline(c.deadline)} and review each other’s answers.`,
-      `Each miss adds the next step to the gift you owe ${inviter.name}: ${step(1)}, then ${step(2)}, then ${step(3)}.`,
+      `Each miss adds to the gift you give ${inviter.name}: ${step(1)} for the first, ${step(2)} for the second, and so on.`,
     ] as const,
   };
 }

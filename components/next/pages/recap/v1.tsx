@@ -154,7 +154,7 @@ export default function RecapV2() {
                   <span className="flex items-center gap-3">
                     <IconBubble icon={Flame} size={40} />
                     <span className="text-nx-body font-semibold">
-                      Longest streaks
+                      Longest streaks that week
                     </span>
                   </span>
                   <StreakLine name="You" streak={v.streaks.me} />
@@ -236,7 +236,7 @@ function StreakLine({
           </span>
           {streak.now && (
             <span className="text-nx-2 text-nx-accent">
-              Still going: {plural(streak.now, 'day')}
+              {plural(streak.now, 'day')} now, still going
             </span>
           )}
         </span>

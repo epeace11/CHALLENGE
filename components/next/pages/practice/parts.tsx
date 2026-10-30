@@ -36,7 +36,7 @@ export function PracticeBanner({ className }: { className?: string }) {
       )}
     >
       <FlaskConical size={20} className="shrink-0" aria-hidden="true" />
-      Practice. Nothing here is saved.
+      Practice. Nothing here counts.
     </p>
   );
 }

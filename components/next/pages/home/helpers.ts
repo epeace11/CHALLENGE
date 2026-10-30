@@ -38,7 +38,7 @@ export const sizeLine = (s: Pick<SavedChallenge, 'days' | 'rules'>) =>
 export const startLabel = (s: SavedChallenge) =>
   s.source === 'mine' ? 'Start again' : `Start ${s.name}`;
 
-/** "You won, 4 points to 7", "Jordan won, 5 points to 3", "A tie, 4 points each". */
+/** "You won, 4 points to Jordan's 7", "Jordan won, 3 points to your 5", "A tie, 4 points each". Fewer wins. */
 export function verdictLine(w: World, past: PastChallenge) {
   const v = past.verdict,
     mine = v.people.find((p) => p.personId === w.me.id),
@@ -46,8 +46,8 @@ export function verdictLine(w: World, past: PastChallenge) {
   if (!mine || !theirs) return '';
   if (!v.winner) return `A tie, ${plural(mine.points, 'point')} each`;
   return v.winner === w.me.id
-    ? `You won, ${plural(mine.points, 'point')} to ${theirs.points}`
-    : `${w.partner.name} won, ${plural(theirs.points, 'point')} to ${mine.points}`;
+    ? `You won, ${plural(mine.points, 'point')} to ${w.partner.name}’s ${theirs.points}`
+    : `${w.partner.name} won, ${plural(theirs.points, 'point')} to your ${mine.points}`;
 }
 
 /** The saved challenge that runs a past one again, if it was saved (same name, ours). */

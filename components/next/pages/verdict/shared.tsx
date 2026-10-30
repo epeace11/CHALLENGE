@@ -1,4 +1,4 @@
-// The verdict's state (marking gifts, Run it again, Save as), its wording, and the pieces it shows.
+// The verdict's state (marking gifts, Run it again, Save for later), its wording, and the pieces it shows.
 'use client';
 import { useState } from 'react';
 import {
@@ -40,7 +40,7 @@ import { pastToShow } from './which';
 
 /**
  * The verdict's state, as v1 keeps it: which gifts are marked (saved with the challenge in the live
- * app), the burst for the one just marked, the open sheet, Run it again and Save as. Nothing pops up:
+ * app), the burst for the one just marked, the open sheet, Run it again and Save for later. Nothing pops up:
  * each change shows where it was made. The gifts come in the order you deal with them: the one you
  * give first, then the one you get.
  */
@@ -171,11 +171,11 @@ export function NoVerdict() {
   );
 }
 
-/** Save as… in the top bar. */
+/** Save for later, in the top bar: keeps the challenge in Your challenges to start again. */
 export function SaveAsButton({ onClick }: { onClick: () => void }) {
   return (
     <Button variant="quiet" icon={BookmarkPlus} onClick={onClick}>
-      Save as…
+      Save for later
     </Button>
   );
 }
@@ -240,7 +240,7 @@ export function HandOff({
   );
 }
 
-/** Every sheet the verdict opens: how the gifts were set, best streaks, badges and Save as. */
+/** Every sheet the verdict opens: how the gifts were set, best streaks, badges and Save for later. */
 export function VerdictSheets({ page }: { page: VerdictPage }) {
   const { v, sheet, setSheet, runAgain, world, save } = page;
   if (!v) return null;

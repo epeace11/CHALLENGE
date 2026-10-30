@@ -65,7 +65,7 @@ export function SharedBy({ by }: { by: string | null }) {
   );
 }
 
-/** "● Dry look": the look's colour and name. */
+/** "● Dry colours": the challenge's colours, as a dot and their name. */
 export function LookLabel({
   look,
   className,
@@ -86,7 +86,7 @@ export function LookLabel({
         style={{ background: 'var(--nx-fill)' }}
         aria-hidden="true"
       />
-      {lookName(look)} look
+      {lookName(look)} colours
     </p>
   );
 }

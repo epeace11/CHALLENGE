@@ -38,7 +38,17 @@ Then distill, October 30, 2026 (Erin's answers: squares with icons, a bar and th
 - **Progress habits show a bar and the streak** for each of you; the % is gone (it clashed with "15 of 30 done" above).
 - **Overview's "Left to log" is one card with the Log button in it.** The big number, the time left and the open check-ins sit above Log Thursday; the card itself no longer opens Check in, so there is one thing to tap instead of two.
 
-Still to build from this critique: the copy and polish fixes.
+Then clarify, October 30, 2026 (the copy the critique flagged):
+
+- **Your challenges says whose points:** "You won, 4 points to Jordan's 7" (it said "4 points to 7", which read like a loss); "Jordan won, 3 points to your 5".
+- **Overview says which day:** "3 left to log for yesterday" (or "today"), so the date in the title and Log Thursday no longer disagree.
+- **Practice:** "Practice. Nothing here counts." (it said "Nothing here is saved" above a Save button).
+- **Invite leads with the same stake as the pact:** "At stake ~$150 · Each gift, if you miss 1 in 10" instead of "First miss $1"; its line reads "Each miss adds to the gift you give Maya: $1 for the first, $2 for the second, and so on."
+- **Plain words:** the shared challenge's "Dry look" is "Dry colours"; the verdict's "Save as…" is "Save for later", like the shared page.
+- **Gifts shows Jordan's note once:** a point's sheet left out the answer's note when the forgiveness request said the same words.
+- **Recap's streaks say when:** "Longest streaks that week · 14 days · No phones in the bedroom", then "18 days now, still going".
+
+Still to build from this critique: the polish fixes.
 
 ## Decisions, October 27, 2026 (design critique)
 
