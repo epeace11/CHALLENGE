@@ -1,6 +1,6 @@
 # Design log
 
-Kazzy picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
+Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
 ## Decisions, October 29, 2026 (second design critique)
 
@@ -28,9 +28,9 @@ Then, from Erin while the round below was built:
 - **No pop-ups anywhere.** "Should not pop up and say save when you log something", then, on the journal's "Note added · Undo": "no pop ups like this in the whole app". Every toast that confirmed an action is gone (Saved, Sent, Approved, Note added, Name saved, Withdrawn, Signed, gift marked…), and with it the preview's toast Undo. The page shows what changed instead: the card glides on, a row says Sent or Given, Copy link turns into "Copied" for two seconds, "Send a new code" says "Sent a new code to …" under it. Where Undo was the only way back, the page has its own: removing a journal note (or saving it empty) asks "Remove this note?" in the note itself with Keep and Remove; a marked gift can be unmarked on the verdict; Say your rules' Start over keeps the sentence in the box. Only a write that fails in the live app still shows a message. It's rule 9 in `README.md`'s checklist.
 - **The add-screenshot button never squeezes its words.** Before the first screenshot it's a wide dashed area with the icon in a round well and "Add screenshot"; after it, a tile the size of a screenshot with the icon alone ("Keep the label" on the wide one).
 
-### Design round, October 30, 2026: signing, the verdict and the end of a day · to pick
+### Design round, October 30, 2026: signing, the verdict and the end of a day · picked
 
-Erin chose own layouts within Calm for the moments that matter. Each page keeps v1 (today's) and adds v2 and v3; they're under Sign the pact, Check in and The verdict below. To see Check in's end of the day, answer Thursday's 3 check-ins (or open it after logging them on any version).
+Erin chose own layouts within Calm for the moments that matter. Each page kept v1 (the page as it was) and added v2 and v3, listed under Sign the pact, Check in and The verdict below. Erin picks each round from now on ("why does kazzy have to pick? I will be picking"): signing 3, the verdict 2, the end of a day 3. Each pick is now the page's `v1.tsx` and the others are deleted.
 
 Still to build from this critique: one way to draw a day on Overview and Progress, and the copy and polish fixes.
 
@@ -191,7 +191,7 @@ Round, October 30, 2026 (the signing moment; version 1 is the page above):
 2. **Signature lines first.** Under "Sign the pact", one card with two rows: "Starts Monday, Nov 2" and "About $150 each gift · If you miss 1 in 10" (each opens its sheet). Then the signatures: Maya's line signed in script with its time, and your empty line with Hold to sign right under it; holding fills the line with ink in step with the button. Signing writes your name in place, runs the seal round the card and turns the title into "You both signed", with the countdown and Go to Overview below. The 4 promises and the 8 rules are rows that open them, not on the screen.
 3. **One step at a time.** "Step 1 of 3" under each title, with Back: what's at stake (~$150) and Day 1; then the rules with their "Only you" / "Only Maya" tags; then your signature line. Next is pinned at the bottom and becomes Hold to sign on step 3. After signing, "Day 1 starts in 1 day 3 hours" fills the screen in large type, with both signatures small below and Go to Overview.
 
-Pick:
+Pick: 3, October 30, 2026 (Erin). Built: one step at a time is now the page, and versions 1 and 2 are deleted.
 
 ## Every day
 
@@ -216,7 +216,7 @@ Round, October 30, 2026 (only the end of the day differs; version 1 is the page 
 2. **What happens next.** "Thursday is logged", then up to three rows, each only when true: "Jordan reviews your 2 answers next" (opens Review), "1 new point · $7 · Read 10 pages" or "No new points for Thursday" (opens Gifts), and "18 days in a row · No phones in the bedroom" (opens Progress); "You can change an answer until 11:59 pm tonight" last. The main button is "Review Jordan's answers" while anything waits for you, else Go to Overview.
 3. **Thursday at a glance.** "Thursday is logged", then one square per check-in with its short name: a colour and an icon for each status (a check for done, an X for missed, a clock for waiting for Jordan…), tapping one opens that answer; then the streak on one line with a flame (opens Progress). The main button is the same as version 2.
 
-Pick:
+Pick: 3, October 30, 2026 (Erin). Built: the end of the day is now the day at a glance (a square per check-in, then the streak), and versions 1 and 2 are deleted.
 
 ### Rules and help (`rules`)
 
@@ -294,7 +294,7 @@ Round, October 30, 2026 (the end of the challenge; version 1 is the page above):
 
 On every version a marked gift can be unmarked (in version 1, in the gifts sheet), since the toast's Undo is gone; and Save as… says "Saved" in its own sheet.
 
-Pick:
+Pick: 2, October 30, 2026 (Erin). Built: the result, then each gift is now the page, and versions 1 and 3 are deleted. A marked gift is unmarked with the Undo on its card's Given or Received strip.
 
 ## Settings
 

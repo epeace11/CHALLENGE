@@ -101,7 +101,7 @@ export const PAGE_META: Record<PageId, PageMeta> = {
     title: 'Sign the pact',
     group: 'First day',
     frame: 'plain',
-    versions: 3,
+    versions: 1,
     brief:
       'Both sign before day one: the rules, the deadline and the stakes. Maya has signed; Jordan has not.',
   },
@@ -128,7 +128,7 @@ export const PAGE_META: Record<PageId, PageMeta> = {
     title: 'Check in',
     group: 'Every day',
     frame: 'app',
-    versions: 3,
+    versions: 1,
     brief:
       'Check in for Thursday: one check-in at a time (Yes or No, numbers, screenshots, a note), one Save each, gliding to the next.',
   },
@@ -182,7 +182,7 @@ export const PAGE_META: Record<PageId, PageMeta> = {
     title: 'The verdict',
     group: 'Last day',
     frame: 'plain',
-    versions: 3,
+    versions: 1,
     brief:
       'How it ended (Summer Sprint): who won, the gift each buys, best streaks and badges; then run it again or start another.',
   },

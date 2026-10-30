@@ -166,36 +166,4 @@
   .settle {
     animation: settle-in var(--nx-base) var(--nx-ease) backwards;
   }
-
-  /* v3: the two gifts above the card, one per tab; the one on the card is the current step. */
-  .tab {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    min-height: 48px;
-    padding: 6px 14px 6px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--nx-line-strong);
-    background: var(--nx-surface-2);
-    color: var(--nx-ink);
-    font: 600 15px/1.25 var(--nx-font-sans);
-    text-align: left;
-    transition:
-      transform var(--nx-fast) var(--nx-ease),
-      background-color var(--nx-base) var(--nx-ease),
-      border-color var(--nx-base) var(--nx-ease),
-      color var(--nx-base) var(--nx-ease);
-  }
-  .tab:hover {
-    background: var(--nx-surface);
-  }
-  .tab:active {
-    transform: scale(0.97);
-  }
-  .tab[aria-current='step'] {
-    border-color: var(--nx-accent);
-    background: var(--nx-accent-soft);
-    color: var(--nx-accent);
-  }
 }

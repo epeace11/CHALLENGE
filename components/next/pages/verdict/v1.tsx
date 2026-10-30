@@ -1,445 +1,384 @@
-// A side-by-side scoreboard flips both gifts in at once, then a short checklist and one sticky button mark them given, one after the other.
+// The result is the title in plain words; each gift is its own large card with its own button, and the next one to mark is the main action.
 'use client';
-import { useState, type CSSProperties } from 'react';
 import {
-  BookmarkPlus,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import {
   Check,
   ChevronRight,
-  Crown,
   Flame,
-  Gift as GiftIcon,
-  MessagesSquare,
   Plus,
   RotateCcw,
   Trophy,
+  type LucideIcon,
 } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
-import { useNav } from '@/components/next/nav';
-import { useBackend } from '@/components/next/backend';
-import { useWorld } from '@/components/next/world';
-import {
-  ActionBar,
-  Avatar,
-  Button,
-  EmptyState,
-  GlassCard,
-  PageTitle,
-  RowButton,
-  Section,
-  TapCard,
-} from '@/components/next/ui';
+import { Button, GlassCard, useReducedMotion } from '@/components/next/ui';
+import { cn } from '@/lib/utils';
 import { formatMoney, plural } from '@/lib/next/selectors';
-import {
-  BADGE_ICON,
-  giftsOf,
-  markGift,
-  saveAs,
-  suggestName,
-  verdictOf,
-  type Gift,
-  type VerdictView,
-} from './data';
+import type { Gift, VerdictView } from './data';
 import { Burst, RevealAmount } from './motion';
 import {
-  BadgesSheet,
-  GiftsSheet,
-  SaveSheet,
-  StreaksSheet,
-  type VerdictSheet,
-} from './sheets';
+  HandOff,
+  NoVerdict,
+  OpenDisputesRow,
+  SaveAsButton,
+  VerdictSheets,
+  badgeLine,
+  outcome,
+  possessive,
+  streakLine,
+  useVerdictPage,
+} from './shared';
 import styles from './verdict.module.css';
-import { pastToShow } from './which';
 
-/** The verdict, version 2. */
-export default function VerdictV2() {
-  const world = useWorld();
-  const shownPast = pastToShow(world);
-  const { navigate } = useNav();
-  const backend = useBackend();
-  // Which gifts are marked given, by who receives them: saved with the challenge in the live app.
-  const [given, setGiven] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(
-      (shownPast?.verdict.people ?? []).map((p) => [
-        p.personId,
-        !!p.giftGivenAt,
-      ]),
-    ),
-  );
-  // The gift just marked, and a count so its burst plays again each time.
-  const [burst, setBurst] = useState<{ id: string; n: number } | null>(null);
-  const [sheet, setSheet] = useState<VerdictSheet>(null);
-  const v = verdictOf(world, shownPast);
-  /** A new challenge with the same rules and stakes (the live app), or Set up (the preview). */
-  const runAgain = () =>
-    v && backend.host
-      ? void backend.host.startFrom({
-          kind: 'again',
-          challenge: v.past.challenge,
-        })
-      : navigate('setup');
+/** The verdict: the result, then each gift. */
+export default function VerdictV1() {
+  const page = useVerdictPage();
+  const {
+    v,
+    gifts,
+    given,
+    next,
+    mark,
+    unmark,
+    burst,
+    setSheet,
+    runAgain,
+    navigate,
+    openDisputes,
+  } = page;
+  // After a gift is marked or taken back, the screen's main action scrolls into view if it's below
+  // the fold (the card just settled stays in sight) and takes focus, so a keyboard carries on there.
+  const [moves, setMoves] = useState(0);
+  const primary = useRef<HTMLButtonElement | null>(null);
+  const keep = (el: HTMLButtonElement | null) => {
+    if (el) primary.current = el;
+  };
+  const still = useReducedMotion();
+  useEffect(() => {
+    const el = primary.current;
+    if (!moves || !el) return;
+    el.scrollIntoView({
+      block: 'nearest',
+      behavior: still ? 'auto' : 'smooth',
+    });
+    el.focus({ preventScroll: true });
+  }, [moves, still]);
 
-  if (!v)
-    return (
-      <PlainFrame back={{ to: 'home', label: 'Your challenges' }}>
-        <GlassCard pad="lg" className="mt-6">
-          <EmptyState
-            icon={Trophy}
-            title="No finished challenge yet"
-            action={
-              <Button variant="primary" onClick={() => navigate('home')}>
-                Back to Your challenges
-              </Button>
-            }
-          />
-        </GlassCard>
-      </PlainFrame>
-    );
-
-  const gifts = giftsOf(v);
-  // The gift you give comes first: marking it is yours to do; the one you get you only confirm.
-  const next =
-    gifts.find((g) => !given[g.id] && g.from.isMe) ??
-    gifts.find((g) => !given[g.id]);
-  const setOne = (id: string, value: boolean) => {
-    setGiven((s) => ({ ...s, [id]: value }));
-    backend.act(
-      {
-        type: 'markGift',
-        challengeId: v.past.challenge.id,
-        recipientId: id,
-        given: value,
-      },
-      (w) => markGift(w, v.past.challenge.id, id, value ? w.now : null),
-    );
-  };
-  // The row says Given or Received; its gifts sheet can mark it back.
-  const mark = (g: Gift) => {
-    setOne(g.id, true);
-    setBurst((b) => ({ id: g.id, n: (b?.n ?? 0) + 1 }));
-  };
-  const close = (open: boolean) => {
-    if (!open) setSheet(null);
-  };
-  // Disputes still open on this challenge; Review settles them only while it's the one loaded.
-  const openDisputes =
-    !backend.host || world.challenge.id === v.past.challenge.id
-      ? (v.past.verdict.openDisputes ?? 0)
-      : 0;
+  if (!v) return <NoVerdict />;
+  const openGifts = () => setSheet('gifts');
 
   return (
     <PlainFrame
       back={{ to: 'home', label: 'Your challenges' }}
-      aside={
-        <Button
-          variant="quiet"
-          icon={BookmarkPlus}
-          onClick={() => setSheet('save')}
-        >
-          Save as…
-        </Button>
-      }
+      aside={<SaveAsButton onClick={() => setSheet('save')} />}
     >
-      <div className="flex flex-col gap-8">
-        <PageTitle kicker={`Finished · ${v.range}`} title={v.name} />
-
-        <GlassCard pad="none" className="nx-enter overflow-hidden">
-          <div className="grid grid-cols-2 divide-x divide-nx-line">
-            {[v.me, v.partner].map((s, i) => (
-              <ScoreColumn
-                key={s.person.id}
-                side={s}
-                won={v.winner === s.person.id}
-                index={i}
-                onOpen={() => setSheet('gifts')}
-              />
-            ))}
-          </div>
-        </GlassCard>
+      <div className="flex flex-col gap-6 sm:gap-8">
+        <header className="nx-enter flex flex-col gap-3 pt-2">
+          <h1 className={styles.result}>{resultTitle(v)}</h1>
+          <p className="text-nx-lead text-nx-ink-2">
+            <ResultLine v={v} onOpen={openGifts} />
+          </p>
+        </header>
 
         {openDisputes > 0 && (
-          <RowButton
-            className="nx-enter -mt-4"
-            leading={
-              <span className="grid size-11 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
-                <MessagesSquare size={20} aria-hidden="true" />
-              </span>
-            }
-            title={`${plural(openDisputes, 'dispute')} ${openDisputes === 1 ? 'is' : 'are'} still open`}
-            detail={
-              openDisputes === 1
-                ? 'Not a point unless it’s conceded. If it is, the gifts change.'
-                : 'None is a point unless it’s conceded. If one is, the gifts change.'
-            }
-            onClick={() => navigate('review')}
+          <OpenDisputesRow
+            className="nx-enter -mt-3"
+            count={openDisputes}
+            onOpen={() => navigate('review')}
           />
         )}
 
-        <Section title="Gifts" index={2}>
-          {gifts.map((g) => {
-            const done = !!given[g.id];
-            return (
-              <RowButton
-                key={g.id}
-                leading={
-                  <span
-                    className={
-                      done
-                        ? 'relative grid size-11 place-items-center rounded-full bg-nx-done-soft text-nx-done'
-                        : 'relative grid size-11 place-items-center rounded-full border-2 border-dashed border-nx-accent-line text-nx-accent'
-                    }
-                  >
-                    {done ? (
-                      <Check
-                        size={22}
-                        strokeWidth={2.6}
-                        className={styles.pop}
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <GiftIcon size={20} aria-hidden="true" />
-                    )}
-                    {done && burst?.id === g.id && <Burst key={burst.n} />}
-                  </span>
-                }
-                title={
-                  g.to.isMe
-                    ? `${g.from.person.name} gives you a ${formatMoney(g.amount)} gift`
-                    : `You give ${g.to.person.name} a ${formatMoney(g.amount)} gift`
-                }
-                detail={
-                  done
-                    ? g.to.isMe
-                      ? 'Received'
-                      : 'Given'
-                    : g.to.isMe
-                      ? 'Not received yet'
-                      : 'Not given yet'
-                }
-                onClick={() => setSheet('gifts')}
-              />
-            );
-          })}
-        </Section>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {gifts.map((g, i) => (
+            <GiftCard
+              key={g.id}
+              gift={g}
+              index={i}
+              done={!!given[g.id]}
+              main={next?.id === g.id}
+              burst={burst?.id === g.id ? burst.n : 0}
+              buttonRef={next?.id === g.id ? keep : undefined}
+              onMark={() => {
+                mark(g);
+                setMoves((m) => m + 1);
+              }}
+              onUnmark={() => {
+                unmark(g);
+                setMoves((m) => m + 1);
+              }}
+              onOpen={openGifts}
+            />
+          ))}
+        </div>
 
-        <Section title="Streaks and badges" index={3}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <TapCard className="h-full" onClick={() => setSheet('streaks')}>
-              <span className="flex flex-col gap-3">
-                <span className="flex items-center gap-3">
-                  <span className="grid size-10 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
-                    <Flame size={20} aria-hidden="true" />
-                  </span>
-                  <span className="text-nx-body font-semibold">
-                    Best streaks
-                  </span>
-                </span>
-                {[v.me, v.partner].map((s) => (
-                  <span key={s.person.id} className="flex flex-col">
-                    <span className="text-nx-body">
-                      <span className="font-semibold">
-                        {s.isMe ? 'You' : s.person.name}:
-                      </span>{' '}
-                      {s.streak.all
-                        ? `all ${s.streak.days} days`
-                        : `${s.streak.days} days in a row`}
-                    </span>
-                    <span className="text-nx-2 text-nx-ink-2">
-                      {s.streak.title}
-                    </span>
-                  </span>
-                ))}
-              </span>
-            </TapCard>
-            <TapCard className="h-full" onClick={() => setSheet('badges')}>
-              <span className="flex flex-col gap-3">
-                <span className="flex items-center gap-3">
-                  <span className="grid size-10 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
-                    <Trophy size={20} aria-hidden="true" />
-                  </span>
-                  <span className="text-nx-body font-semibold">
-                    Badges earned
-                  </span>
-                </span>
-                {[v.me, v.partner].map((s) => (
-                  <span key={s.person.id} className="flex items-center gap-3">
-                    <MedalStack side={s} />
-                    <span className="text-nx-body">
-                      <span className="font-semibold">
-                        {s.isMe ? 'You' : s.person.name}:
-                      </span>{' '}
-                      {plural(s.badges.length, 'badge')}
-                    </span>
-                  </span>
-                ))}
-              </span>
-            </TapCard>
-          </div>
-        </Section>
+        <GlassCard
+          pad="none"
+          className="nx-enter grid divide-y divide-nx-line overflow-hidden sm:grid-cols-2 sm:divide-x sm:divide-y-0"
+          style={{ ['--nx-i' as string]: 3 } as CSSProperties}
+        >
+          <MiniRow
+            icon={Flame}
+            title="Best streaks"
+            detail={streakLine(v)}
+            onClick={() => setSheet('streaks')}
+          />
+          <MiniRow
+            icon={Trophy}
+            title="Badges"
+            detail={badgeLine(v)}
+            onClick={() => setSheet('badges')}
+          />
+        </GlassCard>
 
-        {next && (
+        <div
+          className="nx-enter -mt-2 flex flex-col gap-2 sm:flex-row sm:items-center"
+          style={{ ['--nx-i' as string]: 4 } as CSSProperties}
+        >
+          <Button
+            ref={next ? undefined : keep}
+            variant={next ? 'secondary' : 'primary'}
+            size="lg"
+            icon={RotateCcw}
+            className="w-full scroll-mb-6 sm:w-auto sm:min-w-60"
+            onClick={runAgain}
+          >
+            Run it again
+          </Button>
           <Button
             variant="quiet"
             icon={Plus}
-            className="-mt-2 self-start"
+            className="self-center sm:self-auto"
             onClick={() => navigate('start')}
           >
             Start something new
           </Button>
-        )}
+        </div>
       </div>
 
-      <ActionBar>
-        {next ? (
-          <>
-            <Button
-              variant="primary"
-              size="lg"
-              full
-              icon={Check}
-              onClick={() => mark(next)}
-            >
-              {next.to.isMe
-                ? `Mark the ${formatMoney(next.amount)} gift as received`
-                : `Mark your ${formatMoney(next.amount)} gift as given`}
-            </Button>
-            <Button icon={RotateCcw} onClick={runAgain}>
-              Run it again
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              variant="primary"
-              size="lg"
-              full
-              icon={RotateCcw}
-              onClick={runAgain}
-            >
-              Run it again
-            </Button>
-            <Button
-              variant="quiet"
-              icon={Plus}
-              onClick={() => navigate('start')}
-            >
-              Start something new
-            </Button>
-          </>
-        )}
-      </ActionBar>
-
-      <GiftsSheet
-        v={v}
-        open={sheet === 'gifts'}
-        onOpenChange={close}
-        given={given}
-        onUnmark={(id) => setOne(id, false)}
-      />
-      <StreaksSheet
-        v={v}
-        open={sheet === 'streaks'}
-        onOpenChange={close}
-        onRunAgain={runAgain}
-      />
-      <BadgesSheet v={v} open={sheet === 'badges'} onOpenChange={close} />
-      <SaveSheet
-        open={sheet === 'save'}
-        onOpenChange={close}
-        suggestion={suggestName(world, v.name)}
-        taken={world.saved.map((s) => s.name)}
-        onSave={(name) => {
-          backend.act(
-            {
-              type: 'saveAs',
-              challengeId: v.past.challenge.id,
-              name: name.trim(),
-            },
-            (w) => saveAs(w, v.past, name),
-          );
-        }}
-      />
+      <VerdictSheets page={page} />
     </PlainFrame>
   );
 }
 
-/**
- * One person on the scoreboard: who, their points, whether they won, and the gift they get, which
- * flips in and counts up. The whole column opens how the gifts were set.
- */
-function ScoreColumn({
-  side: s,
-  won,
-  index,
-  onOpen,
+/** "You won Summer Sprint", "Jordan won Summer Sprint", or "Summer Sprint was a tie". */
+function resultTitle(v: VerdictView) {
+  const won = outcome(v);
+  if (won === 'tie') return `${v.name} was a tie`;
+  return `${won === 'me' ? 'You' : v.partner.person.name} won ${v.name}`;
+}
+
+/** "4 points to Jordan’s 7. Fewer points wins.", the winner first; each number opens how the gifts were set. */
+function ResultLine({ v, onOpen }: { v: VerdictView; onOpen: () => void }) {
+  const won = outcome(v),
+    partner = v.partner.person.name;
+  if (won === 'tie')
+    return (
+      <>
+        <NumLink onClick={onOpen}>{plural(v.me.points, 'point')} each</NumLink>.
+      </>
+    );
+  return (
+    <>
+      {won === 'me' ? (
+        <>
+          <NumLink onClick={onOpen}>{plural(v.me.points, 'point')}</NumLink> to{' '}
+          <NumLink onClick={onOpen}>
+            {possessive(partner)} {v.partner.points}
+          </NumLink>
+        </>
+      ) : (
+        <>
+          <NumLink onClick={onOpen}>
+            {possessive(partner)} {plural(v.partner.points, 'point')}
+          </NumLink>{' '}
+          to <NumLink onClick={onOpen}>your {v.me.points}</NumLink>
+        </>
+      )}
+      . Fewer points wins.
+    </>
+  );
+}
+
+/** A number in a sentence, as a button that opens a sheet. */
+function NumLink({
+  onClick,
+  children,
 }: {
-  side: VerdictView['me'];
-  won: boolean;
-  index: number;
-  onOpen: () => void;
+  onClick: () => void;
+  children: ReactNode;
 }) {
-  const delay = 180 + index * 140;
   return (
     <button
       type="button"
-      className="nx-press relative flex min-w-0 flex-col items-center gap-1.5 px-3 pt-6 pb-7 text-center transition-colors hover:bg-nx-accent-soft"
-      onClick={onOpen}
+      className={styles.num}
+      aria-haspopup="dialog"
+      onClick={onClick}
     >
-      <ChevronRight
-        className="nx-row-chevron absolute top-4 right-3"
-        size={20}
-        aria-hidden="true"
-      />
-      <span className="relative mb-1">
-        <Avatar person={s.person} size="lg" decorative />
-        {won && (
-          <span
-            className="absolute -top-2 -right-2 grid size-7 place-items-center rounded-full text-nx-on-accent shadow-nx-glass"
-            style={{ background: 'var(--nx-fill)' }}
-            aria-hidden="true"
-          >
-            <Crown size={15} strokeWidth={2.4} />
-          </span>
-        )}
-      </span>
-      <span className="text-nx-body font-semibold text-nx-ink">
-        {s.isMe ? 'You' : s.person.name}
-      </span>
-      <span className="flex min-h-7 flex-wrap items-center justify-center gap-2 text-nx-2 text-nx-ink-2">
-        {plural(s.points, 'point')}
-        {won && (
-          <span className="rounded-full bg-nx-accent-soft px-2.5 py-0.5 text-nx-min font-semibold text-nx-accent">
-            Won
-          </span>
-        )}
-      </span>
-      <span className="mt-4 text-nx-2 text-nx-ink-2">
-        {s.isMe ? 'You get' : `${s.person.name} gets`}
-      </span>
-      <span
-        className={`${styles.flip} font-nx-serif text-nx-num-lg text-nx-ink`}
-        style={{ ['--delay' as string]: `${delay}ms` } as CSSProperties}
-      >
-        <RevealAmount amount={s.gets} delay={delay + 120} />
-      </span>
+      {children}
     </button>
   );
 }
 
-/** Up to three of a person's badges, overlapping. Decorative; the line says how many. */
-function MedalStack({ side }: { side: VerdictView['me'] }) {
+/**
+ * One gift as its own card: who gives whom, and the amount, which flips in and counts up, beside the
+ * gift on its way (the top opens how it was set); then whether it's given or received yet, and its
+ * button. Marking it settles the card: the gift slides across to the one who gets it, and a check
+ * bursts where the button was, beside Undo.
+ */
+function GiftCard({
+  gift: g,
+  index,
+  done,
+  main,
+  burst,
+  buttonRef,
+  onMark,
+  onUnmark,
+  onOpen,
+}: {
+  gift: Gift;
+  index: number;
+  done: boolean;
+  /** Its button is the screen's main action. */
+  main: boolean;
+  /** Counts up each time it's marked here, so the burst plays again. */
+  burst: number;
+  buttonRef?: (el: HTMLButtonElement | null) => void;
+  onMark: () => void;
+  /** Takes the mark back (Undo on the strip). */
+  onUnmark: () => void;
+  onOpen: () => void;
+}) {
+  const giving = g.from.isMe;
+  const delay = 200 + index * 140;
   return (
-    <span className="flex shrink-0 -space-x-3" aria-hidden="true">
-      {side.badges.slice(0, 3).map((b) => {
-        const Icon = BADGE_ICON[b.id] ?? Trophy;
-        return (
+    <GlassCard
+      as="article"
+      pad="none"
+      className="nx-enter flex flex-col"
+      style={{ ['--nx-i' as string]: index + 1 } as CSSProperties}
+    >
+      <button
+        type="button"
+        className="nx-press relative flex flex-1 flex-col items-start rounded-t-nx-lg px-5 pt-5 pb-3 text-left transition-colors hover:bg-nx-accent-soft sm:px-6 sm:pt-6"
+        aria-haspopup="dialog"
+        onClick={onOpen}
+      >
+        <ChevronRight
+          className="nx-row-chevron absolute top-5 right-4 sm:top-6 sm:right-5"
+          size={22}
+          aria-hidden="true"
+        />
+        {/* Phones: the label, then the amount with the hand-off beside it. Two columns: the hand-off on
+            top, so both cards line up whatever the amounts. */}
+        <span className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 sm:flex-col sm:items-start">
+          <span className="w-full pr-8 text-nx-body text-nx-ink-2">
+            {giving
+              ? `You give ${g.to.person.name}`
+              : `${g.from.person.name} gives you`}
+          </span>{' '}
           <span
-            key={b.id}
-            className="grid size-9 place-items-center rounded-full bg-nx-accent-soft text-nx-accent ring-2 ring-nx-surface"
+            className={cn(
+              styles.flip,
+              'font-nx-serif text-nx-num-xl text-nx-ink tabular-nums',
+            )}
+            style={{ ['--delay' as string]: `${delay}ms` } as CSSProperties}
           >
-            <Icon size={16} />
+            <RevealAmount amount={g.amount} delay={delay + 120} />
           </span>
-        );
-      })}
-    </span>
+          <span className="ml-auto sm:order-first sm:mb-2 sm:ml-0">
+            <HandOff gift={g} done={done} />
+          </span>
+        </span>
+      </button>
+      <div className="flex min-h-[108px] flex-col justify-end gap-2.5 px-5 pt-2 pb-5 sm:min-h-[112px] sm:px-6 sm:pb-6">
+        {done ? (
+          <div
+            className={cn(
+              styles.settle,
+              'flex min-h-12 items-center gap-3 rounded-nx-sm bg-nx-done-soft pr-1 pl-3',
+            )}
+          >
+            <span className="relative grid size-7 shrink-0 place-items-center rounded-full bg-nx-done text-nx-surface">
+              <Check
+                size={17}
+                strokeWidth={3}
+                className={styles.pop}
+                aria-hidden="true"
+              />
+              {burst > 0 && <Burst key={burst} />}
+            </span>
+            <span className="flex-1 text-nx-body font-semibold text-nx-done">
+              {giving ? 'Given' : 'Received'}
+            </span>
+            <Button
+              variant="quiet"
+              aria-label={
+                giving
+                  ? `Undo: mark your ${formatMoney(g.amount)} gift as not given`
+                  : `Undo: mark the ${formatMoney(g.amount)} gift as not received`
+              }
+              onClick={onUnmark}
+            >
+              Undo
+            </Button>
+          </div>
+        ) : (
+          <>
+            <p className="text-nx-2 text-nx-ink-2">
+              {giving ? 'Not given yet' : 'Not received yet'}
+            </p>
+            <Button
+              ref={buttonRef}
+              variant={main ? 'primary' : 'secondary'}
+              size="lg"
+              full
+              icon={Check}
+              className="scroll-mb-6"
+              onClick={onMark}
+            >
+              {giving ? 'Mark as given' : 'Mark as received'}
+            </Button>
+          </>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
+
+/** Half of the streaks-and-badges row: an icon, what it is, both people's numbers, and a chevron. */
+function MiniRow({
+  icon: Icon,
+  title,
+  detail,
+  onClick,
+}: {
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="nx-press flex min-h-16 items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-nx-accent-soft"
+      aria-haspopup="dialog"
+      onClick={onClick}
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
+        <Icon size={20} aria-hidden="true" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-nx-body font-semibold text-nx-ink">{title}</span>
+        <span className="text-nx-2 text-nx-ink-2">{detail}</span>
+      </span>
+      <ChevronRight className="nx-row-chevron" size={22} aria-hidden="true" />
+    </button>
   );
 }

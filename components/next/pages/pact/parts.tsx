@@ -26,7 +26,6 @@ import { formatMoney } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import {
   Avatar,
-  CountUp,
   DURATION,
   EASE,
   motion,
@@ -346,48 +345,6 @@ export function SignatureRow({
         {children}
       </div>
     </div>
-  );
-}
-
-/* ── The countdown ──────────────────────────────────────────────────────── */
-
-/** "Day 1 starts in 1 day 3 hours": both numbers count up; it opens what happens on Day 1. */
-export function CountdownButton({
-  days,
-  hours,
-  day,
-  onClick,
-  className,
-}: {
-  days: number;
-  hours: number;
-  /** "Monday, Nov 2" */
-  day: string;
-  onClick: () => void;
-  className?: string;
-}) {
-  const part = (n: number, one: string, many: string) => (
-    <span className="flex items-baseline gap-1.5">
-      <span className="font-nx-serif text-nx-num-lg text-nx-accent tabular-nums">
-        <CountUp value={n} />
-      </span>
-      <span className="text-nx-lead text-nx-ink">{n === 1 ? one : many}</span>
-    </span>
-  );
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn('nx-glass nx-tappable nx-stat relative', className)}
-    >
-      <span className="nx-stat-label">Day 1 starts in</span>
-      <span className="flex flex-wrap items-baseline gap-x-5 gap-y-1 py-1">
-        {days > 0 && part(days, 'day', 'days')}
-        {part(hours, 'hour', 'hours')}
-      </span>
-      <span className="nx-stat-hint">{day}</span>
-      <ChevronRight className="nx-row-chevron" size={20} aria-hidden="true" />
-    </button>
   );
 }
 

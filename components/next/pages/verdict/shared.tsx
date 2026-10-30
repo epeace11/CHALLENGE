@@ -1,4 +1,4 @@
-// What versions 2 and 3 share: the verdict's state (marking gifts, Run it again, Save as), its wording, and the pieces both show.
+// The verdict's state (marking gifts, Run it again, Save as), its wording, and the pieces it shows.
 'use client';
 import { useState } from 'react';
 import {

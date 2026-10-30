@@ -1,61 +1,80 @@
-// Read first: when it starts and what a gift could come to, the terms, then one list of rules with both signatures under it.
-// Hold to sign, pinned to the bottom; signing glides to a countdown screen.
+// One step at a time: the stakes and Day 1, then the rules, then your signature; after signing the countdown to Day 1 is the hero.
 'use client';
-import { ArrowRight } from 'lucide-react';
-import type { Rule } from '@/lib/next/model';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, ChevronRight, ScrollText } from 'lucide-react';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
 import {
   ActionBar,
   Button,
+  CountUp,
   GlassCard,
   Glide,
-  PageTitle,
-  PairAvatars,
-  Section,
   StatButton,
 } from '@/components/next/ui';
-import {
-  CheckBadge,
-  CountdownButton,
-  HoldToSign,
-  RuleLine,
-  SealRing,
-  SignatureRow,
-  SOLID_BAR,
-  Terms,
-} from './parts';
+import { HoldToSign, SealRing, SOLID_BAR } from './parts';
+import { afterSheets } from './after-sheets';
 import { PactSheets } from './sheets';
+import { ListRow, RuleList } from './rows';
+import { SignatureLine } from './signature-line';
 import { usePact, type PactFlow } from './use-pact';
 
-/** Sign the pact, version 2. */
-export default function PactV2() {
+const STEPS = 3;
+
+/** Sign the pact: three short steps, then the countdown. */
+export default function PactV1() {
   const flow = usePact();
   const { live } = useBackend();
   const signed = !!flow.yours.signedAt;
-  const sign = () => {
-    // The signed screen starts at the top of the page.
+  const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  // Once someone moves between steps, each new step's title takes focus (not on first load).
+  const [moved, setMoved] = useState(false);
+  // While Hold to sign is held, your line inks in step with the button.
+  const [holding, setHolding] = useState(false);
+  const go = (next: number) => {
+    setDirection(next > step ? 1 : -1);
+    setStep(next);
+    setMoved(true);
     window.scrollTo({ top: 0 });
+  };
+  const sign = () => {
+    // The countdown starts at the top of the page.
+    window.scrollTo({ top: 0 });
+    setDirection(1);
+    setMoved(true);
     flow.sign();
   };
+  const last = step === STEPS - 1;
+  const action = signed ? 'signed' : last ? 'sign' : 'next';
   return (
     <PlainFrame
-      // In the live app the invite has been accepted, so Back goes to Your challenges.
-      back={signed ? undefined : { to: live ? 'home' : 'invite' }}
+      back={
+        signed
+          ? undefined
+          : step > 0
+            ? { onClick: () => go(step - 1) }
+            : // In the live app the invite has been accepted, so Back goes to Your challenges.
+              { to: live ? 'home' : 'invite' }
+      }
       aside={<AccountMenu cancel={!signed} />}
     >
-      <Glide id={signed ? 'signed' : 'sign'} direction={signed ? 1 : -1}>
-        {signed ? <Signed flow={flow} /> : <ToSign flow={flow} />}
+      <Glide id={signed ? 'signed' : step} direction={direction}>
+        {signed ? (
+          <Signed flow={flow} focus={moved} />
+        ) : step === 0 ? (
+          <StartsAndStakes flow={flow} focus={moved} />
+        ) : step === 1 ? (
+          <Rules flow={flow} focus={moved} />
+        ) : (
+          <SignStep flow={flow} focus={moved} holding={holding} />
+        )}
       </Glide>
 
-      {/* One bar for both screens: Sign turns into Go to Overview in the same place. */}
+      {/* One bar for every step: Next turns into Hold to sign, then Go to Overview, in the same place. */}
       <ActionBar className={SOLID_BAR}>
-        <Glide
-          id={signed ? 'signed' : 'sign'}
-          direction={signed ? 1 : -1}
-          className="w-full"
-        >
-          {signed ? (
+        <Glide id={action} direction={direction} className="w-full">
+          {action === 'signed' ? (
             <div className="flex flex-col gap-2 sm:flex-row-reverse sm:items-center">
               <Button
                 variant="primary"
@@ -72,11 +91,24 @@ export default function PactV2() {
             </div>
           ) : (
             <div className="flex sm:justify-end">
-              <HoldToSign
-                className="w-full sm:w-auto sm:min-w-56"
-                onSign={sign}
-                onAsk={() => flow.open('sign')}
-              />
+              {action === 'sign' ? (
+                <HoldToSign
+                  className="w-full sm:w-auto sm:min-w-56"
+                  onSign={sign}
+                  onAsk={() => flow.open('sign')}
+                  onHoldChange={setHolding}
+                />
+              ) : (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  iconEnd={ArrowRight}
+                  className="w-full sm:w-auto sm:min-w-56"
+                  onClick={() => go(step + 1)}
+                >
+                  Next
+                </Button>
+              )}
             </div>
           )}
         </Glide>
@@ -87,116 +119,212 @@ export default function PactV2() {
   );
 }
 
-/* ── Before signing: read, then Sign from the bar ──────────────────────── */
+/** A step's title and "Step 1 of 3". It takes focus when the step is reached by Next or Back. */
+function StepTitle({
+  title,
+  step,
+  focus,
+}: {
+  title: string;
+  step: number;
+  focus: boolean;
+}) {
+  const ref = useFocusOnMount<HTMLHeadingElement>(focus);
+  return (
+    <header className="flex flex-col gap-2 pt-2">
+      <h1 ref={ref} tabIndex={-1} className="nx-page-title outline-none">
+        {title}
+      </h1>
+      <p className="text-nx-body text-nx-ink-2">
+        Step {step} of {STEPS}
+      </p>
+    </header>
+  );
+}
 
-function ToSign({ flow }: { flow: PactFlow }) {
+function useFocusOnMount<T extends HTMLElement>(focus: boolean) {
+  const ref = useRef<T>(null);
+  // A step's `focus` only turns on as that step appears (Next, Back or signing moves on at once).
+  useEffect(() => {
+    if (!focus) return;
+    return afterSheets(() => ref.current?.focus({ preventScroll: true }));
+  }, [focus]);
+  return ref;
+}
+
+/* ── Step 1: when it starts and what's at stake ─────────────────────────── */
+
+function StartsAndStakes({ flow, focus }: { flow: PactFlow; focus: boolean }) {
   const c = flow.challenge;
   return (
-    <div className="flex flex-col gap-9">
-      <PageTitle
-        kicker={c.name}
-        title="Sign the pact"
-        detail="Both of you sign before Day 1."
-      />
-
-      <Section index={1}>
-        <div className="grid grid-cols-2 gap-3">
-          <StatButton
-            label="Starts"
-            value={flow.startDate}
-            hint={`${flow.startWeekday} · ${c.days} days`}
-            onClick={() => flow.open('first')}
-          />
-          <StatButton
-            label="At stake"
-            value={`~${flow.stakes}`}
-            hint="Each gift, if you miss 1 in 10"
-            onClick={() => flow.open('step')}
-          />
-        </div>
-      </Section>
-
-      <Section title="What you both agree to" index={2}>
-        <GlassCard>
-          <Terms terms={flow.terms} />
-        </GlassCard>
-      </Section>
-
-      <Section title="The rules" index={3}>
-        <GlassCard className="flex flex-col">
-          {c.rules.map((r) => (
-            <RuleLine
-              key={r.id}
-              rule={r}
-              tag={ruleTag(r, flow)}
-              onOpen={flow.openRule}
-            />
-          ))}
-          <div className="mt-3 flex flex-col gap-4 border-t border-nx-line pt-4">
-            {flow.signers.map((s) => (
-              <SignatureRow
-                key={s.person.id}
-                signer={s}
-                timeZone={c.timeZone}
-              />
-            ))}
-          </div>
-        </GlassCard>
-      </Section>
+    <div className="flex flex-col gap-7">
+      <StepTitle title={`Sign the ${c.name} pact`} step={1} focus={focus} />
+      <div className="flex flex-col gap-3">
+        <StatButton
+          size="lg"
+          tone="accent"
+          label="At stake"
+          value={`~${flow.stakes}`}
+          hint="Each gift, if you miss 1 in 10 check-ins"
+          onClick={() => flow.open('step')}
+        />
+        <StatButton
+          label="Day 1"
+          value={flow.start}
+          hint={`${c.days} days, to ${flow.end}`}
+          onClick={() => flow.open('first')}
+        />
+      </div>
     </div>
   );
 }
 
-/** One list for both of you: a rule only one person checks in on says whose it is. */
-function ruleTag(rule: Rule, flow: PactFlow) {
-  if (rule.who === 'both') return undefined;
-  return rule.who === flow.you.id
-    ? 'Only you'
-    : `Only ${flow.theirs.person.name}`;
+/* ── Step 2: the rules, one list ────────────────────────────────────────── */
+
+function Rules({ flow, focus }: { flow: PactFlow; focus: boolean }) {
+  return (
+    <div className="flex flex-col gap-7">
+      <StepTitle title="The rules" step={2} focus={focus} />
+      <GlassCard>
+        <RuleList flow={flow} />
+      </GlassCard>
+    </div>
+  );
 }
 
-/* ── After signing: the signatures and the countdown (Go to Overview is in the bar) */
+/* ── Step 3: your line, with what you both agree to one tap above it ───── */
 
-function Signed({ flow }: { flow: PactFlow }) {
+function SignStep({
+  flow,
+  focus,
+  holding,
+}: {
+  flow: PactFlow;
+  focus: boolean;
+  holding: boolean;
+}) {
+  const c = flow.challenge;
+  return (
+    <div className="flex flex-col gap-7">
+      <StepTitle title="Your signature" step={3} focus={focus} />
+      <div className="flex flex-col gap-4">
+        <GlassCard pad="none" className="p-1.5">
+          <ListRow
+            icon={ScrollText}
+            title="What you both agree to"
+            detail={`${flow.terms.length} promises`}
+            onClick={() => flow.open('pact')}
+          />
+        </GlassCard>
+        <GlassCard pad="lg" className="flex flex-col gap-6">
+          <h2 className="sr-only">Signatures</h2>
+          <SignatureLine signer={flow.theirs} timeZone={c.timeZone} />
+          <SignatureLine
+            signer={flow.yours}
+            timeZone={c.timeZone}
+            holding={holding}
+          />
+        </GlassCard>
+      </div>
+    </div>
+  );
+}
+
+/* ── Signed: the countdown, then both signatures, small ─────────────────── */
+
+function Signed({ flow, focus }: { flow: PactFlow; focus: boolean }) {
   const c = flow.challenge;
   const drawn = flow.justSigned;
+  const ref = useFocusOnMount<HTMLHeadingElement>(focus);
   return (
-    <div className="flex flex-col gap-6 pt-4">
-      <header className="nx-enter flex flex-col items-center gap-5 text-center">
-        <span className="relative" aria-hidden="true">
-          <PairAvatars people={[flow.theirs.person, flow.you]} size="lg" />
-          {flow.bothSigned && (
-            <CheckBadge
-              drawn={drawn}
-              className="absolute -right-2.5 -bottom-1.5 shadow-[0_0_0_3px_var(--nx-page)]"
-            />
-          )}
-        </span>
-        <h1 className="nx-page-title">
-          {flow.bothSigned ? 'You both signed' : 'You signed'}
-        </h1>
-      </header>
-
-      <GlassCard className="nx-enter flex flex-col gap-6 [--nx-i:1]">
-        {flow.bothSigned && drawn && <SealRing />}
-        <h2 className="sr-only">Signatures</h2>
-        <SignatureRow signer={flow.theirs} timeZone={c.timeZone} />
-        <SignatureRow signer={flow.yours} timeZone={c.timeZone} drawn={drawn} />
-      </GlassCard>
-
+    <div className="flex flex-col gap-8 pt-2">
       {flow.bothSigned ? (
-        <CountdownButton
-          className="nx-enter [--nx-i:2]"
-          days={flow.countdown.days}
-          hours={flow.countdown.hours}
-          day={flow.start}
-          onClick={() => flow.open('first')}
-        />
+        // The heading is the countdown itself, and the countdown opens what happens on Day 1.
+        <h1
+          ref={ref}
+          tabIndex={-1}
+          className="font-nx-sans font-normal outline-none"
+        >
+          <CountdownHero
+            days={flow.countdown.days}
+            hours={flow.countdown.hours}
+            day={flow.start}
+            onClick={() => flow.open('first')}
+          />
+        </h1>
       ) : (
-        <p className="nx-enter text-center text-nx-body text-nx-ink-2 [--nx-i:2]">
-          Waiting for {flow.theirs.person.name} to sign.
-        </p>
+        <header className="flex flex-col gap-2">
+          <h1 ref={ref} tabIndex={-1} className="nx-page-title outline-none">
+            You signed
+          </h1>
+          <p className="text-nx-body text-nx-ink-2">
+            Waiting for {flow.theirs.person.name} to sign.
+          </p>
+        </header>
       )}
+
+      <section
+        aria-labelledby="pact-signed"
+        className="nx-enter flex flex-col gap-3 [--nx-i:3]"
+      >
+        <h2 id="pact-signed" className="nx-section-title">
+          {flow.bothSigned ? 'You both signed' : 'Signatures'}
+        </h2>
+        <GlassCard className="flex flex-col gap-4">
+          {flow.bothSigned && drawn && <SealRing />}
+          <SignatureLine size="sm" signer={flow.theirs} timeZone={c.timeZone} />
+          <SignatureLine
+            size="sm"
+            signer={flow.yours}
+            timeZone={c.timeZone}
+            drawn={drawn}
+          />
+        </GlassCard>
+      </section>
     </div>
+  );
+}
+
+/** "Day 1 starts in 1 day 3 hours", large: both numbers count up, and it opens what happens on Day 1. */
+function CountdownHero({
+  days,
+  hours,
+  day,
+  onClick,
+}: {
+  days: number;
+  hours: number;
+  /** "Monday, Nov 2" */
+  day: string;
+  onClick: () => void;
+}) {
+  const part = (n: number, one: string, many: string) => (
+    <span className="flex items-baseline gap-2">
+      <span className="font-nx-serif text-[64px] leading-none tracking-[-0.03em] text-nx-accent tabular-nums sm:text-[88px]">
+        <CountUp value={n} />
+      </span>
+      <span className="font-nx-serif text-nx-h2 text-nx-ink">
+        {n === 1 ? one : many}
+      </span>
+    </span>
+  );
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="nx-glass nx-tappable relative flex-col items-start gap-3 px-6 py-7 sm:px-8 sm:py-9"
+    >
+      <span className="pr-8 text-nx-lead text-nx-ink">Day 1 starts in</span>
+      <span className="flex flex-wrap items-baseline gap-x-7 gap-y-2">
+        {days > 0 && part(days, 'day', 'days')}
+        {part(hours, 'hour', 'hours')}
+      </span>
+      <span className="text-nx-body text-nx-ink-2">{day}</span>
+      <ChevronRight
+        className="nx-row-chevron absolute top-7 right-5 sm:top-9 sm:right-7"
+        size={22}
+        aria-hidden="true"
+      />
+    </button>
   );
 }

@@ -1,54 +1,51 @@
-// Focus. One question fills the screen in large type; Save stays pinned at the bottom.
+// Focus: one question fills the screen with Save pinned below; the logged day shows a square per check-in, then the streak.
 'use client';
-import { ArrowRight, Check, ListChecks } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { useNav } from '@/components/next/nav';
-import { Button } from '@/components/next/ui';
-import { formatWeekday } from '@/lib/next/selectors';
-import { CheckinPage, type EndActionsProps, type EndProps } from './page';
-import styles from './log.module.css';
+import { Enter } from '@/components/next/ui';
+import { formatWeekday, plural } from '@/lib/next/selectors';
+import { DaySquares } from './day-squares';
+import { NextActions, shortTitle, streakAfter } from './end';
+import { CheckinPage, type EndProps } from './page';
+import { LinkLine } from './question';
 
 export default function LogV1() {
-  return <CheckinPage end={Done} endActions={DoneActions} />;
+  return <CheckinPage end={AtAGlance} endActions={NextActions} />;
 }
 
-function Done({ ci, headingRef }: EndProps) {
-  const day = ci.day ?? '';
-  return (
-    <section className="flex flex-col items-center gap-4 px-2 pt-10 pb-4 text-center">
-      <span className={styles.doneMark} data-size="lg">
-        <Check size={40} strokeWidth={2.4} aria-hidden="true" />
-      </span>
-      <h2
-        ref={headingRef}
-        tabIndex={-1}
-        className="mt-2 font-nx-serif text-nx-h1 outline-none"
-      >
-        {formatWeekday(day)} is logged
-      </h2>
-      <p className="max-w-sm text-nx-lead text-nx-ink-2">
-        You can change an answer until {ci.lockLabel(day)}.
-      </p>
-    </section>
-  );
-}
-
-function DoneActions({ showAnswers }: EndActionsProps) {
+function AtAGlance({ ci, headingRef }: EndProps) {
   const { navigate } = useNav();
+  const day = ci.day ?? '';
+  const streak = streakAfter(ci.world, ci.me, day);
   return (
-    <>
-      <Button
-        variant="primary"
-        size="lg"
-        full
-        iconEnd={ArrowRight}
-        className="sm:w-auto sm:min-w-56"
-        onClick={() => navigate('overview')}
-      >
-        Go to Overview
-      </Button>
-      <Button icon={ListChecks} onClick={showAnswers}>
-        See answers
-      </Button>
-    </>
+    <section className="flex flex-col gap-5 pt-4 pb-4">
+      <Enter>
+        <h2
+          ref={headingRef}
+          tabIndex={-1}
+          className="font-nx-serif text-nx-h1 text-balance outline-none"
+        >
+          {formatWeekday(day)} is logged
+        </h2>
+      </Enter>
+      <DaySquares ci={ci} />
+      <Enter index={ci.rules.length + 1} className="flex flex-col gap-2">
+        {streak && (
+          <LinkLine
+            icon={Flame}
+            className="-mx-3 w-[calc(100%+24px)]"
+            onClick={() => navigate('progress')}
+          >
+            {shortTitle(streak.rule)} ·{' '}
+            <span className="whitespace-nowrap">
+              {plural(streak.current, 'day')} in a row
+            </span>
+          </LinkLine>
+        )}
+        <p className="text-nx-2 text-nx-ink-2">
+          You can change an answer until {ci.lockLabel(day)}.
+        </p>
+      </Enter>
+    </section>
   );
 }

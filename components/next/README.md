@@ -1,6 +1,6 @@
 # The new UI: a guide for page builders
 
-The Challenge for any couple is designed here, on sample data only, before any of it touches a database. A page in a design round has 2 or 3 versions; Erin and Kazzy compare them at `/preview` with the 1 2 3 buttons, and Kazzy picks one. The pick becomes the page's `v1.tsx` and the others are deleted, so a page that is not in a round has one version.
+The Challenge for any couple is designed here, on sample data only, before any of it touches a database. A page in a design round has 2 or 3 versions; Erin and Kazzy compare them at `/preview` with the 1 2 3 buttons, and Erin picks one. The pick becomes the page's `v1.tsx` and the others are deleted, so a page that is not in a round has one version.
 
 Read this whole file before you start. Then build your versions and nothing else.
 

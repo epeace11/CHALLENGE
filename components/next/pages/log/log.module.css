@@ -69,37 +69,6 @@
     }
   }
 
-  /* A round mark for a finished day. */
-  @keyframes pop {
-    0% {
-      transform: scale(0.6);
-      opacity: 0;
-    }
-    70% {
-      transform: scale(1.08);
-      opacity: 1;
-    }
-  }
-  .doneMark {
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--nx-done-soft);
-    color: var(--nx-done);
-    animation: pop var(--nx-slow) var(--nx-ease) both;
-  }
-  .doneMark[data-size='lg'] {
-    width: 88px;
-    height: 88px;
-  }
-  .doneMark[data-size='sm'] {
-    width: 48px;
-    height: 48px;
-  }
-
   /* The day chip: one open day, as a row. */
   .chip {
     display: inline-flex;

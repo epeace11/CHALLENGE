@@ -10,24 +10,15 @@ export type VerdictSheet = 'gifts' | 'streaks' | 'badges' | 'save' | null;
 /** "You", or the partner's name. */
 const who = (s: VerdictView['me']) => (s.isMe ? 'You' : s.person.name);
 
-/**
- * How each gift adds up: the nth point costs n times the step, forgiven points cost nothing. With
- * `given` and `onUnmark`, a gift marked given (or received) says so and can be marked back.
- */
+/** How each gift adds up: the nth point costs n times the step, forgiven points cost nothing. */
 export function GiftsSheet({
   v,
   open,
   onOpenChange,
-  given,
-  onUnmark,
 }: {
   v: VerdictView;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Which gifts are marked, by who receives them. */
-  given?: Record<string, boolean>;
-  /** Takes back the mark on the gift this person receives. */
-  onUnmark?: (recipientId: string) => void;
 }) {
   // The gift a person gets comes from the other person's points.
   const rows = [
@@ -58,21 +49,6 @@ export function GiftsSheet({
                 : `${gets.person.name}’s gift from you: ${formatMoney(gets.gets)}.`}
               {from.forgiven > 0 ? ' Forgiven points cost nothing.' : ''}
             </p>
-            {onUnmark && given?.[gets.person.id] && (
-              <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <span className="flex items-center gap-2 text-nx-body font-semibold text-nx-done">
-                  <Check size={18} strokeWidth={2.6} aria-hidden="true" />
-                  {gets.isMe ? 'Received' : 'Given'}
-                </span>
-                <Button
-                  variant="quiet"
-                  className="-mr-3"
-                  onClick={() => onUnmark(gets.person.id)}
-                >
-                  {gets.isMe ? 'Mark as not received' : 'Mark as not given'}
-                </Button>
-              </div>
-            )}
           </Card>
         ))}
       </div>

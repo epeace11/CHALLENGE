@@ -1,12 +1,6 @@
-// Rows for versions 2 and 3: a tappable row inside a card, and the rules as one tagged list.
+// Rows: a tappable row inside a card, and the rules as one tagged list.
 'use client';
-import { useId, useState } from 'react';
-import {
-  ChevronDown,
-  ChevronRight,
-  ListChecks,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
 import { keepNumbersWithWords } from '@/lib/next/format';
 import { cn } from '@/lib/utils';
@@ -92,55 +86,5 @@ export function ListRow({
         )}
       />
     </button>
-  );
-}
-
-/** A hairline between rows in a card. */
-export function RowDivider() {
-  return <span aria-hidden="true" className="mx-3.5 border-t border-nx-line" />;
-}
-
-/**
- * "8 rules" as a row that opens the tagged list in place, so the rules are one tap away without
- * filling the screen. The list grows to its height (grid rows animate where height cannot) and is
- * out of the tab order while closed.
- */
-export function RulesDisclosure({ flow }: { flow: PactFlow }) {
-  const [open, setOpen] = useState(false);
-  const panel = useId();
-  const rules = flow.challenge.rules;
-  const forWhom = {
-    both: 'both of you',
-    you: 'you',
-    them: flow.theirs.person.name,
-  } as const;
-  const counts = flow.groups.map(
-    (g) => `${g.rules.length} for ${forWhom[g.key]}`,
-  );
-  return (
-    <div className="flex flex-col">
-      <ListRow
-        icon={ListChecks}
-        title={`${rules.length} rules`}
-        detail={counts.join(' · ')}
-        expanded={open}
-        controls={panel}
-        onClick={() => setOpen(!open)}
-      />
-      <div
-        id={panel}
-        inert={!open}
-        className={cn(
-          'grid [transition:grid-template-rows_var(--nx-base)_var(--nx-ease),opacity_var(--nx-base)_var(--nx-ease)]',
-          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-        )}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <div className="px-3.5 pt-1.5 pb-2">
-            <RuleList flow={flow} />
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }

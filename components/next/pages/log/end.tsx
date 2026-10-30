@@ -1,4 +1,4 @@
-// What versions 2 and 3 share at the end of a day: the main action, the streak, short rule names.
+// The end of a day: the main action, the streak, short rule names.
 'use client';
 import { ArrowRight, ListChecks } from 'lucide-react';
 import type { DateString, Rule, World } from '@/lib/next/model';

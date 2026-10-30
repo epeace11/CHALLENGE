@@ -1,4 +1,4 @@
-// A signature line for versions 2 and 3: labelled with the person's name, inked while Hold to sign is held.
+// A signature line: labelled with the person's name, inked while Hold to sign is held.
 'use client';
 import { dateIn, formatDate, formatTime } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
