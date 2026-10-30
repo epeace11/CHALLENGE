@@ -52,10 +52,20 @@ export function ProofStrip({
           )}
         </div>
       ))}
+      {/* Before the first screenshot, a wide drop-zone with the whole label; after it, a tile the
+          size of a screenshot with only the icon (screen readers hear the label). */}
       {onAdd && (
-        <button type="button" className="nx-proof-add" onClick={onAdd}>
-          <ImagePlus size={24} aria-hidden="true" />
-          {addLabel}
+        <button
+          type="button"
+          className="nx-proof-add"
+          data-wide={proofs.length === 0 || undefined}
+          aria-label={proofs.length ? addLabel : undefined}
+          onClick={onAdd}
+        >
+          <span className="nx-proof-add-icon" aria-hidden="true">
+            <ImagePlus size={22} />
+          </span>
+          {proofs.length ? null : addLabel}
         </button>
       )}
       <ProofViewer

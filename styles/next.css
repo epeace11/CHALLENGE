@@ -1479,26 +1479,47 @@
     object-fit: cover;
     object-position: top;
   }
+  /* Add a screenshot: a soft dashed tile with the icon in a round well. Wide (with its label) before
+     the first screenshot, the size of a screenshot (the icon alone) after it. The label never wraps. */
   .nx-proof-add {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 10px;
     width: 76px;
     height: 124px;
     padding: 8px;
     border-radius: 14px;
     border: 1.5px dashed var(--nx-accent-line);
-    color: var(--nx-accent);
-    font: 600 14px/1.25 var(--nx-font-sans);
-    text-align: center;
+    background: color-mix(in srgb, var(--nx-accent-soft) 45%, transparent);
+    color: var(--nx-ink);
+    font: 600 15px/1.2 var(--nx-font-sans);
+    white-space: nowrap;
     transition:
       transform var(--nx-fast) var(--nx-ease),
-      background var(--nx-base) var(--nx-ease);
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease);
+  }
+  .nx-proof-add[data-wide] {
+    flex: 1 1 100%;
+    width: 100%;
+    height: 124px;
+    border-radius: 18px;
+    font-size: 17px;
+  }
+  .nx-proof-add-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
   }
   .nx-proof-add:hover {
     background: var(--nx-accent-soft);
+    border-color: var(--nx-accent);
   }
   .nx-proof-add:active {
     transform: scale(0.96);
