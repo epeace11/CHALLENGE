@@ -15,7 +15,15 @@ Built first, Review and disputes:
 - **A dispute still open at the end is explained.** Rules and help answers "What if a dispute is still open at the end?" (it isn't a point; either of you can still settle it on Review, and the gifts change if it's conceded), and the verdict shows "1 dispute is still open", which opens Review. The help's reviewing answer now says "concedes" and "replies", the buttons' words.
 - The card's rule name is an h2 under the page's h1 (it skipped to h3).
 
-Still to build from this critique: Hold to sign that answers a tap, ending that needs the partner's OK, own layouts for signing, the verdict and the end of a day (2–3 versions each for Kazzy), one way to draw a day on Overview and Progress, and the copy and polish fixes.
+Built second, hardening:
+
+- **Hold to sign answers a tap.** Holding still signs. A tap, a click, Enter, a screen reader or Voice Control opens "Sign Fall Reset?" with the stakes once more and a plain Sign button, so nobody is stuck and a stray tap still never signs. A drifting thumb no longer resets the hold (the button doesn't scroll the page).
+- **Check in's Save says why it can't save.** It stays focusable instead of going grey and silent; pressing it early says "Enter a number to save." (or "Choose Yes or No.", or "Change the answer to save.") next to it, and a screen reader hears it. The same goes for Send late answer.
+- **The challenge's name is a full 44px target.** Below 1024px it shares one row with "Day 19 of 30" (name left, day right); on laptops they stack beside the top nav as before. The Progress calendar's days were already 45×48 (the critique measured them mid-animation).
+- **Ending a running challenge takes both** (`supabase/next/end-requests.sql`). End the challenge in Settings now asks: "Ask Jordan to end Fall Reset?", then "Waiting for Jordan · End Fall Reset now" with Withdraw. Jordan sees "Maya asks to end Fall Reset now" at the top of Overview (and in Settings) with Keep going and End it, which confirms first. Before Day 1, either can still cancel at once.
+- The Progress streak reads "1 day in a row" to a screen reader (it said "1 days").
+
+Still to build from this critique: own layouts for signing, the verdict and the end of a day (2–3 versions each for Kazzy), one way to draw a day on Overview and Progress, and the copy and polish fixes.
 
 ## Decisions, October 27, 2026 (design critique)
 

@@ -385,20 +385,26 @@ export function CountdownButton({
 const HOLD_MS = 900;
 
 /**
- * Sign as a deliberate act: a press fills the button and signs once it is full, and letting go
- * early empties it again, so a stray tap never signs. A keyboard or screen reader activates it
- * like any button (they never tap by accident). Under reduced motion it still needs the hold, but
- * the fill shows at once instead of sweeping across.
+ * Sign as a deliberate act: a press fills the button and signs once it is full. Anything short of
+ * that (a tap, a click, Enter, a screen reader or Voice Control) asks first with `onAsk`, so
+ * nobody is stuck and a stray tap never signs. The thumb can drift while holding (the button
+ * doesn't scroll the page). Under reduced motion it still needs the hold, but the fill shows at
+ * once instead of sweeping across.
  */
 export function HoldToSign({
   onSign,
+  onAsk,
   className,
 }: {
   onSign: () => void;
+  /** Opens a confirm step with an ordinary Sign button. */
+  onAsk: () => void;
   className?: string;
 }) {
   const [holding, setHolding] = useState(false);
   const timer = useRef<number | null>(null);
+  // The hold finished and signed; the click that follows the release is part of it.
+  const signed = useRef(false);
   const still = useReducedMotion();
   const stop = () => {
     if (timer.current !== null) window.clearTimeout(timer.current);
@@ -409,24 +415,36 @@ export function HoldToSign({
   return (
     <button
       type="button"
-      className={cn('nx-btn overflow-hidden', className)}
+      className={cn(
+        'nx-btn touch-none overflow-hidden select-none [-webkit-touch-callout:none]',
+        className,
+      )}
       data-variant="primary"
       data-size="lg"
       onPointerDown={(e) => {
         if (e.button !== 0) return;
+        signed.current = false;
         setHolding(true);
         timer.current = window.setTimeout(() => {
           timer.current = null;
+          signed.current = true;
           setHolding(false);
           onSign();
         }, HOLD_MS);
       }}
       onPointerUp={stop}
+      // A mouse that slides off lets go; a finger stays captured, so drifting doesn't.
       onPointerLeave={stop}
       onPointerCancel={stop}
       onContextMenu={(e) => e.preventDefault()}
-      // detail 0: Enter, Space or a screen reader, never a pointer.
-      onClick={(e) => e.detail === 0 && onSign()}
+      onClick={() => {
+        if (signed.current) {
+          signed.current = false;
+          return;
+        }
+        stop();
+        onAsk();
+      }}
     >
       <span
         aria-hidden="true"

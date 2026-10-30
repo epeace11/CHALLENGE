@@ -6,8 +6,8 @@ import { useBackend, useUndoAction } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 import { pactView, signPactAt } from './pact-data';
 
-/** The sheets the pact opens: Day 1 and the first check-in, the dollar step, one rule, the whole pact. */
-export type PactSheet = 'first' | 'step' | 'rule' | 'pact';
+/** The sheets the pact opens: Day 1 and the first check-in, the dollar step, one rule, the whole pact, and Sign without holding. */
+export type PactSheet = 'first' | 'step' | 'rule' | 'pact' | 'sign';
 
 /**
  * What both pact versions share: the data, which sheet is open, and signing. Signing goes through

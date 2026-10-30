@@ -84,8 +84,8 @@ export function ClosedDay({
               <Button onClick={ci.cancel}>Cancel</Button>
               <Button
                 variant="primary"
-                disabled={!ci.canSave(shown)}
-                onClick={() => ci.save(shown)}
+                aria-disabled={!ci.canSave(shown)}
+                onClick={() => ci.trySave(shown)}
               >
                 Send late answer
               </Button>

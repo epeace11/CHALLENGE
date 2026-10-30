@@ -1,5 +1,6 @@
 'use client';
 import type { ReactNode } from 'react';
+import { PenLine } from 'lucide-react';
 import {
   formatMoney,
   formatTarget,
@@ -11,13 +12,20 @@ import { RuleIcon, RuleLine, StepBars, Terms } from './parts';
 import type { PactFlow } from './use-pact';
 
 /** Every sheet the pact opens. Each version renders this once. */
-export function PactSheets({ flow }: { flow: PactFlow }) {
+export function PactSheets({
+  flow,
+  onSign,
+}: {
+  flow: PactFlow;
+  onSign: () => void;
+}) {
   return (
     <>
       <FirstDaySheet flow={flow} />
       <StepSheet flow={flow} />
       <RuleSheet flow={flow} />
       <WholePactSheet flow={flow} />
+      <SignSheet flow={flow} onSign={onSign} />
     </>
   );
 }
@@ -153,6 +161,36 @@ function RuleSheet({ flow }: { flow: PactFlow }) {
 }
 
 /* ── The whole pact, after signing ─────────────────────────────────────── */
+
+/* ── Signing without the hold ──────────────────────────────────────────── */
+
+/** A tap, a click, Enter or a screen reader on Hold to sign: the stakes once more, and a plain Sign. */
+function SignSheet({ flow, onSign }: { flow: PactFlow; onSign: () => void }) {
+  const c = flow.challenge;
+  return (
+    <Sheet
+      open={flow.sheet === 'sign'}
+      onOpenChange={onOpenChange(flow)}
+      title={`Sign ${c.name}?`}
+      description={`Day 1 is ${flow.start}. At stake: about ${flow.stakes} for each gift, if you miss 1 in 10.`}
+      footer={
+        <>
+          <Button onClick={flow.close}>Cancel</Button>
+          <Button
+            variant="primary"
+            icon={PenLine}
+            onClick={() => {
+              flow.close();
+              onSign();
+            }}
+          >
+            Sign
+          </Button>
+        </>
+      }
+    />
+  );
+}
 
 function WholePactSheet({ flow }: { flow: PactFlow }) {
   const c = flow.challenge;

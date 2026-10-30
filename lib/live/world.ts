@@ -55,6 +55,9 @@ export type ChallengeRow = {
   cap: number | string | null;
   week_start: number;
   status: ChallengeStatus | 'draft' | 'invited' | 'signing';
+  /** Absent on a project that hasn't run end-requests.sql. */
+  end_asked_by?: string | null;
+  end_asked_at?: string | null;
   created_by: string;
   created_at: string;
 };
@@ -282,6 +285,9 @@ export function challengeOf(
       .sort((a, b) => a.position - b.position)
       .map((r) => ruleOf(r, partnerId)),
     weekStart: c.week_start as Weekday,
+    ...(c.end_asked_by && c.end_asked_at
+      ? { endAsk: { by: c.end_asked_by, at: c.end_asked_at } }
+      : {}),
   };
 }
 

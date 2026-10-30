@@ -357,6 +357,19 @@ export function signPact(w: World, personId: string): World {
   };
 }
 
+/** Asks to end the running challenge early; it ends once the partner accepts. */
+export const askToEnd = (w: World, personId: string): World => ({
+  ...w,
+  challenge: { ...w.challenge, endAsk: { by: personId, at: w.now } },
+});
+
+/** Drops the request to end early: withdrawn by whoever asked, or declined by the other. */
+export function dropEndAsk(w: World): World {
+  const challenge = { ...w.challenge };
+  delete challenge.endAsk;
+  return { ...w, challenge };
+}
+
 /** Changes the running challenge's settings (name, look, step, cap, deadline, rules…). */
 export function updateChallenge(
   w: World,

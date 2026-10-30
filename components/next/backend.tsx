@@ -41,6 +41,10 @@ export type Command =
   | { type: 'editNote'; noteId: string; text: string }
   | { type: 'removeNote'; noteId: string }
   | { type: 'signPact' }
+  /** Ending a running challenge early: ask, take the request back, or turn the partner's down. */
+  | { type: 'askToEnd' }
+  | { type: 'withdrawEnd' }
+  | { type: 'declineEnd' }
   | { type: 'rename'; name: string }
   | { type: 'setShareLink'; savedId: string; on: boolean }
   | { type: 'saveAs'; challengeId: string; name: string }

@@ -56,6 +56,9 @@ create table public.challenges(
   -- draft: being set up. invited: waiting on the partner's account. signing: both in, pact open.
   -- running: both signed. finished: the last day's deadline has passed.
   status text not null default 'draft' check (status in ('draft','invited','signing','running','finished')),
+  -- Ending a running challenge early takes both: who asked, and when. The other accepts or declines.
+  end_asked_by uuid references public.profiles,
+  end_asked_at timestamptz,
   created_by uuid not null references public.profiles,
   created_at timestamptz not null default now()
 );
@@ -901,19 +904,15 @@ end $$;
 
 /* ── Cancelling: deleted before Day 1, ended now while it runs ────────── */
 
--- Before Day 1, the challenge and everything in it is deleted. While it runs, it ends now: the days
--- whose deadline has passed count, later days' answers and points go, and the verdict opens. Ending
--- one before any day has closed deletes it. Either person can do it. Returns 'deleted' or 'ended'.
-create function public.nx_cancel_challenge(p_challenge uuid) returns text
+-- Ends a running challenge now: the days whose deadline has passed count, later days' answers and
+-- points go, and the verdict opens. One that no day has closed on yet is deleted. Internal: it runs
+-- once both have agreed. Returns 'deleted' or 'ended'.
+create function public.nx_end_now(p_challenge uuid) returns text
 language plpgsql security definer set search_path = public as $$
-declare c challenges := nx_enter(p_challenge); last_closed date;
+declare c challenges; last_closed date;
 begin
-  if c.status = 'finished' then raise exception 'This challenge is already over.'; end if;
-  if c.status in ('draft','invited','signing') then
-    delete from challenges where id = c.id;
-    return 'deleted';
-  end if;
-  perform nx_tick(c.id);
+  perform nx_tick(p_challenge);
+  select * into c from challenges where id = p_challenge;
   -- The latest day whose deadline has passed (as in nx_tick).
   last_closed := least(nx_last_day(c), nx_today(c) - c.deadline_days - case when nx_now() > nx_lock_time(c, nx_today(c) - c.deadline_days) then 0 else 1 end);
   if last_closed < c.start_date then
@@ -922,10 +921,54 @@ begin
   end if;
   delete from points where challenge_id = c.id and day > last_closed;
   delete from entries where challenge_id = c.id and day > last_closed;
-  update challenges set days = last_closed - start_date + 1, status = 'finished' where id = c.id;
+  update challenges set days = last_closed - start_date + 1, status = 'finished', end_asked_by = null, end_asked_at = null
+  where id = c.id;
   -- The last, shorter week's shortfalls, at its share of the target.
   perform nx_tick(c.id);
   return 'ended';
+end $$;
+
+-- Before Day 1, the challenge and everything in it is deleted, by either person. While it runs, it
+-- ends only once both agree: this is the partner accepting the other's request (nx_end_request).
+-- Returns 'deleted' or 'ended'.
+create function public.nx_cancel_challenge(p_challenge uuid) returns text
+language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge);
+begin
+  if c.status = 'finished' then raise exception 'This challenge is already over.'; end if;
+  if c.status in ('draft','invited','signing') then
+    delete from challenges where id = c.id;
+    return 'deleted';
+  end if;
+  if c.end_asked_by is null or c.end_asked_by = auth.uid() then
+    raise exception 'A running challenge ends once you both agree. Ask your partner first.';
+  end if;
+  return nx_end_now(c.id);
+end $$;
+
+-- Asking to end a running challenge early: 'ask', 'withdraw' (the one who asked) or 'decline' (the
+-- other). Asking after the partner already asked means both agree, so it ends. Accepting is
+-- nx_cancel_challenge. Returns 'asked', 'withdrawn', 'declined', 'ended' or 'deleted'.
+create function public.nx_end_request(p_challenge uuid, p_action text) returns text
+language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge);
+begin
+  select * into c from challenges where id = c.id for update;
+  if c.status <> 'running' then raise exception 'Only a running challenge can be ended early.'; end if;
+  if p_action = 'ask' then
+    if c.end_asked_by is not null and c.end_asked_by <> auth.uid() then return nx_end_now(c.id); end if;
+    update challenges set end_asked_by = auth.uid(), end_asked_at = nx_now() where id = c.id;
+    return 'asked';
+  elsif p_action = 'withdraw' then
+    if c.end_asked_by is distinct from auth.uid() then raise exception 'You haven''t asked to end it.'; end if;
+    update challenges set end_asked_by = null, end_asked_at = null where id = c.id;
+    return 'withdrawn';
+  elsif p_action = 'decline' then
+    if c.end_asked_by is null or c.end_asked_by = auth.uid() then raise exception 'Nobody else asked to end it.'; end if;
+    update challenges set end_asked_by = null, end_asked_at = null where id = c.id;
+    return 'declined';
+  end if;
+  raise exception 'Unknown request.';
 end $$;
 
 
@@ -960,7 +1003,7 @@ do $$ declare f text; begin
   -- Internal helpers: nobody calls these directly.
   foreach f in array array['nx_enter(uuid)','nx_partner(uuid,uuid)','nx_tick(uuid)','nx_tick_all()',
     'nx_put_rules(public.challenges,jsonb)','nx_find_invite(text)','nx_check_proofs(public.challenges,jsonb)',
-    'nx_void_point_of(uuid)','nx_add_point(public.entries,text)','nx_forgive(uuid)'] loop
+    'nx_void_point_of(uuid)','nx_add_point(public.entries,text)','nx_forgive(uuid)','nx_end_now(uuid)'] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
   end loop;
   -- What a signed-in person can call.
@@ -971,7 +1014,8 @@ do $$ declare f text; begin
     'nx_save_checkin(uuid,uuid,date,boolean,numeric,text,jsonb,text)','nx_review(uuid,text,text)',
     'nx_resolve_dispute(uuid,text,text)','nx_ask_forgiveness(uuid,text)','nx_decide_forgiveness(uuid,boolean)',
     'nx_forgive_point(uuid)','nx_add_note(uuid,date,text)','nx_edit_note(uuid,text)','nx_remove_note(uuid)',
-    'nx_save_challenge(uuid,text)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)'] loop
+    'nx_save_challenge(uuid,text)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)',
+    'nx_end_request(uuid,text)'] loop
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;

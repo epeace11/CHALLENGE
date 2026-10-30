@@ -562,6 +562,17 @@ export function send(challengeId: string, c: Command) {
       return rpc('nx_remove_note', { p_note: c.noteId });
     case 'signPact':
       return rpc('nx_sign_pact', { p_challenge: challengeId });
+    case 'askToEnd':
+    case 'withdrawEnd':
+    case 'declineEnd':
+      return rpc('nx_end_request', {
+        p_challenge: challengeId,
+        p_action: {
+          askToEnd: 'ask',
+          withdrawEnd: 'withdraw',
+          declineEnd: 'decline',
+        }[c.type],
+      });
     case 'rename':
       return setName(c.name);
     case 'setShareLink':

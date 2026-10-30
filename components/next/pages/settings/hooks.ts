@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { World } from '@/lib/next/model';
+import { askToEnd, dropEndAsk } from '@/lib/next/actions';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useToast } from '@/components/next/ui';
@@ -75,6 +76,26 @@ function download(filename: string, text: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Ending the running challenge early takes both: ask, take the request back, or turn the partner's down. */
+export function useEndAsk(world: World) {
+  const backend = useBackend();
+  const toast = useToast();
+  return {
+    ask: () => {
+      backend.act({ type: 'askToEnd' }, (w) => askToEnd(w, w.me.id));
+      toast(`Sent to ${world.partner.name}`);
+    },
+    withdraw: () => {
+      backend.act({ type: 'withdrawEnd' }, dropEndAsk);
+      toast('Withdrawn');
+    },
+    decline: () => {
+      backend.act({ type: 'declineEnd' }, dropEndAsk);
+      toast(`${world.challenge.name} keeps going`);
+    },
+  };
 }
 
 /** The account's actions, each doing exactly what its button says. */

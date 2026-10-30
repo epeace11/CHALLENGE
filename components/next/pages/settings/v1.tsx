@@ -33,16 +33,19 @@ import {
   type Terms,
 } from './data';
 import {
+  AskEndSheet,
   DeleteSheet,
+  EndAskCard,
   LeaveSheet,
   ProposalCard,
   TermsFields,
   TimeSelect,
+  endAskFrom,
 } from './parts';
-import { THEME_OPTIONS, useAccount, useThemeChoice } from './hooks';
+import { THEME_OPTIONS, useAccount, useEndAsk, useThemeChoice } from './hooks';
 import styles from './settings.module.css';
 
-type Open = 'name' | 'times' | 'terms' | 'leave' | 'delete' | null;
+type Open = 'name' | 'times' | 'terms' | 'ask' | 'leave' | 'delete' | null;
 
 /** Settings, version 1. */
 export default function SettingsV1() {
@@ -63,6 +66,33 @@ export default function SettingsV1() {
   const close = (next: boolean) => {
     if (!next) setOpen(null);
   };
+  // Ending early takes both: the button asks, then the request waits for the partner (Withdraw);
+  // a request from the partner is answered here or on Overview.
+  const ending = useEndAsk(world);
+  const theirAsk = endAskFrom(world);
+  const myAsk = c.status === 'running' && c.endAsk && !theirAsk;
+  const endControls = theirAsk ? (
+    <EndAskCard
+      world={world}
+      onKeep={ending.decline}
+      onEnd={() => setOpen('leave')}
+    />
+  ) : myAsk ? (
+    <ProposalCard
+      partner={partner}
+      changes={[`End ${c.name} now`]}
+      onWithdraw={ending.withdraw}
+    />
+  ) : (
+    <Button
+      variant="quiet"
+      icon={LogOut}
+      className="-ml-3 self-start text-nx-danger"
+      onClick={() => setOpen(c.status === 'running' ? 'ask' : 'leave')}
+    >
+      End the challenge
+    </Button>
+  );
 
   return (
     <AppFrame>
@@ -154,27 +184,13 @@ export default function SettingsV1() {
                 Changes here go to {partner} to accept.
               </p>
             )}
-            <Button
-              variant="quiet"
-              icon={LogOut}
-              className="-ml-3 self-start text-nx-danger"
-              onClick={() => setOpen('leave')}
-            >
-              End the challenge
-            </Button>
+            {endControls}
           </Section>
         )}
 
         {later && world.challenge.status === 'running' && (
           <Section title={c.name} index={4}>
-            <Button
-              variant="quiet"
-              icon={LogOut}
-              className="-ml-3 self-start text-nx-danger"
-              onClick={() => setOpen('leave')}
-            >
-              End the challenge
-            </Button>
+            {endControls}
           </Section>
         )}
 
@@ -250,6 +266,12 @@ export default function SettingsV1() {
           setProposal(t);
           toast(`Sent to ${partner}`);
         }}
+      />
+      <AskEndSheet
+        world={world}
+        open={open === 'ask'}
+        onOpenChange={close}
+        onAsk={ending.ask}
       />
       <LeaveSheet
         world={world}

@@ -306,7 +306,9 @@ function HabitLine({
           <>
             <Flame size={16} className="text-nx-accent" aria-hidden="true" />
             {stat.current}
-            <span className="sr-only">{` ${unit}s in a row`}</span>
+            <span className="sr-only">
+              {` ${stat.current === 1 ? unit : `${unit}s`} in a row`}
+            </span>
           </>
         )}
       </span>

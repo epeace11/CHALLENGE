@@ -33,6 +33,11 @@ export default function PactV2() {
   const flow = usePact();
   const { live } = useBackend();
   const signed = !!flow.yours.signedAt;
+  const sign = () => {
+    // The signed screen starts at the top of the page.
+    window.scrollTo({ top: 0 });
+    flow.sign();
+  };
   return (
     <PlainFrame
       // In the live app the invite has been accepted, so Back goes to Your challenges.
@@ -70,18 +75,15 @@ export default function PactV2() {
             <div className="flex sm:justify-end">
               <HoldToSign
                 className="w-full sm:w-auto sm:min-w-56"
-                onSign={() => {
-                  // The signed screen starts at the top of the page.
-                  window.scrollTo({ top: 0 });
-                  flow.sign();
-                }}
+                onSign={sign}
+                onAsk={() => flow.open('sign')}
               />
             </div>
           )}
         </Glide>
       </ActionBar>
 
-      <PactSheets flow={flow} />
+      <PactSheets flow={flow} onSign={sign} />
     </PlainFrame>
   );
 }

@@ -23,13 +23,7 @@ import {
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import { Bar } from './bar';
-import {
-  outcomeOf,
-  problemOf,
-  stepFor,
-  unitLabel,
-  type Checkin,
-} from './use-checkin';
+import { outcomeOf, stepFor, unitLabel, type Checkin } from './use-checkin';
 import styles from './log.module.css';
 
 /** A line of text that is one button: it wraps on phones, unlike a kit Button, and leads somewhere. */
@@ -292,7 +286,10 @@ export function QuestionFields({
   );
 }
 
-/** Why Save is off, said next to it (only when the reason is not obvious). */
+/**
+ * Why Save can't save, said next to it: at once when the reason is not obvious, and for any
+ * reason once Save is pressed. It is a status region, so a screen reader hears it too.
+ */
 export function SaveHint({
   ci,
   rule,
@@ -302,13 +299,15 @@ export function SaveHint({
   rule: Rule;
   className?: string;
 }) {
-  const problem = problemOf(rule, ci.draftOf(rule), ci.late);
-  if (!problem?.show) return null;
+  const text = ci.blocked(rule);
   return (
     <output
-      className={cn('block text-nx-2 font-semibold text-nx-wait', className)}
+      className={cn(
+        'block text-nx-2 font-semibold text-nx-wait empty:hidden',
+        className,
+      )}
     >
-      {problem.text}
+      {text}
     </output>
   );
 }

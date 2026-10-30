@@ -584,10 +584,12 @@
       color var(--nx-base) var(--nx-ease),
       opacity var(--nx-base) var(--nx-ease);
   }
-  .nx-btn:active:not(:disabled, [data-loading]) {
+  .nx-btn:active:not(:disabled, [aria-disabled='true'], [data-loading]) {
     transform: scale(0.97);
   }
-  .nx-btn:disabled {
+  /* aria-disabled: looks off but stays focusable, so pressing it can say why. */
+  .nx-btn:disabled,
+  .nx-btn[aria-disabled='true'] {
     opacity: 0.45;
     cursor: not-allowed;
     box-shadow: none;
@@ -605,7 +607,7 @@
     color: var(--nx-on-primary);
     box-shadow: var(--nx-primary-shadow);
   }
-  .nx-btn[data-variant='primary']:hover:not(:disabled) {
+  .nx-btn[data-variant='primary']:hover:not(:disabled, [aria-disabled='true']) {
     background: var(--nx-primary-hover);
   }
   /* Like today's app: a light glass button with a thin grey border and ink text. */
@@ -615,7 +617,10 @@
     background: var(--nx-surface-2);
     color: var(--nx-ink);
   }
-  .nx-btn[data-variant='secondary']:hover:not(:disabled) {
+  .nx-btn[data-variant='secondary']:hover:not(
+      :disabled,
+      [aria-disabled='true']
+    ) {
     background: var(--nx-surface);
   }
   .nx-btn[data-variant='quiet'] {
@@ -623,14 +628,14 @@
     padding: 0 12px;
     color: var(--nx-accent);
   }
-  .nx-btn[data-variant='quiet']:hover:not(:disabled) {
+  .nx-btn[data-variant='quiet']:hover:not(:disabled, [aria-disabled='true']) {
     background: var(--nx-accent-soft);
   }
   .nx-btn[data-variant='danger'] {
     background: var(--nx-danger-fill);
     color: #fff;
   }
-  .nx-btn[data-variant='danger']:hover:not(:disabled) {
+  .nx-btn[data-variant='danger']:hover:not(:disabled, [aria-disabled='true']) {
     filter: brightness(1.08);
   }
   .nx-btn[data-loading] {
@@ -1672,6 +1677,38 @@
   }
   .nx-day-link:hover {
     color: var(--nx-accent);
+  }
+  /* The challenge's name and its day. Below 1024px the tab bar holds the navigation, so the two
+     share one row and each is a full 44px target; above it they stack beside the top nav. */
+  .nx-topbar-title {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .nx-topbar-title .nx-brand {
+    min-width: 0;
+    padding-block: 10px;
+  }
+  .nx-topbar-title .nx-day-link {
+    margin: 0 -6px 0 0;
+  }
+  @media (min-width: 1024px) {
+    .nx-topbar-title {
+      flex: 0 1 auto;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+    }
+    .nx-topbar-title .nx-brand {
+      max-width: 100%;
+      padding-block: 0;
+    }
+    .nx-topbar-title .nx-day-link {
+      margin: -6px 0 -6px -6px;
+    }
   }
   .nx-tabbar {
     position: fixed;

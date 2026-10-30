@@ -10,6 +10,7 @@ import {
   Toggle,
 } from '@/components/next/ui';
 import { formatMoney } from '@/lib/next/selectors';
+import { cn } from '@/lib/utils';
 import { capLine, formatClock, giftsUnder, stepLine, type Terms } from './data';
 import styles from './settings.module.css';
 
@@ -166,7 +167,98 @@ export function ProposalCard({
 
 /* ── Leaving and deleting ─────────────────────────────────────────────── */
 
-/** Confirms leaving: the challenge ends for both, and the gifts stay where they are. */
+/** The partner's request to end the running challenge early, when one waits on this person. */
+export function endAskFrom(world: World) {
+  const ask = world.challenge.endAsk;
+  return world.challenge.status === 'running' && ask && ask.by !== world.me.id
+    ? ask
+    : null;
+}
+
+/** Asks the partner to end the running challenge early; nothing ends until they accept. */
+export function AskEndSheet({
+  world,
+  open,
+  onOpenChange,
+  onAsk,
+}: {
+  world: World;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAsk: () => void;
+}) {
+  const c = world.challenge;
+  const partner = world.partner.name;
+  const early = world.today <= c.start;
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Ask ${partner} to end ${c.name}?`}
+      description={
+        early
+          ? `It’s deleted once ${partner} agrees, since no day has counted yet. Until then, nothing changes.`
+          : `It ends once ${partner} agrees: the days that are over count, and the verdict opens. Until then, nothing changes.`
+      }
+      footer={
+        <>
+          <Button onClick={() => onOpenChange(false)}>Keep going</Button>
+          <Button
+            variant="danger"
+            icon={LogOut}
+            onClick={() => {
+              onAsk();
+              onOpenChange(false);
+            }}
+          >
+            Ask to end it
+          </Button>
+        </>
+      }
+    />
+  );
+}
+
+/** The partner asked to end the challenge early: Keep going turns it down, End it confirms first. */
+export function EndAskCard({
+  world,
+  onKeep,
+  onEnd,
+  className,
+}: {
+  world: World;
+  onKeep: () => void;
+  onEnd: () => void;
+  className?: string;
+}) {
+  const partner = world.partner.name;
+  return (
+    <div
+      className={cn(
+        'nx-enter flex flex-col gap-3 rounded-nx border border-nx-line bg-nx-wait-soft p-4',
+        className,
+      )}
+    >
+      <div className="flex flex-col gap-1">
+        <p className="text-nx-body font-semibold text-nx-ink">
+          {partner} asks to end {world.challenge.name} now
+        </p>
+        <p className="text-nx-2 text-nx-ink-2">It ends only if you agree.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={onKeep}>Keep going</Button>
+        <Button variant="danger" icon={LogOut} onClick={onEnd}>
+          End it
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Confirms ending the challenge for both, once the partner has asked (or before Day 1, when either
+ * can): the days that are over count, and the gifts stay where they are.
+ */
 export function LeaveSheet({
   world,
   open,
@@ -183,6 +275,7 @@ export function LeaveSheet({
   const partner = world.partner.name;
   // Nothing has counted before Day 1 is over, so the challenge is deleted instead.
   const early = world.today <= c.start;
+  const asked = endAskFrom(world) ? `${partner} asked to end it. ` : '';
   return (
     <Sheet
       open={open}
@@ -190,8 +283,8 @@ export function LeaveSheet({
       title={`End ${c.name}?`}
       description={
         early
-          ? `It’s deleted for you and ${partner}, since no day has counted yet. This can’t be undone.`
-          : `It ends now for you and ${partner}. The days that are over count, and the verdict opens. This can’t be undone.`
+          ? `${asked}It’s deleted for you and ${partner}, since no day has counted yet. This can’t be undone.`
+          : `${asked}It ends now for you and ${partner}. The days that are over count, and the verdict opens. This can’t be undone.`
       }
       footer={
         <>

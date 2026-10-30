@@ -221,6 +221,20 @@ export function useCheckin({ top, heading }: Anchors) {
   /** Save does something: the answer is complete and differs from what was saved. */
   const canSave = (rule: Rule) =>
     !problemOf(rule, draftOf(rule), late) && !unchanged(rule);
+  // Save stays pressable when it can't save; pressing it then says why next to it.
+  const [tried, setTried] = useState<string | null>(null);
+  /** Why Save can't save this check-in, once it was pressed or when it isn't obvious; else null. */
+  const blocked = (rule: Rule) => {
+    const pressed = tried === key(rule),
+      problem = problemOf(rule, draftOf(rule), late);
+    if (problem) return problem.show || pressed ? problem.text : null;
+    return pressed && unchanged(rule) ? 'Change the answer to save.' : null;
+  };
+  /** Saves, or says why it can't. */
+  const trySave = (rule: Rule) => {
+    if (canSave(rule)) save(rule);
+    else setTried(key(rule));
+  };
   const drop = (rule: Rule) => {
     const k = key(rule);
     setDrafts((all) => {
@@ -378,8 +392,10 @@ export function useCheckin({ top, heading }: Anchors) {
     entryOf,
     draftOf,
     canSave,
+    blocked,
     change,
     save,
+    trySave,
     skip,
     openRule,
     cancel,

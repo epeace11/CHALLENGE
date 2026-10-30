@@ -114,18 +114,18 @@ export function AppFrame({ children }: { children: ReactNode }) {
             // Your challenges lists this challenge right below, so the top bar names the product.
             <span className="nx-brand self-center">The Challenge</span>
           ) : (
-            <div className="flex min-w-0 flex-col">
+            <div className="nx-topbar-title">
               {/* The challenge's name leads to Your challenges, like the product's name before Day 1. */}
               <button
                 type="button"
-                className="nx-brand nx-press self-start truncate text-left"
+                className="nx-brand nx-press truncate text-left"
                 onClick={() => navigate('home')}
               >
                 {c.name}
               </button>
               <button
                 type="button"
-                className="nx-day-link self-start"
+                className="nx-day-link"
                 onClick={() => navigate('progress')}
               >
                 {world.today < c.start

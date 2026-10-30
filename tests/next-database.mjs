@@ -31,6 +31,7 @@ for (const script of [
   'gifts-given.sql',
   'fixes-oct-18.sql',
   'cancel-challenge.sql',
+  'end-requests.sql',
 ])
   await db.exec(
     readFileSync(
@@ -775,17 +776,46 @@ assert.equal(
   'no misses before both had signed',
 );
 
-// Cancelling. Ending a running challenge keeps the days that have closed and drops later answers;
-// only its own couple can, and once it's over it stays over. A challenge still in setup is deleted.
+// Cancelling. A running challenge ends only once both agree: one asks, the other accepts (or
+// declines), and the one who asked can withdraw. Ending keeps the days that have closed and drops
+// later answers; only its own couple can, and once it's over it stays over. A challenge still in
+// setup is deleted by either person.
 await as(sam, `select nx_save_checkin($1,$2,'2026-11-18',true)`, [
   dry,
   dryPray,
 ]);
+const endAsk = (id, action) =>
+  one(id, `select nx_end_request($1,$2) r`, [dry, action]).then((x) => x.r);
+const askedBy = async () =>
+  (await one(priya, `select end_asked_by from challenges where id=$1`, [dry]))
+    .end_asked_by;
+await fails(as(maya, `select nx_end_request($1,'ask')`, [dry]), /isn't yours/);
 await fails(as(maya, `select nx_cancel_challenge($1)`, [dry]), /isn't yours/);
+// Nobody asked yet.
+await fails(as(priya, `select nx_cancel_challenge($1)`, [dry]), /both agree/);
+await fails(as(priya, `select nx_end_request($1,'decline')`, [dry]), /Nobody/);
+await fails(
+  as(priya, `select nx_end_request($1,'withdraw')`, [dry]),
+  /haven't/,
+);
+assert.equal(await endAsk(priya, 'ask'), 'asked');
+assert.equal(await askedBy(), priya);
+// The one who asked can't accept it.
+await fails(as(priya, `select nx_cancel_challenge($1)`, [dry]), /both agree/);
+await fails(as(sam, `select nx_end_request($1,'withdraw')`, [dry]), /haven't/);
+assert.equal(await endAsk(sam, 'decline'), 'declined');
+assert.equal(await askedBy(), null);
+assert.equal(await endAsk(priya, 'ask'), 'asked');
+assert.equal(await endAsk(priya, 'withdraw'), 'withdrawn');
+assert.equal(await askedBy(), null);
+await fails(as(priya, `select nx_end_request($1,'stop')`, [dry]), /Unknown/);
+assert.equal(await endAsk(priya, 'ask'), 'asked');
 assert.equal(
-  (await one(priya, `select nx_cancel_challenge($1) r`, [dry])).r,
+  (await one(sam, `select nx_cancel_challenge($1) r`, [dry])).r,
   'ended',
 );
+assert.equal(await askedBy(), null, 'the request is cleared once it ends');
+await fails(as(priya, `select nx_end_request($1,'ask')`, [dry]), /running/);
 assert.deepEqual(
   await one(priya, `select status, days from challenges where id=$1`, [dry]),
   { status: 'finished', days: 1 },

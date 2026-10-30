@@ -169,8 +169,8 @@ export default function LogV2() {
                     full
                     icon={Check}
                     className="min-w-0 flex-1 sm:w-auto sm:min-w-56 sm:flex-none"
-                    disabled={!ci.canSave(rule)}
-                    onClick={() => ci.save(rule)}
+                    aria-disabled={!ci.canSave(rule)}
+                    onClick={() => ci.trySave(rule)}
                   >
                     Save
                   </Button>

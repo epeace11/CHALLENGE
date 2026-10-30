@@ -222,6 +222,8 @@ export type Challenge = {
   rules: Rule[];
   /** First day of each week, for weekly rules and the Monday recap. */
   weekStart: Weekday;
+  /** One person asked to end it early; it ends once the other accepts. */
+  endAsk?: { by: string; at: Instant };
 };
 
 /** A challenge kept to run again, or opened from a link another couple shared. */

@@ -16,6 +16,8 @@ import {
   Section,
   StatButton,
 } from '@/components/next/ui';
+import { EndAskCard, LeaveSheet, endAskFrom } from '../settings/parts';
+import { useAccount, useEndAsk } from '../settings/hooks';
 import { overviewOf, shortTitle } from './data';
 import { BeforeStart } from './before-start';
 import { DaySheet, WeekLegend, WeekStrip } from './week';
@@ -32,6 +34,30 @@ export default function OverviewV1() {
   return <Running />;
 }
 
+/** The partner asked to end the challenge early. It waits on you, so it comes first. */
+function EndAsk() {
+  const world = useWorld();
+  const ending = useEndAsk(world);
+  const account = useAccount(world);
+  const [open, setOpen] = useState(false);
+  if (!endAskFrom(world)) return null;
+  return (
+    <>
+      <EndAskCard
+        world={world}
+        onKeep={ending.decline}
+        onEnd={() => setOpen(true)}
+      />
+      <LeaveSheet
+        world={world}
+        open={open}
+        onOpenChange={setOpen}
+        onLeave={account.leave}
+      />
+    </>
+  );
+}
+
 function Running() {
   const world = useWorld();
   const { navigate } = useNav();
@@ -44,6 +70,8 @@ function Running() {
     <AppFrame>
       <div className="flex flex-col gap-8">
         <PageTitle title={o.today} />
+
+        <EndAsk />
 
         {/* One column in order of what matters now. */}
         <div className="flex flex-col gap-8">
