@@ -35,7 +35,6 @@ import {
   habitStats,
   lockWords,
   mainAction,
-  percent,
   wholeCounts,
   type HabitStat,
 } from './data';
@@ -225,8 +224,8 @@ function onlyWho(world: World, rule: Rule) {
 }
 
 /**
- * Every habit, worst first: one card per habit with a thin bar per person, the hit rate and the
- * streak going now. The card opens the habit, with a chip to switch between the two of you.
+ * Every habit, worst first: one card per habit with a thin bar per person and the streak going
+ * now. The card opens the habit, with a chip to switch between the two of you.
  */
 export function ByHabit({ detail }: { detail: Detail }) {
   const world = useWorld();
@@ -298,9 +297,6 @@ function HabitLine({
         parts={barParts(counts)}
         label={`${person.name}: ${countsLine(counts)}`}
       />
-      <span className="w-11 shrink-0 text-right text-nx-2 font-semibold text-nx-ink tabular-nums">
-        {stat.rate === null ? '' : percent(stat.rate)}
-      </span>
       <span className="inline-flex w-11 shrink-0 items-center justify-end gap-1 text-nx-2 text-nx-ink-2 tabular-nums">
         {stat.current > 0 && (
           <>

@@ -194,6 +194,15 @@
   --nx-ahead-soft: #eef0f5;
   --nx-danger: #b23b3b;
   --nx-danger-fill: #b23b3b;
+
+  /* Day squares (.nx-day): the picked palette (October 21), the same in light and dark, with dark marks on every
+     square. */
+  --nx-day-done: #86c79c;
+  --nx-day-excused: #b4d7e3;
+  --nx-day-missed: #cc718a;
+  --nx-day-wait: #e2bd71;
+  --nx-day-open: #8d9ad0;
+  --nx-day-ink: #23203a;
 }
 
 /* ── Tokens: classic look, dark ──────────────────────────────────────────── */
@@ -1446,6 +1455,84 @@
   }
   .nx-target[data-met='false'] {
     color: var(--nx-missed);
+  }
+
+  /* ── Day squares ────────────────────────────────────────────────────────── */
+  /* The one way a day (or one answer) is drawn, on Overview's week, the Progress calendars and the
+     end of a day: the picked colour, frosted (a lighter top-left catching the light, see-through toward
+     the bottom right, a white hairline and a soft glow of its colour), with dark marks: a date and
+     the status icon (DayIcon). Size and layout are the page's. */
+  .nx-day {
+    --sq: var(--nx-sunken);
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    border-radius: 12px;
+    border: 1px solid rgb(255 255 255 / 0.3);
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--sq), white 14%),
+      color-mix(in srgb, var(--sq) 74%, transparent)
+    );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      0 6px 14px -8px color-mix(in srgb, var(--sq) 70%, transparent);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
+    color: var(--nx-day-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .nx-day[data-tone='done'] {
+    --sq: var(--nx-day-done);
+  }
+  .nx-day[data-tone='excused'] {
+    --sq: var(--nx-day-excused);
+  }
+  .nx-day[data-tone='missed'] {
+    --sq: var(--nx-day-missed);
+  }
+  .nx-day[data-tone='review'],
+  .nx-day[data-tone='disputed'] {
+    --sq: var(--nx-day-wait);
+  }
+  .nx-day[data-tone='open'] {
+    --sq: var(--nx-day-open);
+  }
+  /* A weekly habit's day without a visit: an outline, since it costs nothing. */
+  .nx-day[data-tone='none'] {
+    border: 1.5px solid var(--nx-line-strong);
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    color: var(--nx-ink-2);
+  }
+  /* Days still to come are plain glass, like the cards; days a habit doesn't ask for are fainter. */
+  .nx-day[data-tone='ahead'],
+  .nx-day[data-tone='off'] {
+    border-color: var(--nx-line);
+    background: var(--nx-glass);
+    box-shadow: var(--nx-glass-shadow);
+    color: var(--nx-ink-2);
+  }
+  .nx-day[data-tone='off'] {
+    box-shadow: none;
+    opacity: 0.5;
+  }
+  .nx-day[data-today] {
+    box-shadow: inset 0 0 0 2px var(--nx-accent);
+  }
+  button.nx-day {
+    transition:
+      transform var(--nx-fast) var(--nx-ease),
+      box-shadow var(--nx-base) var(--nx-ease),
+      filter var(--nx-base) var(--nx-ease);
+  }
+  button.nx-day:hover {
+    filter: brightness(1.05);
+  }
+  button.nx-day:active {
+    transform: scale(0.93);
   }
 
   /* ── Screenshots ────────────────────────────────────────────────────────── */

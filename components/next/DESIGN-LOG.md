@@ -32,7 +32,13 @@ Then, from Erin while the round below was built:
 
 Erin chose own layouts within Calm for the moments that matter. Each page kept v1 (the page as it was) and added v2 and v3, listed under Sign the pact, Check in and The verdict below. Erin picks each round from now on ("why does kazzy have to pick? I will be picking"): signing 3, the verdict 2, the end of a day 3. Each pick is now the page's `v1.tsx` and the others are deleted.
 
-Still to build from this critique: one way to draw a day on Overview and Progress, and the copy and polish fixes.
+Then distill, October 30, 2026 (Erin's answers: squares with icons, a bar and the streak per habit, changed in place):
+
+- **One way to draw a day, everywhere.** Overview's week, the Progress calendar, each habit's calendar and the end of a day on Check in all use the same day square: Erin's colours (frosted, the same in light and dark) with a dark icon in each, a check for done, an X for missed, a clock for waiting, a heart for forgiven, a dashed circle for open, a dash for no visit. The calendar keeps its dates, with the icon under each. A status never rests on colour alone. It's the kit's `nx-day` and `DayIcon`, and the legends use the same small squares.
+- **Progress habits show a bar and the streak** for each of you; the % is gone (it clashed with "15 of 30 done" above).
+- **Overview's "Left to log" is one card with the Log button in it.** The big number, the time left and the open check-ins sit above Log Thursday; the card itself no longer opens Check in, so there is one thing to tap instead of two.
+
+Still to build from this critique: the copy and polish fixes.
 
 ## Decisions, October 27, 2026 (design critique)
 

@@ -18,6 +18,7 @@ export { Menu, type MenuItem } from './menu';
 export { YesNo, SegmentedControl, Toggle } from './choice';
 export { TextField, NumberField } from './fields';
 export { ProofStrip, ProofViewer } from './proofs';
+export { DayIcon, type DayTone } from './day';
 export { EmptyState } from './empty';
 export { ActionBar } from './action-bar';
 export {

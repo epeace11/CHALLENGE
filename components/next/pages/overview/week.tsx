@@ -1,54 +1,33 @@
 'use client';
 import { useState, type CSSProperties } from 'react';
-import {
-  Check,
-  CircleDashed,
-  Clock3,
-  HeartHandshake,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
 import type { DateString, DayColor } from '@/lib/next/model';
 import { formatDay, formatWeekday } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
-import { Avatar, Button, Sheet, StatusPill } from '@/components/next/ui';
+import {
+  Avatar,
+  Button,
+  DayIcon,
+  Sheet,
+  StatusPill,
+} from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import { COLOR_WORDS, dayActions, dayRows, type WeekDay } from './data';
 
 /**
- * This week as a strip: a column per day (Monday to Sunday), with a row for each person coloured
- * by how the day went. Each past day is one button that opens the day sheet with both people's
- * answers. Today and later days are shown but do nothing.
+ * This week as a strip: a column per day (Monday to Sunday), with a day square for each person
+ * showing how the day went (the kit's one way to draw a day: colour and icon). Each past day is one
+ * button that opens the day sheet with both people's answers. Today and later days are shown but
+ * do nothing.
  */
 
-const TONE: Record<DayColor, string> = {
-  done: 'bg-nx-done-soft text-nx-done',
-  excused: 'bg-nx-excused-soft text-nx-excused',
-  missed: 'bg-nx-missed-soft text-nx-missed',
-  review: 'bg-nx-wait-soft text-nx-wait',
-  open: 'border-[1.5px] border-dashed border-nx-accent-line bg-nx-accent-soft text-nx-accent',
-  ahead: 'bg-nx-sunken',
-};
-
-const ICON: Partial<Record<DayColor, LucideIcon>> = {
-  done: Check,
-  excused: HeartHandshake,
-  missed: X,
-  review: Clock3,
-  open: CircleDashed,
-};
-
 function Cell({ color }: { color: DayColor }) {
-  const Icon = ICON[color];
   return (
     <span
-      className={cn(
-        'grid h-8 w-full max-w-12 place-items-center rounded-[10px] transition-colors duration-200 ease-nx',
-        TONE[color],
-      )}
+      className="nx-day h-8 w-full max-w-12 rounded-[10px]"
+      data-tone={color}
     >
-      {Icon && <Icon size={17} strokeWidth={2.5} aria-hidden="true" />}
+      <DayIcon tone={color} size={17} />
     </span>
   );
 }
@@ -148,7 +127,7 @@ export function WeekStrip({
   );
 }
 
-/** What the colours mean, only for the ones on screen. */
+/** What the squares mean, only for the ones on screen. */
 export function WeekLegend({
   days,
   className,
@@ -168,22 +147,14 @@ export function WeekLegend({
       )}
       aria-hidden="true"
     >
-      {shown.map((c) => {
-        const Icon = ICON[c]!;
-        return (
-          <li key={c} className="flex items-center gap-1.5">
-            <span
-              className={cn(
-                'grid size-5 place-items-center rounded-md',
-                TONE[c],
-              )}
-            >
-              <Icon size={13} strokeWidth={2.6} />
-            </span>
-            {COLOR_WORDS[c]}
-          </li>
-        );
-      })}
+      {shown.map((c) => (
+        <li key={c} className="flex items-center gap-1.5">
+          <span className="nx-day size-5 rounded-md" data-tone={c}>
+            <DayIcon tone={c} size={12} />
+          </span>
+          {COLOR_WORDS[c]}
+        </li>
+      ))}
     </ul>
   );
 }

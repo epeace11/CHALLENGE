@@ -1,19 +1,10 @@
 // The day's answers as squares, one per check-in, each a button that opens that answer.
 'use client';
 import type { CSSProperties } from 'react';
-import {
-  Check,
-  CircleDashed,
-  Clock3,
-  HeartHandshake,
-  MessageSquareWarning,
-  Minus,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
 import type { DateString } from '@/lib/next/model';
 import { entryPill, type PillStatus } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
+import { DayIcon, type DayTone } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import { answerText } from './days';
 import { shortTitle } from './end';
@@ -28,24 +19,15 @@ type Kind =
   | 'no'
   | 'open';
 
-/** Each status by colour and by icon, so it never rests on colour alone. */
-const SQUARE: Record<Kind, { icon: LucideIcon; tone: string }> = {
-  done: { icon: Check, tone: 'bg-nx-done-soft text-nx-done' },
-  missed: { icon: X, tone: 'bg-nx-missed-soft text-nx-missed' },
-  wait: { icon: Clock3, tone: 'bg-nx-wait-soft text-nx-wait' },
-  disputed: {
-    icon: MessageSquareWarning,
-    tone: 'bg-nx-missed-soft text-nx-missed',
-  },
-  forgiven: {
-    icon: HeartHandshake,
-    tone: 'bg-nx-excused-soft text-nx-excused',
-  },
-  no: { icon: Minus, tone: 'bg-nx-sunken text-nx-ink-2' },
-  open: {
-    icon: CircleDashed,
-    tone: 'border-[1.5px] border-dashed border-nx-accent-line bg-nx-accent-soft text-nx-accent',
-  },
+/** Each kind as a day square (the kit's one way to draw a day): its colour and its icon. */
+const TONE: Record<Kind, DayTone> = {
+  done: 'done',
+  missed: 'missed',
+  wait: 'review',
+  disputed: 'disputed',
+  forgiven: 'excused',
+  no: 'none',
+  open: 'open',
 };
 
 const KIND: Record<PillStatus, Kind> = {
@@ -102,14 +84,14 @@ export function DaySquares({
   const day = ci.day;
   if (!day) return null;
   const squares = squaresOf(ci, day);
-  const kinds = (Object.keys(SQUARE) as Kind[]).filter((k) =>
+  const kinds = (Object.keys(TONE) as Kind[]).filter((k) =>
     squares.some((s) => s.kind === k),
   );
   return (
     <div className={cn('flex flex-col gap-4', className)}>
       <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-7">
         {squares.map(({ rule, entry, kind, status }, i) => {
-          const { icon: Icon, tone } = SQUARE[kind];
+          const tone = TONE[kind];
           return (
             <li
               key={rule.id}
@@ -126,12 +108,10 @@ export function DaySquares({
                 }}
               >
                 <span
-                  className={cn(
-                    'grid aspect-square w-full max-w-14 place-items-center rounded-nx-sm shadow-nx-glass sm:max-w-16',
-                    tone,
-                  )}
+                  className="nx-day aspect-square w-full max-w-14 sm:max-w-16"
+                  data-tone={tone}
                 >
-                  <Icon size={26} strokeWidth={2.5} aria-hidden="true" />
+                  <DayIcon tone={tone} size={26} />
                 </span>
                 <span className="w-full text-center text-nx-min leading-snug text-nx-ink [overflow-wrap:anywhere]">
                   {shortTitle(rule)}
@@ -146,22 +126,14 @@ export function DaySquares({
         className="flex flex-wrap gap-x-4 gap-y-1.5 text-nx-min text-nx-ink-2"
         aria-hidden="true"
       >
-        {kinds.map((k) => {
-          const { icon: Icon, tone } = SQUARE[k];
-          return (
-            <li key={k} className="flex items-center gap-1.5">
-              <span
-                className={cn(
-                  'grid size-5 place-items-center rounded-md',
-                  tone,
-                )}
-              >
-                <Icon size={13} strokeWidth={2.6} />
-              </span>
-              {word(k, ci.partner)}
-            </li>
-          );
-        })}
+        {kinds.map((k) => (
+          <li key={k} className="flex items-center gap-1.5">
+            <span className="nx-day size-5 rounded-md" data-tone={TONE[k]}>
+              <DayIcon tone={TONE[k]} size={12} />
+            </span>
+            {word(k, ci.partner)}
+          </li>
+        ))}
       </ul>
     </div>
   );

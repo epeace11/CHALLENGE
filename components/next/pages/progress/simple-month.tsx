@@ -2,16 +2,17 @@
 import type { CSSProperties } from 'react';
 import type { DateString, DayColor, Weekday } from '@/lib/next/model';
 import { formatDay, weekday } from '@/lib/next/selectors';
+import { DayIcon, type DayTone } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import styles from './progress.module.css';
 
 const LETTER = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
- * A square's colour: a calendar day's, or a habit's day (disputed days take the waiting colour; 'off'
- * is a day the habit doesn't ask for).
+ * A square's tone: a calendar day's, or a habit's day (disputed days take the waiting colour; 'off'
+ * is a day the habit doesn't ask for). The kit's day tones.
  */
-export type SquareTone = DayColor | 'disputed' | 'none' | 'off';
+export type SquareTone = DayTone;
 
 /** What each colour means, in the order of the bars. One list for the calendar and the bars. */
 export const SIMPLE_LEGEND: { tone: SquareTone; label: string }[] = [
@@ -36,7 +37,7 @@ const WORDS: Record<SquareTone, string> = {
 };
 
 /**
- * The challenge's days in week rows, each one square of colour with its date and nothing else.
+ * The challenge's days in week rows, each a day square with its date and the status icon under it.
  * Settled and open days are buttons (48px tall, 56px from 640px) that open the day; days still
  * ahead and today are not. Rows fade in one after another.
  */
@@ -82,6 +83,7 @@ export function SimpleMonth({
           const inside = (
             <>
               <span aria-hidden="true">{Number(d.day.slice(8))}</span>
+              <DayIcon tone={d.color} size={14} />
               <span className="sr-only">
                 {`${formatDay(d.day)}: ${isToday ? 'today' : WORDS[d.color]}`}
               </span>
@@ -91,7 +93,7 @@ export function SimpleMonth({
             return (
               <span
                 key={d.day}
-                className={styles.square}
+                className={cn('nx-day', styles.square)}
                 data-tone="ahead"
                 data-today={isToday || d.day === marked || undefined}
                 style={style}
@@ -103,7 +105,7 @@ export function SimpleMonth({
             <button
               key={d.day}
               type="button"
-              className={styles.square}
+              className={cn('nx-day', styles.square)}
               data-tone={d.color}
               data-today={isToday || d.day === marked || undefined}
               style={style}
@@ -118,7 +120,7 @@ export function SimpleMonth({
   );
 }
 
-/** The one legend: a swatch of each colour and its word. */
+/** The one legend: a small day square of each tone, with its icon, and its word. */
 export function SimpleLegend({
   tones,
   className,
@@ -140,7 +142,13 @@ export function SimpleLegend({
     >
       {items.map(({ tone, label }) => (
         <li key={tone} className="inline-flex items-center gap-2">
-          <span className={styles.swatch} data-tone={tone} aria-hidden="true" />
+          <span
+            className={cn('nx-day', styles.swatch)}
+            data-tone={tone}
+            aria-hidden="true"
+          >
+            <DayIcon tone={tone} size={12} />
+          </span>
           {label}
         </li>
       ))}

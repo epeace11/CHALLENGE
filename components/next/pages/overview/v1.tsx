@@ -1,4 +1,4 @@
-// Numbers first. Thursday's check-ins as one big number above the Log button, then number buttons for review, gym and both gifts, then the week.
+// Numbers first. Thursday's check-ins as one big number in the card with the Log button, then number buttons for review, gym and both gifts, then the week.
 'use client';
 import { useMemo, useState } from 'react';
 import { ArrowRight, CircleCheck, Clock3 } from 'lucide-react';
@@ -9,6 +9,7 @@ import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
   Button,
+  CountUp,
   Enter,
   GlassCard,
   PageTitle,
@@ -79,44 +80,47 @@ function Running() {
           <Enter index={1} className="flex flex-col gap-3">
             {o.left > 0 ? (
               <>
-                <StatButton
-                  size="lg"
-                  tone="accent"
-                  label={`Left to log for ${o.dayName}`}
-                  value={o.left}
-                  hint={
-                    <>
-                      <span className="flex items-center gap-1.5">
-                        <Clock3
-                          size={16}
-                          className="shrink-0"
-                          aria-hidden="true"
-                        />
-                        {formatDuration(o.msLeft)} left, until {o.closes}
+                {/* What is left and the button that logs it, as one: the card itself does
+                    nothing, so there is one thing to tap. */}
+                <GlassCard className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-2">
+                    <p className="flex flex-wrap items-baseline gap-x-3">
+                      <span className="font-nx-serif text-nx-num-lg leading-none text-nx-accent tabular-nums">
+                        <CountUp value={o.left} />
                       </span>
-                      <span className="mt-3 flex flex-wrap gap-2">
-                        {o.open.map((r) => (
-                          <span
-                            key={r.id}
-                            className="rounded-full bg-nx-sunken px-3 py-1 text-nx-min text-nx-ink"
-                          >
-                            {shortTitle(r)}
-                          </span>
-                        ))}
+                      <span className="text-nx-lead text-nx-ink">
+                        left to log for {o.dayName}
                       </span>
-                    </>
-                  }
-                  onClick={() => navigate('log')}
-                />
-                <Button
-                  variant="primary"
-                  size="lg"
-                  full
-                  iconEnd={ArrowRight}
-                  onClick={() => navigate('log')}
-                >
-                  Log {o.dayName}
-                </Button>
+                    </p>
+                    <p className="flex items-center gap-1.5 text-nx-2 text-nx-ink-2">
+                      <Clock3
+                        size={16}
+                        className="shrink-0"
+                        aria-hidden="true"
+                      />
+                      {formatDuration(o.msLeft)} left, until {o.closes}
+                    </p>
+                    <ul className="mt-1 flex flex-wrap gap-2">
+                      {o.open.map((r) => (
+                        <li
+                          key={r.id}
+                          className="rounded-full bg-nx-sunken px-3 py-1 text-nx-min text-nx-ink"
+                        >
+                          {shortTitle(r)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    full
+                    iconEnd={ArrowRight}
+                    onClick={() => navigate('log')}
+                  >
+                    Log {o.dayName}
+                  </Button>
+                </GlassCard>
               </>
             ) : (
               <>

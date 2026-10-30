@@ -60,41 +60,25 @@
     border: 1.5px dashed var(--nx-line-strong);
   }
 
-  /* This page's own colours (the picked palette, the same in light and dark), for the calendar, its
-     legend and the bars. Every square carries dark dates. */
+  /* The bars take the day squares' colours (the picked palette, the kit's --nx-day-*), so the calendar,
+     its legend and the bars read the same. */
   .palette {
-    --nx-done-bar: #86c79c;
-    --nx-excused-bar: #b4d7e3;
-    --nx-missed-bar: #cc718a;
-    --nx-wait-bar: #e2bd71;
-    --nx-open-square: #8d9ad0;
-    --nx-square-ink: #23203a;
+    --nx-done-bar: var(--nx-day-done);
+    --nx-excused-bar: var(--nx-day-excused);
+    --nx-missed-bar: var(--nx-day-missed);
+    --nx-wait-bar: var(--nx-day-wait);
   }
 
-  /* The simple month: each day one flat rounded square of colour with its date, nothing else. The colours are the bar colours, so
-     the calendar, the legend and the bars read the same. */
+  /* The simple month: each day a day square (`nx-day`, the kit's one way to draw a day) with its
+     date and the status icon under it. This sets only its size, type and how rows fade in. */
   .square {
-    --sq: var(--nx-sunken);
-    display: grid;
-    place-items: center;
-    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
     min-height: 48px;
-    border-radius: 12px;
-    border: 1px solid rgb(255 255 255 / 0.3);
-    /* Frosted colour: a lighter top-left catching the light, the colour see-through toward the
-       bottom right, a hairline highlight and a soft glow of its own colour. */
-    background: linear-gradient(
-      135deg,
-      color-mix(in oklab, var(--sq), white 14%),
-      color-mix(in srgb, var(--sq) 74%, transparent)
-    );
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.35),
-      0 6px 14px -8px color-mix(in srgb, var(--sq) 70%, transparent);
-    backdrop-filter: blur(10px) saturate(140%);
     font: 500 14px/1 var(--nx-font-sans);
-    font-variant-numeric: tabular-nums;
-    color: var(--nx-square-ink, var(--nx-ink));
     animation: cell-in var(--nx-base) var(--nx-ease) backwards;
     animation-delay: calc(var(--row, 0) * 40ms);
   }
@@ -104,89 +88,12 @@
       font-size: 15px;
     }
   }
-  .square[data-tone='done'] {
-    --sq: var(--nx-done-bar);
-  }
-  .square[data-tone='excused'] {
-    --sq: var(--nx-excused-bar);
-  }
-  .square[data-tone='missed'] {
-    --sq: var(--nx-missed-bar);
-  }
-  .square[data-tone='review'] {
-    --sq: var(--nx-wait-bar);
-  }
-  .square[data-tone='open'] {
-    --sq: var(--nx-open-square, var(--nx-accent-soft));
-  }
-  .square[data-tone='disputed'] {
-    --sq: var(--nx-wait-bar);
-  }
-  .square[data-tone='none'] {
-    border: 1.5px solid var(--nx-line-strong);
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    color: var(--nx-ink-2);
-  }
-  .square[data-tone='off'] {
-    border-color: var(--nx-glass-border);
-    background: var(--nx-glass);
-    box-shadow: none;
-    color: var(--nx-ink-2);
-    opacity: 0.5;
-  }
-  /* Days still to come are plain glass, like the cards. */
-  .square[data-tone='ahead'] {
-    border-color: var(--nx-line);
-    background: var(--nx-glass);
-    box-shadow: var(--nx-glass-shadow);
-    color: var(--nx-ink-2);
-  }
-  .square[data-today] {
-    box-shadow: inset 0 0 0 2px var(--nx-accent);
-  }
-  button.square {
-    transition:
-      transform var(--nx-fast) var(--nx-ease),
-      box-shadow var(--nx-base) var(--nx-ease),
-      filter var(--nx-base) var(--nx-ease);
-  }
-  button.square:hover {
-    filter: brightness(1.05);
-  }
-  button.square:active {
-    transform: scale(0.93);
-  }
 
-  /* A legend swatch: the same colour as a square. */
+  /* A legend swatch: a small day square (`nx-day`) with its icon. */
   .swatch {
-    display: inline-block;
     flex-shrink: 0;
     width: 20px;
     height: 20px;
     border-radius: 6px;
-  }
-  .swatch[data-tone='done'] {
-    background: var(--nx-done-bar);
-  }
-  .swatch[data-tone='excused'] {
-    background: var(--nx-excused-bar);
-  }
-  .swatch[data-tone='missed'] {
-    background: var(--nx-missed-bar);
-  }
-  .swatch[data-tone='review'] {
-    background: var(--nx-wait-bar);
-  }
-  .swatch[data-tone='open'] {
-    background: var(--nx-open-square, var(--nx-accent-soft));
-  }
-  .swatch[data-tone='none'] {
-    box-shadow: inset 0 0 0 1.5px var(--nx-line-strong);
-  }
-  .swatch[data-tone='ahead'] {
-    border: 1px solid var(--nx-line-strong);
-    background: var(--nx-glass);
   }
 }
