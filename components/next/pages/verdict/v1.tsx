@@ -8,6 +8,7 @@ import {
   Crown,
   Flame,
   Gift as GiftIcon,
+  MessagesSquare,
   Plus,
   RotateCcw,
   Trophy,
@@ -129,6 +130,11 @@ export default function VerdictV2() {
   const close = (open: boolean) => {
     if (!open) setSheet(null);
   };
+  // Disputes still open on this challenge; Review settles them only while it's the one loaded.
+  const openDisputes =
+    !backend.host || world.challenge.id === v.past.challenge.id
+      ? (v.past.verdict.openDisputes ?? 0)
+      : 0;
 
   return (
     <PlainFrame
@@ -159,6 +165,24 @@ export default function VerdictV2() {
             ))}
           </div>
         </GlassCard>
+
+        {openDisputes > 0 && (
+          <RowButton
+            className="nx-enter -mt-4"
+            leading={
+              <span className="grid size-11 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
+                <MessagesSquare size={20} aria-hidden="true" />
+              </span>
+            }
+            title={`${plural(openDisputes, 'dispute')} ${openDisputes === 1 ? 'is' : 'are'} still open`}
+            detail={
+              openDisputes === 1
+                ? 'Not a point unless it’s conceded. If it is, the gifts change.'
+                : 'None is a point unless it’s conceded. If one is, the gifts change.'
+            }
+            onClick={() => navigate('review')}
+          />
+        )}
 
         <Section title="Gifts" index={2}>
           {gifts.map((g) => {

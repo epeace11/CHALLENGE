@@ -1610,6 +1610,14 @@
     box-shadow: var(--nx-lift-shadow);
     -webkit-backdrop-filter: blur(22px) saturate(1.2);
     backdrop-filter: blur(22px) saturate(1.2);
+    transition:
+      opacity var(--nx-base) var(--ease-nx),
+      translate var(--nx-base) var(--ease-nx);
+  }
+  .nx-action-bar[data-away] {
+    opacity: 0;
+    translate: 0 12px;
+    pointer-events: none;
   }
   @media (min-width: 640px) {
     .nx-action-bar {

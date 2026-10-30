@@ -1,14 +1,7 @@
 'use client';
 import { useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import {
-  Check,
-  CheckCheck,
-  ChevronRight,
-  Expand,
-  Undo2,
-  X,
-} from 'lucide-react';
+import { CheckCheck, ChevronRight, Expand, Undo2, X } from 'lucide-react';
 import type { Person, Proof, Rule, World } from '@/lib/next/model';
 import {
   formatAnswer,
@@ -106,7 +99,9 @@ export function Quote({
 const SHOT_SIZE = {
   sm: 'h-[78px] w-12 rounded-[11px]',
   md: 'h-[124px] w-[76px] rounded-[14px]',
-  lg: 'h-[clamp(170px,49vw,232px)] w-[clamp(104px,30vw,142px)] rounded-nx',
+  // The evidence on Review's card: the card's full width on phones (its top, where the totals
+  // are), a tall tile beside the answer on wider screens.
+  lg: 'h-[clamp(260px,80vw,340px)] w-full rounded-nx sm:h-[400px] sm:w-[236px]',
 } as const;
 
 /** A screenshot as a tile that opens it full screen (arrows move between several). */
@@ -174,6 +169,12 @@ type Size = 'md' | 'lg';
 const titleClass = (size: Size) =>
   cn('mt-1 font-nx-serif', size === 'lg' ? 'text-nx-h2' : 'text-nx-h3');
 
+/** An item's rule as its heading: the page's card is under the page title (h2), a sheet's body under the sheet's (h3). */
+function Title({ size, children }: { size: Size; children: ReactNode }) {
+  const Tag = size === 'lg' ? 'h2' : 'h3';
+  return <Tag className={titleClass(size)}>{children}</Tag>;
+}
+
 /** The answer itself: "11,240 steps", "Yes", "Not logged". */
 function Value({
   rule,
@@ -205,29 +206,30 @@ function Value({
   );
 }
 
-/** Whether a number meets its target, in the done or missed colour. */
+/**
+ * The target beside the partner's number. A number that meets it is only what they say, so the
+ * line stays neutral and the reviewer judges it against the screenshot; one that misses is their
+ * own admission, so it says so.
+ */
 function TargetLine({ rule, shown }: { rule: Rule; shown: Shown }) {
   if (rule.kind === 'weekly')
     return <p className="text-nx-2 text-nx-ink-2">{formatWhen(rule)}</p>;
   if (!rule.target || shown.value === undefined) return null;
-  const met = meetsTarget(rule.target, shown.value);
-  const Icon = met ? Check : X;
+  if (meetsTarget(rule.target, shown.value))
+    return (
+      <p className="text-nx-2 text-nx-ink-2">
+        Target: {formatTarget(rule.target)}
+      </p>
+    );
   return (
-    <p
-      className={cn(
-        'flex items-start gap-1.5 text-nx-2 font-semibold',
-        met ? 'text-nx-done' : 'text-nx-missed',
-      )}
-    >
-      <Icon
+    <p className="flex items-start gap-1.5 text-nx-2 font-semibold text-nx-missed">
+      <X
         size={18}
         strokeWidth={2.6}
         className="mt-0.5 shrink-0"
         aria-hidden="true"
       />
-      <span>
-        {met ? 'Meets' : 'Misses'} the target: {formatTarget(rule.target)}
-      </span>
+      <span>Misses the target: {formatTarget(rule.target)}</span>
     </p>
   );
 }
@@ -260,27 +262,71 @@ export function AnswerBody({
     : showDay
       ? `${world.partner.name}’s answer · ${formatDayShort(entry.day)}`
       : null;
+  const answer = (
+    <>
+      <Value rule={rule} shown={shown} size={size} />
+      <TargetLine rule={rule} shown={shown} />
+      {late && (
+        <p className="text-nx-2 text-nx-ink-2">
+          Before: {formatAnswer(rule, entry)}
+        </p>
+      )}
+    </>
+  );
+  const note = shown.note ? (
+    <Quote person={world.partner}>{shown.note}</Quote>
+  ) : null;
+  // On the page's card the screenshot is the biggest thing: under the answer on phones, a tall
+  // tile on the left with the answer and note beside it on wider screens.
+  const beside = size === 'lg' && shown.proofs.length > 0;
   return (
     <div className="flex flex-col gap-4">
       {(kicker || !hideTitle) && (
         <div>
           {kicker && <p className="nx-kicker">{kicker}</p>}
-          {!hideTitle && <h3 className={titleClass(size)}>{rule.title}</h3>}
+          {!hideTitle && <Title size={size}>{rule.title}</Title>}
         </div>
       )}
-      <div className="flex items-end gap-4">
-        <Shot proofs={shown.proofs} size={size === 'lg' ? 'lg' : 'md'} />
-        <div className="flex min-w-0 flex-col gap-2 pb-0.5">
-          <Value rule={rule} shown={shown} size={size} />
-          <TargetLine rule={rule} shown={shown} />
-          {late && (
-            <p className="text-nx-2 text-nx-ink-2">
-              Before: {formatAnswer(rule, entry)}
-            </p>
+      {size === 'lg' ? (
+        <div
+          className={cn(
+            'grid gap-4',
+            beside &&
+              'sm:grid-cols-[auto_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-6',
+          )}
+        >
+          <div
+            className={cn(
+              'flex min-w-0 flex-col gap-2',
+              beside && 'sm:col-start-2 sm:row-start-1 sm:pt-1',
+            )}
+          >
+            {answer}
+          </div>
+          <Shot
+            proofs={shown.proofs}
+            size="lg"
+            className="sm:col-start-1 sm:row-span-2 sm:row-start-1"
+          />
+          {note && (
+            <div
+              className={cn(
+                beside && 'sm:col-start-2 sm:row-start-2 sm:self-start',
+              )}
+            >
+              {note}
+            </div>
           )}
         </div>
-      </div>
-      {shown.note && <Quote person={world.partner}>{shown.note}</Quote>}
+      ) : (
+        <>
+          <div className="flex items-end gap-4">
+            <Shot proofs={shown.proofs} size="md" />
+            <div className="flex min-w-0 flex-col gap-2 pb-0.5">{answer}</div>
+          </div>
+          {note}
+        </>
+      )}
     </div>
   );
 }
@@ -297,7 +343,7 @@ export function ForgivenessBody({
     <div className="flex flex-col gap-4">
       <div>
         <p className="nx-kicker">{world.partner.name} asks you to forgive</p>
-        {!hideTitle && <h3 className={titleClass(size)}>{item.rule.title}</h3>}
+        {!hideTitle && <Title size={size}>{item.rule.title}</Title>}
         <p className="mt-1 text-nx-2 text-nx-ink-2">
           {formatDay(item.point.day)} ·{' '}
           {missWhy(world, item.point, item.rule, item.entry)}
@@ -350,7 +396,7 @@ export function DisputeBody({
     <div className="flex flex-col gap-4">
       <div>
         <p className="nx-kicker">{world.partner.name} disputes your answer</p>
-        {!hideTitle && <h3 className={titleClass(size)}>{rule.title}</h3>}
+        {!hideTitle && <Title size={size}>{rule.title}</Title>}
         <p className="mt-1 text-nx-2 text-nx-ink-2">
           {formatDay(entry.day)} · You answered {formatAnswer(rule, entry)}
         </p>
@@ -513,7 +559,7 @@ export function DisputeSheet({
   );
 }
 
-/** Keep a dispute on the viewer's answer open, with a reply the partner reads. */
+/** Reply to a dispute on the viewer's answer; it stays open, and the partner reads the reply. */
 export function ReplySheet({
   sheet,
   review,
@@ -527,9 +573,10 @@ export function ReplySheet({
       key={`reply:${sheet.target?.id}`}
       open={sheet.open}
       onOpenChange={sheet.setOpen}
-      title="Keep it open"
+      title={`Reply to ${partner.name}`}
       description={`No point while it’s open. ${partner.name} can withdraw it, and you can still concede later.`}
-      label={`Your reply to ${partner.name}`}
+      label="Your reply"
+      hint={`${partner.name} reads exactly what you write.`}
       submit="Send reply"
       missing="Write your reply first."
       onSubmit={(text) => {

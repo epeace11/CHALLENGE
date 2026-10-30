@@ -465,6 +465,7 @@ export function verdictFor(w: World): Verdict {
         : a.points < b.points
           ? a.personId
           : b.personId,
+    openDisputes: w.disputes.filter((d) => d.status === 'open').length,
   };
 }
 

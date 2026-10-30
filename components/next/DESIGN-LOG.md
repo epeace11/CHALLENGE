@@ -2,6 +2,21 @@
 
 Kazzy picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, October 29, 2026 (second design critique)
+
+A second critique scored the app 28/40 (up from 26). Erin's answers: fix Review and disputes first, take on everything it found, give signing and the verdict their own layouts within Calm, and make ending the challenge need the partner's OK, like a rename.
+
+Built first, Review and disputes:
+
+- **Review doesn't judge the partner's number.** It said "✓ Meets the target" in green beside a number Jordan typed; it now says "Target: 10,000 steps or more" in plain grey, so the reviewer compares the claim with the screenshot. A number that misses still says so in red (that's Jordan's own admission).
+- **The screenshot is the biggest thing on the card:** the card's full width under the answer on phones, a tall tile beside the answer and note on wider screens. Sheets keep the small tile.
+- **The Approve/Dispute bar steps aside** once its card has scrolled out of view, so it never acts on something you can't see (`ActionBar`'s new `away`).
+- **Being disputed leads with replying.** The main button is "Reply to Jordan" (it was Concede, with replying behind "Keep it open"); Concede is the second button. The reply sheet is titled "Reply to Jordan" and says Jordan reads exactly what you write.
+- **A dispute still open at the end is explained.** Rules and help answers "What if a dispute is still open at the end?" (it isn't a point; either of you can still settle it on Review, and the gifts change if it's conceded), and the verdict shows "1 dispute is still open", which opens Review. The help's reviewing answer now says "concedes" and "replies", the buttons' words.
+- The card's rule name is an h2 under the page's h1 (it skipped to h3).
+
+Still to build from this critique: Hold to sign that answers a tap, ending that needs the partner's OK, own layouts for signing, the verdict and the end of a day (2–3 versions each for Kazzy), one way to draw a day on Overview and Progress, and the copy and polish fixes.
+
 ## Decisions, October 27, 2026 (design critique)
 
 A design critique scored the app 26/40. These fix what it found:

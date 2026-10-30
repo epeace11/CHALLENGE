@@ -299,6 +299,8 @@ export type Verdict = {
   }[];
   /** Fewer points wins; null on a tie. */
   winner: string | null;
+  /** Disputes still open: none is a point unless it is conceded, which can still happen after the end. */
+  openDisputes?: number;
 };
 
 /** One Monday-to-Sunday week, told on the Monday after. */

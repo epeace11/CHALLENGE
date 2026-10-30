@@ -141,13 +141,17 @@ export function waitingSummary(s: ReviewState) {
   return parts.join(', ');
 }
 
-/** The main action and its alternative for each kind of item, in the words the buttons use. */
-export const ACTIONS: Record<
-  ReviewItem['kind'],
-  { main: string; alt: string }
-> = {
-  answer: { main: 'Approve', alt: 'Dispute' },
-  correction: { main: 'Approve', alt: 'Decline' },
-  forgiveness: { main: 'Forgive', alt: 'Decline' },
-  dispute: { main: 'Concede', alt: 'Keep it open' },
-};
+/**
+ * The main action and its alternative for each kind of item, in the words the buttons use. On a
+ * dispute the main action is replying, so taking the point is never the easy default.
+ */
+export const actionsFor = (
+  kind: ReviewItem['kind'],
+  partner: string,
+): { main: string; alt: string } =>
+  ({
+    answer: { main: 'Approve', alt: 'Dispute' },
+    correction: { main: 'Approve', alt: 'Decline' },
+    forgiveness: { main: 'Forgive', alt: 'Decline' },
+    dispute: { main: `Reply to ${partner}`, alt: 'Concede' },
+  })[kind];

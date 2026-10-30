@@ -362,12 +362,17 @@ export function HowItWorks({ className }: { className?: string }) {
     {
       id: 'review',
       q: 'How does reviewing work?',
-      a: 'You review each other’s Yes answers: approve one, or dispute it and say why. The owner accepts a dispute, which makes it a point, or it is withdrawn.',
+      a: 'You review each other’s Yes answers: approve one, or dispute it and say why. The owner concedes it, which makes it a point, or replies. Whoever raised it can withdraw it.',
       more: (
         <AnswerLink icon={Inbox} onClick={() => navigate('review')}>
           Go to Review
         </AnswerLink>
       ),
+    },
+    {
+      id: 'open-dispute',
+      q: 'What if a dispute is still open at the end?',
+      a: 'It isn’t a point. Either of you can still settle it on Review after the last day, and if it’s conceded, the gifts change.',
     },
     {
       id: 'points',

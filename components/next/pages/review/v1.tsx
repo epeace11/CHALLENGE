@@ -1,6 +1,6 @@
-// One thing at a time on a big card with a large screenshot; its two buttons stay pinned at the bottom.
+// One thing at a time on a big card with a large screenshot; its two buttons stay pinned at the bottom while the card is on screen.
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, CheckCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
 import {
@@ -27,7 +27,7 @@ import {
   useSheetFor,
 } from './parts';
 import {
-  ACTIONS,
+  actionsFor,
   approveAllLabel,
   shortTitle,
   type AnswerItem,
@@ -46,6 +46,24 @@ const KIND: Record<ReviewItem['kind'], string> = {
 
 const dayOf = (item: ReviewItem) =>
   item.kind === 'forgiveness' ? item.point.day : item.entry.day;
+
+/**
+ * Whether an element can be seen below the top bar. Returns a ref for it; until it is measured it
+ * counts as seen.
+ */
+function useSeen() {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [seen, setSeen] = useState(true);
+  useEffect(() => {
+    if (!el) return;
+    const watch = new IntersectionObserver(([e]) => setSeen(e.isIntersecting), {
+      rootMargin: '-64px 0px 0px 0px',
+    });
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, [el]);
+  return [setEl, seen] as const;
+}
 
 /** Review, version 2. */
 export default function ReviewV2() {
@@ -93,6 +111,9 @@ export default function ReviewV2() {
   const [listOpen, setListOpen] = useState(false);
   const disputing = useSheetFor<AnswerItem>();
   const replying = useSheetFor<DisputeItem>();
+  // The bar acts on the card, so it steps aside once the card has scrolled away.
+  const [cardRef, cardSeen] = useSeen();
+  const actions = current && actionsFor(current.kind, world.partner.name);
 
   /** Acts on the card on screen, remembering it so the next open one follows. */
   const decide = (item: ReviewItem, main: boolean) => {
@@ -103,7 +124,7 @@ export default function ReviewV2() {
       return main ? review.approve(item) : review.declineLate(item);
     if (item.kind === 'forgiveness')
       return main ? review.forgive(item) : review.decline(item);
-    return main ? review.concede(item) : replying.show(item);
+    return main ? replying.show(item) : review.concede(item);
   };
 
   // "Approve both" on an answer card while its day has several answers waiting.
@@ -180,14 +201,16 @@ export default function ReviewV2() {
           )}
 
           <Enter index={2}>
-            <Deck id={current?.id ?? null} direction={shown.direction}>
-              {current && (
-                <GlassCard pad="lg" as="article">
-                  <ItemBody world={world} item={current} size="lg" showDay />
-                  {approveDay}
-                </GlassCard>
-              )}
-            </Deck>
+            <div ref={cardRef}>
+              <Deck id={current?.id ?? null} direction={shown.direction}>
+                {current && (
+                  <GlassCard pad="lg" as="article">
+                    <ItemBody world={world} item={current} size="lg" showDay />
+                    {approveDay}
+                  </GlassCard>
+                )}
+              </Deck>
+            </div>
             {!current && <CaughtUp world={world} />}
           </Enter>
 
@@ -199,8 +222,11 @@ export default function ReviewV2() {
             <PointActions world={world} />
           </Enter>
 
-          {current && (
-            <ActionBar className="flex-row-reverse items-stretch">
+          {current && actions && (
+            <ActionBar
+              away={!cardSeen}
+              className="flex-row-reverse items-stretch"
+            >
               <Button
                 variant="primary"
                 size="lg"
@@ -212,7 +238,7 @@ export default function ReviewV2() {
                 className="flex-1 px-3"
                 onClick={() => decide(current, true)}
               >
-                {ACTIONS[current.kind].main}
+                {actions.main}
               </Button>
               <Button
                 variant="secondary"
@@ -220,7 +246,7 @@ export default function ReviewV2() {
                 className="flex-1 px-3"
                 onClick={() => decide(current, false)}
               >
-                {ACTIONS[current.kind].alt}
+                {actions.alt}
               </Button>
             </ActionBar>
           )}

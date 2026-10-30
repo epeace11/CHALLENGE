@@ -9,9 +9,12 @@ import { cn } from '@/lib/utils';
  */
 export function ActionBar({
   children,
+  away,
   className,
 }: {
   children: ReactNode;
+  /** What the bar acts on is off screen: it fades away and leaves the tab order until it's back. */
+  away?: boolean;
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -30,7 +33,12 @@ export function ActionBar({
     };
   }, []);
   return (
-    <div ref={ref} className={cn('nx-action-bar', className)}>
+    <div
+      ref={ref}
+      className={cn('nx-action-bar', className)}
+      data-away={away || undefined}
+      inert={away || undefined}
+    >
       {children}
     </div>
   );
