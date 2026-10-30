@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
-import { useBackend, useUndoAction } from '@/components/next/backend';
+import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 import {
   ActionBar,
@@ -27,7 +27,6 @@ import {
   RowButton,
   Section,
   TapCard,
-  useToast,
 } from '@/components/next/ui';
 import { formatMoney, plural } from '@/lib/next/selectors';
 import {
@@ -57,8 +56,6 @@ export default function VerdictV2() {
   const shownPast = pastToShow(world);
   const { navigate } = useNav();
   const backend = useBackend();
-  const undoAction = useUndoAction();
-  const toast = useToast();
   // Which gifts are marked given, by who receives them: saved with the challenge in the live app.
   const [given, setGiven] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(
@@ -115,17 +112,10 @@ export default function VerdictV2() {
       (w) => markGift(w, v.past.challenge.id, id, value ? w.now : null),
     );
   };
+  // The row says Given or Received; its gifts sheet can mark it back.
   const mark = (g: Gift) => {
     setOne(g.id, true);
     setBurst((b) => ({ id: g.id, n: (b?.n ?? 0) + 1 }));
-    toast({
-      text: g.to.isMe
-        ? `The ${formatMoney(g.amount)} gift is marked as received`
-        : `Your ${formatMoney(g.amount)} gift is marked as given`,
-      ...(backend.live
-        ? {}
-        : { action: { label: 'Undo', onClick: () => setOne(g.id, false) } }),
-    });
   };
   const close = (open: boolean) => {
     if (!open) setSheet(null);
@@ -338,7 +328,13 @@ export default function VerdictV2() {
         )}
       </ActionBar>
 
-      <GiftsSheet v={v} open={sheet === 'gifts'} onOpenChange={close} />
+      <GiftsSheet
+        v={v}
+        open={sheet === 'gifts'}
+        onOpenChange={close}
+        given={given}
+        onUnmark={(id) => setOne(id, false)}
+      />
       <StreaksSheet
         v={v}
         open={sheet === 'streaks'}
@@ -360,7 +356,6 @@ export default function VerdictV2() {
             },
             (w) => saveAs(w, v.past, name),
           );
-          toast({ text: `Saved as ${name}`, ...undoAction() });
         }}
       />
     </PlainFrame>

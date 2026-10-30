@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import type { Rule } from '@/lib/next/model';
-import { useToast } from '@/components/next/ui';
 import { useBackend, type SetupDraft } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -68,9 +67,8 @@ export function useSetup() {
   const world = useWorld();
   const { navigate } = useNav();
   const { host } = useBackend();
-  const toast = useToast();
   const drafted = useDraft();
-  const { draft, saveRule, removeRule, restoreRule } = drafted;
+  const { draft, saveRule, removeRule } = drafted;
   const [open, setOpen] = useState<SetupSheet | null>(null);
   const [editing, setEditing] = useState<Rule | null>(null);
   const [errors, setErrors] = useState<Errors>({});
@@ -105,17 +103,7 @@ export function useSetup() {
     if (errors[key]) setErrors({ ...errors, [key]: undefined });
   };
 
-  const remove = (rule: Rule) => {
-    const removed = removeRule(rule.id);
-    if (removed)
-      toast({
-        text: `Removed “${rule.title}”`,
-        action: {
-          label: 'Undo',
-          onClick: () => restoreRule(removed.rule, removed.index),
-        },
-      });
-  };
+  const remove = (rule: Rule) => removeRule(rule.id);
   const toggleLibrary = (rule: Rule) => {
     const existing = matchingRule(draft.rules, rule);
     if (existing) remove(existing);
@@ -128,11 +116,10 @@ export function useSetup() {
     setEditing(rule);
     setOpen('builder');
   };
-  const builderSaved = (rule: Rule, isNew: boolean) => {
+  const builderSaved = (rule: Rule) => {
     saveRule(rule);
     clear('rules');
     setOpen(null);
-    toast(isNew ? `Added “${rule.title}”` : `Saved “${rule.title}”`);
   };
 
   /** Shows the errors of one part (or every part) and says whether it is ready. */

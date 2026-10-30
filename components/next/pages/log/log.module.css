@@ -95,6 +95,10 @@
     width: 88px;
     height: 88px;
   }
+  .doneMark[data-size='sm'] {
+    width: 48px;
+    height: 48px;
+  }
 
   /* The day chip: one open day, as a row. */
   .chip {

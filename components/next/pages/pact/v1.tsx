@@ -48,8 +48,7 @@ export default function PactV2() {
         {signed ? <Signed flow={flow} /> : <ToSign flow={flow} />}
       </Glide>
 
-      {/* One bar for both screens: Sign turns into Go to Overview in the same place, and the
-          toast after signing rises above it instead of covering it. */}
+      {/* One bar for both screens: Sign turns into Go to Overview in the same place. */}
       <ActionBar className={SOLID_BAR}>
         <Glide
           id={signed ? 'signed' : 'sign'}

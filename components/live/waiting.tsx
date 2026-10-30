@@ -1,17 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Copy, PencilLine, Send } from 'lucide-react';
+import { Check, Copy, PencilLine, Send } from 'lucide-react';
 import type { World } from '@/lib/next/model';
 import type { Host } from '@/components/next/backend';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
-import {
-  ActionBar,
-  Button,
-  GlassCard,
-  PageTitle,
-  useToast,
-} from '@/components/next/ui';
+import { ActionBar, Button, GlassCard, PageTitle } from '@/components/next/ui';
 
 /**
  * After setup, for the person who set it up, while the partner has no account yet: send the invite
@@ -19,8 +13,14 @@ import {
  */
 export function Waiting({ world, host }: { world: World; host: Host }) {
   const { navigate } = useNav();
-  const toast = useToast();
   const partner = world.partner.name;
+  // Copying says so on the Copy button for a moment.
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const t = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(t);
+  }, [copied]);
   const joined = !world.partnerPending;
   const [invite, setInvite] = useState<{ link: string; code: string } | null>(
     null,
@@ -46,7 +46,7 @@ export function Waiting({ world, host }: { world: World; host: Host }) {
       }
     }
     await navigator.clipboard.writeText(invite.link);
-    toast('Link copied');
+    setCopied(true);
   };
 
   return (
@@ -61,15 +61,15 @@ export function Waiting({ world, host }: { world: World; host: Host }) {
             {invite?.link ?? 'Making your link…'}
           </p>
           <Button
-            icon={Copy}
+            icon={copied ? Check : Copy}
             disabled={!invite}
             onClick={async () => {
               if (!invite) return;
               await navigator.clipboard.writeText(invite.link);
-              toast('Link copied');
+              setCopied(true);
             }}
           >
-            Copy link
+            {copied ? 'Copied' : 'Copy link'}
           </Button>
         </GlassCard>
         <Button

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, MailCheck, RotateCcw } from 'lucide-react';
 import { useBackend } from '@/components/next/backend';
-import { Button, GlassCard, useToast } from '@/components/next/ui';
+import { Button, GlassCard } from '@/components/next/ui';
 import { CodeField } from './fields';
 import { codeError } from './form';
 import type { SignupMode } from './mode';
@@ -22,8 +22,9 @@ export function SentPanel({
   onDone: () => void;
   onBack: () => void;
 }) {
-  const toast = useToast();
   const { host } = useBackend();
+  // A new link went out: said on the page, next to the button.
+  const [resent, setResent] = useState(false);
   const [code, setCode] = useState('');
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -84,8 +85,7 @@ export function SentPanel({
           variant="quiet"
           icon={RotateCcw}
           onClick={async () => {
-            if (!host || (await host.sendLink({ email })))
-              toast(`Sent a new link to ${email}`);
+            if (!host || (await host.sendLink({ email }))) setResent(true);
           }}
         >
           Send a new link
@@ -93,6 +93,9 @@ export function SentPanel({
         <Button variant="quiet" icon={ArrowLeft} onClick={onBack}>
           Use a different email
         </Button>
+        <output className="w-full pl-3 text-nx-2 text-nx-ink-2 empty:hidden">
+          {resent ? `Sent a new link to ${email}.` : ''}
+        </output>
       </div>
     </form>
   );

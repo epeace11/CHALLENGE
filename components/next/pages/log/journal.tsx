@@ -14,17 +14,17 @@ import {
   Section,
   Sheet,
   TextField,
-  useToast,
 } from '@/components/next/ui';
-import { useBackend, useUndoAction } from '@/components/next/backend';
+import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 
-/** The day's notes by both people, oldest first, and adding, changing or removing one (with Undo). */
+/**
+ * The day's notes by both people, oldest first, and adding, changing or removing one. No toast:
+ * the note appears in, changes in or leaves the list on screen.
+ */
 export function useNotes(day: DateString) {
   const world = useWorld();
   const backend = useBackend();
-  const undoAction = useUndoAction();
-  const toast = useToast();
   const notes = world.journal
     .filter((n) => n.day === day)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -33,29 +33,24 @@ export function useNotes(day: DateString) {
     backend.act({ type: 'addNote', day, text: text.trim() }, (w) =>
       addNote(w, world.me.id, day, text),
     );
-    toast({ text: 'Note added', ...undoAction() });
     return true;
   };
-  const remove = (id: string) => {
+  const remove = (id: string) =>
     backend.act({ type: 'removeNote', noteId: id }, (w) => removeNote(w, id));
-    toast({ text: 'Note removed', ...undoAction() });
-  };
   /** Saves new words for one of the viewer's notes; an empty note is removed instead. */
-  const edit = (id: string, text: string) => {
+  const edit = (id: string, text: string) =>
     backend.act({ type: 'editNote', noteId: id, text: text.trim() }, (w) =>
       editNote(w, id, text),
     );
-    toast({
-      text: text.trim() ? 'Note saved' : 'Note removed',
-      ...undoAction(),
-    });
-  };
   return { notes, add, remove, edit };
 }
 
 type NoteActions = Pick<ReturnType<typeof useNotes>, 'remove' | 'edit'>;
 
-/** One note. The viewer's own notes have Change and Remove; Change turns the note into a field. */
+/**
+ * One note. The viewer's own notes have Change and Remove; Change turns the note into a field.
+ * Removing asks first, in the note itself (there is no undo), and so does saving it empty.
+ */
 function NoteItem({
   note,
   actions,
@@ -67,7 +62,34 @@ function NoteItem({
   const person = personById(world, note.personId),
     mine = note.personId === world.me.id;
   const [draft, setDraft] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  if (asking)
+    return (
+      <Card pad="sm" className="flex flex-col gap-3">
+        <p className="text-nx-body text-nx-ink">{note.text}</p>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <p className="w-full text-nx-2 font-semibold text-nx-ink">
+            Remove this note?
+          </p>
+          <Button
+            variant="quiet"
+            // Focus lands on Keep, the safe choice, so a keyboard never removes by accident.
+            ref={(el: HTMLButtonElement | null) => el?.focus()}
+            onClick={() => setAsking(false)}
+          >
+            Keep
+          </Button>
+          <Button
+            variant="danger"
+            icon={Trash2}
+            onClick={() => actions.remove(note.id)}
+          >
+            Remove
+          </Button>
+        </div>
+      </Card>
+    );
   if (draft !== null)
     return (
       <div ref={box}>
@@ -86,7 +108,9 @@ function NoteItem({
             <Button
               disabled={draft.trim() === note.text}
               onClick={() => {
-                actions.edit(note.id, draft);
+                // An emptied note would be removed: ask first, as Remove does.
+                if (!draft.trim()) setAsking(true);
+                else actions.edit(note.id, draft);
                 setDraft(null);
               }}
             >
@@ -125,7 +149,7 @@ function NoteItem({
             icon={Trash2}
             label="Remove note"
             plain
-            onClick={() => actions.remove(note.id)}
+            onClick={() => setAsking(true)}
           />
         </div>
       )}

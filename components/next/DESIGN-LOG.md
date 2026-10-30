@@ -23,7 +23,16 @@ Built second, hardening:
 - **Ending a running challenge takes both** (`supabase/next/end-requests.sql`). End the challenge in Settings now asks: "Ask Jordan to end Fall Reset?", then "Waiting for Jordan · End Fall Reset now" with Withdraw. Jordan sees "Maya asks to end Fall Reset now" at the top of Overview (and in Settings) with Keep going and End it, which confirms first. Before Day 1, either can still cancel at once.
 - The Progress streak reads "1 day in a row" to a screen reader (it said "1 days").
 
-Still to build from this critique: own layouts for signing, the verdict and the end of a day (2–3 versions each for Kazzy), one way to draw a day on Overview and Progress, and the copy and polish fixes.
+Then, from Erin while the round below was built:
+
+- **No pop-ups anywhere.** "Should not pop up and say save when you log something", then, on the journal's "Note added · Undo": "no pop ups like this in the whole app". Every toast that confirmed an action is gone (Saved, Sent, Approved, Note added, Name saved, Withdrawn, Signed, gift marked…), and with it the preview's toast Undo. The page shows what changed instead: the card glides on, a row says Sent or Given, Copy link turns into "Copied" for two seconds, "Send a new code" says "Sent a new code to …" under it. Where Undo was the only way back, the page has its own: removing a journal note (or saving it empty) asks "Remove this note?" in the note itself with Keep and Remove; a marked gift can be unmarked on the verdict; Say your rules' Start over keeps the sentence in the box. Only a write that fails in the live app still shows a message. It's rule 9 in `README.md`'s checklist.
+- **The add-screenshot button never squeezes its words.** Before the first screenshot it's a wide dashed area with the icon in a round well and "Add screenshot"; after it, a tile the size of a screenshot with the icon alone ("Keep the label" on the wide one).
+
+### Design round, October 30, 2026: signing, the verdict and the end of a day · to pick
+
+Erin chose own layouts within Calm for the moments that matter. Each page keeps v1 (today's) and adds v2 and v3; they're under Sign the pact, Check in and The verdict below. To see Check in's end of the day, answer Thursday's 3 check-ins (or open it after logging them on any version).
+
+Still to build from this critique: one way to draw a day on Overview and Progress, and the copy and polish fixes.
 
 ## Decisions, October 27, 2026 (design critique)
 
@@ -177,6 +186,13 @@ Pick: 2
 
 Pick: 2
 
+Round, October 30, 2026 (the signing moment; version 1 is the page above):
+
+2. **Signature lines first.** Under "Sign the pact", one card with two rows: "Starts Monday, Nov 2" and "About $150 each gift · If you miss 1 in 10" (each opens its sheet). Then the signatures: Maya's line signed in script with its time, and your empty line with Hold to sign right under it; holding fills the line with ink in step with the button. Signing writes your name in place, runs the seal round the card and turns the title into "You both signed", with the countdown and Go to Overview below. The 4 promises and the 8 rules are rows that open them, not on the screen.
+3. **One step at a time.** "Step 1 of 3" under each title, with Back: what's at stake (~$150) and Day 1; then the rules with their "Only you" / "Only Maya" tags; then your signature line. Next is pinned at the bottom and becomes Hold to sign on step 3. After signing, "Day 1 starts in 1 day 3 hours" fills the screen in large type, with both signatures small below and Go to Overview.
+
+Pick:
+
 ## Every day
 
 ### Overview (`overview`)
@@ -194,6 +210,13 @@ Pick: 1
 3. The whole day as a list: open check-ins expand in place one at a time, a saved one slides into Answered, and a row of day chips is the switcher.
 
 Pick: 2
+
+Round, October 30, 2026 (only the end of the day differs; version 1 is the page above, ending with a tick and "Thursday is logged"):
+
+2. **What happens next.** "Thursday is logged", then up to three rows, each only when true: "Jordan reviews your 2 answers next" (opens Review), "1 new point · $7 · Read 10 pages" or "No new points for Thursday" (opens Gifts), and "18 days in a row · No phones in the bedroom" (opens Progress); "You can change an answer until 11:59 pm tonight" last. The main button is "Review Jordan's answers" while anything waits for you, else Go to Overview.
+3. **Thursday at a glance.** "Thursday is logged", then one square per check-in with its short name: a colour and an icon for each status (a check for done, an X for missed, a clock for waiting for Jordan…), tapping one opens that answer; then the streak on one line with a flame (opens Progress). The main button is the same as version 2.
+
+Pick:
 
 ### Rules and help (`rules`)
 
@@ -263,6 +286,15 @@ Pick: 2
 2. A side-by-side scoreboard (crown and Won on Maya) flips both gifts in, then a gifts checklist and streak and badge cards; one sticky button marks $28, then $10, then becomes Run it again.
 
 Pick: 2
+
+Round, October 30, 2026 (the end of the challenge; version 1 is the page above):
+
+2. **The result, then each gift.** The title says it: "You won Summer Sprint" (or "Jordan won…", "…was a tie"), with "4 points to Jordan's 7. Fewer points wins." under it. Then each gift is its own large card: who gives whom, the amount flipping in, a small hand-off from the giver's avatar to the other's, and its own button; marking it turns the button into a green Given or Received strip (with Undo) and the gift slides across. Then best streaks and badges as one row; Run it again is the main button once both gifts are marked.
+3. **One gift at a time.** One compact line on top (both avatars, a crown on the winner, "You won, 4 points to Jordan's 7"), two tabs ("$10 to Jordan", "$28 to you"), and one large card for one gift with one button. Marking it glides to the other gift, then to "Both gifts are done" with best streaks, badges and Run it again. Either tab goes back to a gift.
+
+On every version a marked gift can be unmarked (in version 1, in the gifts sheet), since the toast's Undo is gone; and Save as… says "Saved" in its own sheet.
+
+Pick:
 
 ## Settings
 

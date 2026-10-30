@@ -37,7 +37,7 @@ export default function OverviewV1() {
 /** The partner asked to end the challenge early. It waits on you, so it comes first. */
 function EndAsk() {
   const world = useWorld();
-  const ending = useEndAsk(world);
+  const ending = useEndAsk();
   const account = useAccount(world);
   const [open, setOpen] = useState(false);
   if (!endAskFrom(world)) return null;

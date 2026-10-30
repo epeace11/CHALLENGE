@@ -7,7 +7,6 @@ import { Button } from '@/components/next/ui/button';
 import { Menu, type MenuItem } from '@/components/next/ui/menu';
 import { Avatar } from '@/components/next/ui/people';
 import { Sheet } from '@/components/next/ui/sheet';
-import { useToast } from '@/components/next/ui/toast';
 import { useWorld } from '@/components/next/world';
 
 /**
@@ -19,7 +18,6 @@ export function AccountMenu({ cancel }: { cancel?: boolean }) {
   const world = useWorld();
   const { host } = useBackend();
   const { navigate } = useNav();
-  const toast = useToast();
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const you = world.me;
@@ -36,7 +34,6 @@ export function AccountMenu({ cancel }: { cancel?: boolean }) {
       icon: LogOut,
       onSelect: () => {
         if (host) return void host.signOut();
-        toast('Signed out');
         navigate('landing');
       },
     },
@@ -51,7 +48,6 @@ export function AccountMenu({ cancel }: { cancel?: boolean }) {
   const confirm = async () => {
     if (!host) {
       setAsking(false);
-      toast('Challenge cancelled');
       return navigate('start');
     }
     setBusy(true);

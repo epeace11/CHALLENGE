@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import type { Rule } from '@/lib/next/model';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
-import { useToast } from '@/components/next/ui';
 import {
   DAY_PRESETS,
   DRAFT_MS,
@@ -29,14 +28,13 @@ export type EditDraft = {
 /**
  * Everything Say your rules does, for both versions: the sentence, the pretend drafting (about
  * 1.5 s, lighting up each part of the sentence), the drafted rules with the one question, editing,
- * removing (with Undo), Start over (with Undo) and Use these rules. All of it is local: nothing
+ * removing, Start over (back to the sentence, still in the box) and Use these rules. All of it is local: nothing
  * reaches the sample world until setup.
  */
 export function useSay() {
   const world = useWorld();
   const draft = world.sayRules;
   const { navigate } = useNav();
-  const toast = useToast();
 
   const [stage, setStage] = useState<Stage>('write');
   const [text, setText] = useState('');
@@ -115,47 +113,19 @@ export function useSay() {
   };
 
   const remove = (ruleId: string) => {
-    const index = rules.findIndex((r) => r.id === ruleId);
-    if (index < 0) return;
-    const rule = rules[index];
     setRules((list) => list.filter((r) => r.id !== ruleId));
     if (missing === ruleId) setMissing(null);
     setEdit((e) => ({ ...e, open: false }));
-    toast({
-      text: `Removed “${rule.title}”`,
-      action: {
-        label: 'Undo',
-        onClick: () =>
-          setRules((list) =>
-            list.some((r) => r.id === ruleId)
-              ? list
-              : [...list.slice(0, index), rule, ...list.slice(index)],
-          ),
-      },
-    });
   };
 
+  // Back to writing, with the sentence still in the box, so nothing typed is lost.
   const startOver = () => {
-    const before = { text, rules, answers };
     setStage('write');
-    setText('');
     setRules([]);
     setAnswers({});
     setMissing(null);
     setError(null);
     setLit(0);
-    toast({
-      text: 'Started over',
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          setText(before.text);
-          setRules(before.rules);
-          setAnswers(before.answers);
-          setStage('check');
-        },
-      },
-    });
   };
 
   const openEdit = (rule: Rule) =>
@@ -210,7 +180,6 @@ export function useSay() {
       if (missing === v.ruleId) setMissing(null);
     }
     setEdit((e) => ({ ...e, open: false }));
-    toast('Saved');
     return true;
   };
 

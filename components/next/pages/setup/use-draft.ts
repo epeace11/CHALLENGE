@@ -34,24 +34,9 @@ export function useDraft() {
         : [...d.rules, rule],
     }));
 
-  /** Takes a rule out; returns what Undo needs to put it back in its place. */
-  const removeRule = (id: string) => {
-    const index = draft.rules.findIndex((r) => r.id === id);
-    if (index < 0) return null;
-    const rule = draft.rules[index];
+  /** Takes a rule out. */
+  const removeRule = (id: string) =>
     setDraft((d) => ({ ...d, rules: d.rules.filter((r) => r.id !== id) }));
-    return { rule, index };
-  };
-
-  const restoreRule = (rule: Rule, index: number) =>
-    setDraft((d) =>
-      d.rules.some((r) => r.id === rule.id)
-        ? d
-        : {
-            ...d,
-            rules: [...d.rules.slice(0, index), rule, ...d.rules.slice(index)],
-          },
-    );
 
   return {
     draft,
@@ -60,6 +45,5 @@ export function useDraft() {
     people,
     saveRule,
     removeRule,
-    restoreRule,
   };
 }

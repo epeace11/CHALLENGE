@@ -20,8 +20,7 @@ import {
   shift,
   timeLeft,
 } from '@/lib/next/selectors';
-import { useBackend, useUndoAction } from '@/components/next/backend';
-import { useToast } from '@/components/next/ui';
+import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 
 /**
@@ -162,8 +161,6 @@ export type Anchors = {
 export function useCheckin({ top, heading }: Anchors) {
   const world = useWorld();
   const backend = useBackend();
-  const undoAction = useUndoAction();
-  const toast = useToast();
   const c = world.challenge,
     me = world.me.id,
     partner = world.partner.name;
@@ -294,20 +291,12 @@ export function useCheckin({ top, heading }: Anchors) {
       ...(ask ? { forgiveness: ask } : {}),
     };
     backend.act({ type: 'saveCheckin', input }, (w) => saveCheckin(w, input));
-    const k = key(rule);
+    // No toast: the card gliding on to the next question (or the end of the day) shows it saved.
     drop(rule);
     setFocus(null);
     setSkipped((s) => s.filter((id) => id !== rule.id));
     setDirection(1);
     reveal();
-    toast({
-      text: late
-        ? `Late answer sent to ${partner}`
-        : ask
-          ? `Saved. ${partner} will see your request.`
-          : 'Saved',
-      ...undoAction(() => setDrafts((all) => ({ ...all, [k]: d }))),
-    });
   };
 
   const skip = (rule: Rule) => {

@@ -1,5 +1,6 @@
 'use client';
-import { Copy } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, Copy } from 'lucide-react';
 import type { SavedChallenge } from '@/lib/next/model';
 import { setShareLink } from '@/lib/next/actions';
 import { useBackend } from '@/components/next/backend';
@@ -9,7 +10,6 @@ import {
   Toggle,
   motion,
   useReducedMotion,
-  useToast,
   DURATION,
   EASE,
 } from '@/components/next/ui';
@@ -22,8 +22,14 @@ import styles from './home.module.css';
  */
 export function ShareLink({ saved }: { saved: SavedChallenge }) {
   const backend = useBackend();
-  const toast = useToast();
   const still = useReducedMotion();
+  // Copying says so on the button for a moment; if the browser refuses, a line says what to do.
+  const [copied, setCopied] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!copied) return;
+    const t = window.setTimeout(() => setCopied(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [copied]);
   return (
     <div className="flex flex-col">
       <Toggle
@@ -51,19 +57,17 @@ export function ShareLink({ saved }: { saved: SavedChallenge }) {
                 {shortLink(saved.link)}
               </p>
               <Button
-                icon={Copy}
-                onClick={async () => {
-                  const copied = await copyText(saved.link);
-                  toast(
-                    copied
-                      ? 'Link copied'
-                      : 'Could not copy. Select the link and copy it.',
-                  );
-                }}
+                icon={copied ? Check : Copy}
+                onClick={async () => setCopied(await copyText(saved.link))}
               >
-                Copy link
+                {copied ? 'Copied' : 'Copy link'}
               </Button>
             </div>
+            {copied === false && (
+              <p className="pb-2 text-nx-2 text-nx-ink-2">
+                Couldn’t copy. Select the link and copy it.
+              </p>
+            )}
           </motion.div>
         )}
       </Presence>

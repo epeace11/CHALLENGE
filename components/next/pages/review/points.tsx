@@ -12,14 +12,8 @@ import {
   plural,
   ruleById,
 } from '@/lib/next/selectors';
-import { useBackend, useUndoAction } from '@/components/next/backend';
-import {
-  Avatar,
-  Button,
-  RowButton,
-  Sheet,
-  useToast,
-} from '@/components/next/ui';
+import { useBackend } from '@/components/next/backend';
+import { Avatar, Button, RowButton, Sheet } from '@/components/next/ui';
 import { ReasonSheet, useSheetFor } from './parts';
 import { missWhy } from './queue';
 
@@ -50,8 +44,6 @@ function pointsDetail(who: string, total: number, open: number) {
  */
 export function PointActions({ world }: { world: World }) {
   const backend = useBackend();
-  const undoAction = useUndoAction();
-  const toast = useToast();
   const partner = world.partner;
   const mine = openPoints(world, world.me.id);
   const theirs = openPoints(world, partner.id);
@@ -155,7 +147,6 @@ export function PointActions({ world }: { world: World }) {
             { type: 'askForgiveness', pointId: row.point.id, reason },
             (w) => askForgiveness(w, row.point.id, reason),
           );
-          toast({ text: `Asked ${partner.name}`, ...undoAction() });
         }}
       />
 
@@ -182,7 +173,6 @@ export function PointActions({ world }: { world: World }) {
                   { type: 'forgivePoint', pointId: row.point.id },
                   (w) => forgivePoint(w, row.point.id),
                 );
-                toast({ text: 'Point forgiven', ...undoAction() });
               }}
             >
               Forgive

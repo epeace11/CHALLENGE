@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Clock3, Download, LogOut, Trash2 } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
-import { useBackend, useUndoAction } from '@/components/next/backend';
+import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 import {
   Avatar,
@@ -16,7 +16,6 @@ import {
   Sheet,
   TextField,
   Toggle,
-  useToast,
 } from '@/components/next/ui';
 import { formatMoney } from '@/lib/next/selectors';
 import {
@@ -51,8 +50,6 @@ type Open = 'name' | 'times' | 'terms' | 'ask' | 'leave' | 'delete' | null;
 export default function SettingsV1() {
   const world = useWorld();
   const backend = useBackend();
-  const undoAction = useUndoAction();
-  const toast = useToast();
   const account = useAccount(world);
   // Reminders, proposed changes, leaving and deleting the account come later in the live app.
   const later = backend.live;
@@ -68,7 +65,7 @@ export default function SettingsV1() {
   };
   // Ending early takes both: the button asks, then the request waits for the partner (Withdraw);
   // a request from the partner is answered here or on Overview.
-  const ending = useEndAsk(world);
+  const ending = useEndAsk();
   const theirAsk = endAskFrom(world);
   const myAsk = c.status === 'running' && c.endAsk && !theirAsk;
   const endControls = theirAsk ? (
@@ -113,10 +110,7 @@ export default function SettingsV1() {
             <GlassCard pad="sm" className="flex flex-col gap-1 px-5 sm:px-6">
               <Toggle
                 checked={reminders.on}
-                onChange={(on) => {
-                  setReminders({ ...reminders, on });
-                  toast(on ? 'Reminders on' : 'Reminders off');
-                }}
+                onChange={(on) => setReminders({ ...reminders, on })}
                 label="Evening reminders"
                 description="Only when something is left to log"
               />
@@ -174,10 +168,7 @@ export default function SettingsV1() {
               <ProposalCard
                 partner={partner}
                 changes={changesOf(now, proposal)}
-                onWithdraw={() => {
-                  setProposal(null);
-                  toast('Withdrawn');
-                }}
+                onWithdraw={() => setProposal(null)}
               />
             ) : (
               <p className="text-nx-2 text-nx-ink-2">
@@ -245,27 +236,20 @@ export default function SettingsV1() {
           backend.act({ type: 'rename', name: name.trim() }, (w) =>
             renamePerson(w, w.me.id, name),
           );
-          toast({ text: 'Name saved', ...undoAction() });
         }}
       />
       <TimesSheet
         open={open === 'times'}
         onOpenChange={close}
         reminders={reminders}
-        onSave={(r) => {
-          setReminders(r);
-          toast(`Reminders at ${remindersLine(r)}`);
-        }}
+        onSave={setReminders}
       />
       <TermsSheet
         open={open === 'terms'}
         onOpenChange={close}
         now={now}
         start={proposal ?? now}
-        onPropose={(t) => {
-          setProposal(t);
-          toast(`Sent to ${partner}`);
-        }}
+        onPropose={setProposal}
       />
       <AskEndSheet
         world={world}

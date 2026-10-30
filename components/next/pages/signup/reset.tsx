@@ -2,13 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, KeyRound, Mail, RotateCcw } from 'lucide-react';
 import { useBackend } from '@/components/next/backend';
-import {
-  Button,
-  GlassCard,
-  Glide,
-  TextField,
-  useToast,
-} from '@/components/next/ui';
+import { Button, GlassCard, Glide, TextField } from '@/components/next/ui';
 import { CodeField, PasswordField } from './fields';
 import { MIN_PASSWORD, codeError, validate } from './form';
 
@@ -27,8 +21,9 @@ export function ResetPanel({
   onDone: () => void;
 }) {
   const { host } = useBackend();
-  const toast = useToast();
   const [email, setEmail] = useState(startEmail);
+  // A new code went out: said on the page, next to the button.
+  const [resent, setResent] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
@@ -141,8 +136,7 @@ export function ResetPanel({
               variant="quiet"
               icon={RotateCcw}
               onClick={async () => {
-                if (!host || (await host.sendReset(sentTo)))
-                  toast(`Sent a new code to ${sentTo}`);
+                if (!host || (await host.sendReset(sentTo))) setResent(true);
               }}
             >
               Send a new code
@@ -151,6 +145,9 @@ export function ResetPanel({
           <Button variant="quiet" icon={ArrowLeft} onClick={onBack}>
             Back to sign in
           </Button>
+          <output className="w-full pl-3 text-nx-2 text-nx-ink-2 empty:hidden">
+            {resent && sentTo ? `Sent a new code to ${sentTo}.` : ''}
+          </output>
         </div>
       </form>
     </Glide>

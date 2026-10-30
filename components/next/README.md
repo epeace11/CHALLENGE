@@ -132,13 +132,12 @@ Pages change things through `useBackend()`, passing the same change twice: as a 
 
 ```tsx
 const backend = useBackend(); // from '@/components/next/backend'
-const undoAction = useUndoAction(); // Undo only where it works: the preview
-const toast = useToast(); // from '@/components/next/ui'
 backend.act({ type: 'approve', entryId: entry.id }, (w) =>
   approve(w, entry.id),
 );
-toast({ text: 'Approved', ...undoAction() });
 ```
+
+The page itself shows what changed (the item leaves with its stamp, a row says Given, the card glides on). Never confirm an action with a pop-up (see the checklist).
 
 Steps that are not world changes (signing up, starting a challenge, finishing setup, the invite link, accepting an invite, adding a screenshot) go through `backend.host`, which is null in the preview: keep the preview behaviour when it is null. `components/live/` is the host; pages never import it.
 
@@ -185,7 +184,7 @@ Import from `@/components/next/ui`. Every piece works in light and dark, in ever
 | `Avatar`, `PairAvatars`, `PersonChip` | People in their hue; a chip with `onClick` is a 44px button (`pressed` for toggles).                                                                                                                                                                                                   |
 | `StatusPill`                          | `status`: done, missed, review, forgiven, disputed, open, none; pair with `entryPill()`.                                                                                                                                                                                               |
 | `Sheet`                               | Details one tap away: bottom sheet on phones, dialog from 640px; `title` (required), `description`, `footer` (main action last). Focus, Escape and the backdrop are handled. Put "How it works" explanations here.                                                                     |
-| `useToast()`                          | `toast('Saved')` or with one `action` (Undo). Rises above the tab bar and the action bar; one at a time (a new toast replaces the last), and at the top of the screen while a sheet is open on a phone.                                                                                |
+| `useToast()`                          | Only for a write that failed in the live app (the host already does it). Never to confirm an action: no "Saved", "Sent", "Note added" or Undo pop-ups.                                                                                                                                 |
 | `Menu`                                | A short list from a button: `trigger={<Button>…</Button>}`, `items` of `{ label, icon, onSelect }`.                                                                                                                                                                                    |
 | `YesNo`                               | Two 64px answer buttons (native radios); `label` is the question.                                                                                                                                                                                                                      |
 | `NumberField`                         | Big digits with `unit`, `target` (says whether it is met), `step` for − and + buttons, `decimals`.                                                                                                                                                                                     |
@@ -250,7 +249,8 @@ Every screen of every version passes all of these.
 6. **No unnecessary copy.** A sentence stays only if it helps someone act or understand. Longer explanations go in a "How it works" sheet or on Rules and help.
 7. **No tiny text.** Body 17px, secondary 15px, nothing under 14px anywhere (labels, chips, navigation, timestamps, badges, captions); text inputs at least 16px. Use the `text-nx-*` sizes; `text-xs` and anything under 14px fail `npm run check`.
 8. **Every number does something.** Each statistic is a `StatButton` or a row or link that opens what you would act on.
-9. **No useless numbers.** Show a number only if it answers something couples ask: what is left to log, what waits for review, who is ahead, what the gift is at, how many gym days are left this week, a streak worth protecting.
+9. **No pop-ups.** Nothing pops up to confirm an action ("Saved", "Note added · Undo"). What changed shows on the page itself: the card glides on, the row says Sent or Given, a copy button says Copied for a moment. Only a failed write in the live app shows a message.
+10. **No useless numbers.** Show a number only if it answers something couples ask: what is left to log, what waits for review, who is ahead, what the gift is at, how many gym days are left this week, a streak worth protecting.
 
 And: light and dark both look right (tokens only), phone first and still good on a laptop, visible keyboard focus (built into the kit; keep `:focus-visible` outlines on your own controls), real labels on inputs (`TextField`, `NumberField` and `YesNo` have them), good contrast (`text-nx-ink-2` is the lightest text colour).
 

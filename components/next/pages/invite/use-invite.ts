@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
-import { useToast } from '@/components/next/ui';
 import { useWorld } from '@/components/next/world';
 import { inviteView, topicLabel, type Topic } from './invite-data';
 
@@ -20,7 +19,6 @@ export function useInvite() {
   const view = inviteView(world);
   const { navigate } = useNav();
   const { host } = useBackend();
-  const toast = useToast();
   const [sheet, setSheet] = useState<InviteSheet | null>(null);
   // The rule in the rule sheet, kept after it closes so the sheet keeps its content while it falls.
   const [ruleId, setRuleId] = useState<string | null>(null);
@@ -69,16 +67,6 @@ export function useInvite() {
       setSent(suggestion);
       setDraft('');
       setSheet(null);
-      toast({
-        text: `Sent to ${view.inviter.name}`,
-        action: {
-          label: 'Undo',
-          onClick: () => {
-            setSent(null);
-            setDraft(text);
-          },
-        },
-      });
     },
     sent,
     /** Suggestions go to the inviter only in the preview; the live app adds them later. */

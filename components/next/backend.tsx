@@ -162,20 +162,3 @@ export function useBackend(): Backend {
     [live, act, undo],
   );
 }
-
-/** A toast's Undo button, only where Undo works (the preview). */
-export function useUndoAction() {
-  const { canUndo, undo } = useBackend();
-  return (onUndo?: () => void) =>
-    canUndo
-      ? {
-          action: {
-            label: 'Undo',
-            onClick: () => {
-              undo();
-              onUndo?.();
-            },
-          },
-        }
-      : {};
-}

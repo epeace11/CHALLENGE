@@ -459,6 +459,7 @@ function Hosting({
       try {
         return await f();
       } catch (e) {
+        // The one pop-up the app keeps: a write that failed, so it never fails silently.
         toast(
           e instanceof Error ? e.message : 'Something went wrong. Try again.',
         );
@@ -539,7 +540,6 @@ function Hosting({
       resetPassword: async (a) => {
         const ok = await attempt(() => api.resetPassword(a));
         if (ok === false) return false;
-        toast('Password saved');
         await signedIn();
         return true;
       },
@@ -610,7 +610,6 @@ function Hosting({
         writeStored(LINK_KEY, null);
         setWantedChallenge(null);
         await reload();
-        toast(done === 'ended' ? 'Challenge ended' : 'Challenge cancelled');
         if (done === 'ended') showVerdictFor(challenge);
         navigate(done === 'ended' ? 'verdict' : null);
         return true;

@@ -196,14 +196,26 @@ export function StepBars({
 
 /**
  * A name written on the line in Georgia italic, with a flourish under it. `drawn` writes it in,
- * left to right, then draws the flourish: for the one who has just signed.
+ * left to right, then draws the flourish: for the one who has just signed. `className` can set a
+ * smaller size (`text-[24px]`).
  */
-function Script({ name, drawn }: { name: string; drawn?: boolean }) {
+export function Script({
+  name,
+  drawn,
+  className,
+}: {
+  name: string;
+  drawn?: boolean;
+  className?: string;
+}) {
   const timing = useTiming();
   return (
     <span
       aria-hidden="true"
-      className="relative inline-block pr-3 pb-1.5 pl-0.5 font-nx-serif text-[32px] leading-[1.1] tracking-[0.01em] whitespace-nowrap text-nx-ink italic"
+      className={cn(
+        'relative inline-block pr-3 pb-1.5 pl-0.5 font-nx-serif text-[32px] leading-[1.1] tracking-[0.01em] whitespace-nowrap text-nx-ink italic',
+        className,
+      )}
     >
       <motion.span
         className="inline-block"
@@ -382,7 +394,7 @@ export function CountdownButton({
 /* ── Signing ───────────────────────────────────────────────────────────── */
 
 /** How long a finger or mouse holds Sign before it counts. */
-const HOLD_MS = 900;
+export const HOLD_MS = 900;
 
 /**
  * Sign as a deliberate act: a press fills the button and signs once it is full. Anything short of
@@ -394,11 +406,14 @@ const HOLD_MS = 900;
 export function HoldToSign({
   onSign,
   onAsk,
+  onHoldChange,
   className,
 }: {
   onSign: () => void;
   /** Opens a confirm step with an ordinary Sign button. */
   onAsk: () => void;
+  /** Told when a hold starts and ends, so a signature line can fill along with the button. */
+  onHoldChange?: (holding: boolean) => void;
   className?: string;
 }) {
   const [holding, setHolding] = useState(false);
@@ -412,6 +427,10 @@ export function HoldToSign({
     setHolding(false);
   };
   useEffect(() => stop, []);
+  const release = () => {
+    stop();
+    onHoldChange?.(false);
+  };
   return (
     <button
       type="button"
@@ -425,17 +444,19 @@ export function HoldToSign({
         if (e.button !== 0) return;
         signed.current = false;
         setHolding(true);
+        onHoldChange?.(true);
         timer.current = window.setTimeout(() => {
           timer.current = null;
           signed.current = true;
           setHolding(false);
+          onHoldChange?.(false);
           onSign();
         }, HOLD_MS);
       }}
-      onPointerUp={stop}
+      onPointerUp={release}
       // A mouse that slides off lets go; a finger stays captured, so drifting doesn't.
-      onPointerLeave={stop}
-      onPointerCancel={stop}
+      onPointerLeave={release}
+      onPointerCancel={release}
       onContextMenu={(e) => e.preventDefault()}
       onClick={() => {
         if (signed.current) {

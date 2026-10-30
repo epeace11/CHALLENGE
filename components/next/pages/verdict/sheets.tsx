@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Flame, RotateCcw, Sparkles } from 'lucide-react';
+import { Check, Flame, RotateCcw, Sparkles } from 'lucide-react';
 import { Avatar, Button, Card, Sheet, TextField } from '@/components/next/ui';
 import { formatMoney, plural } from '@/lib/next/selectors';
 import { BADGE_ICON, giftSum, type VerdictView } from './data';
@@ -10,15 +10,24 @@ export type VerdictSheet = 'gifts' | 'streaks' | 'badges' | 'save' | null;
 /** "You", or the partner's name. */
 const who = (s: VerdictView['me']) => (s.isMe ? 'You' : s.person.name);
 
-/** How each gift adds up: the nth point costs n times the step, forgiven points cost nothing. */
+/**
+ * How each gift adds up: the nth point costs n times the step, forgiven points cost nothing. With
+ * `given` and `onUnmark`, a gift marked given (or received) says so and can be marked back.
+ */
 export function GiftsSheet({
   v,
   open,
   onOpenChange,
+  given,
+  onUnmark,
 }: {
   v: VerdictView;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Which gifts are marked, by who receives them. */
+  given?: Record<string, boolean>;
+  /** Takes back the mark on the gift this person receives. */
+  onUnmark?: (recipientId: string) => void;
 }) {
   // The gift a person gets comes from the other person's points.
   const rows = [
@@ -49,6 +58,21 @@ export function GiftsSheet({
                 : `${gets.person.name}’s gift from you: ${formatMoney(gets.gets)}.`}
               {from.forgiven > 0 ? ' Forgiven points cost nothing.' : ''}
             </p>
+            {onUnmark && given?.[gets.person.id] && (
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="flex items-center gap-2 text-nx-body font-semibold text-nx-done">
+                  <Check size={18} strokeWidth={2.6} aria-hidden="true" />
+                  {gets.isMe ? 'Received' : 'Given'}
+                </span>
+                <Button
+                  variant="quiet"
+                  className="-mr-3"
+                  onClick={() => onUnmark(gets.person.id)}
+                >
+                  {gets.isMe ? 'Mark as not received' : 'Mark as not given'}
+                </Button>
+              </div>
+            )}
           </Card>
         ))}
       </div>
@@ -172,6 +196,8 @@ export function SaveSheet({
 }) {
   const [name, setName] = useState(suggestion);
   const [error, setError] = useState<string | null>(null);
+  // The name it was saved under: the sheet then says so.
+  const [saved, setSaved] = useState<string | null>(null);
   // A fresh name each time it opens.
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
@@ -179,6 +205,7 @@ export function SaveSheet({
     if (open) {
       setName(suggestion);
       setError(null);
+      setSaved(null);
     }
   }
   const save = () => {
@@ -187,8 +214,26 @@ export function SaveSheet({
     if (taken.some((t) => t.toLowerCase() === trimmed.toLowerCase()))
       return setError(`You already have one called ${trimmed}.`);
     onSave(trimmed);
-    onOpenChange(false);
+    setSaved(trimmed);
   };
+  if (saved)
+    return (
+      <Sheet
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Saved"
+        footer={
+          <Button variant="primary" onClick={() => onOpenChange(false)}>
+            Done
+          </Button>
+        }
+      >
+        <p className="flex min-h-12 items-center gap-3 rounded-nx-sm bg-nx-done-soft px-3 py-2 text-nx-body font-semibold text-nx-done">
+          <Check size={20} strokeWidth={2.6} aria-hidden="true" />
+          {saved} is in Your challenges, ready to start again.
+        </p>
+      </Sheet>
+    );
   return (
     <Sheet
       open={open}

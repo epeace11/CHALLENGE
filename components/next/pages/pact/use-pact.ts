@@ -1,8 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useNav } from '@/components/next/nav';
-import { useToast } from '@/components/next/ui';
-import { useBackend, useUndoAction } from '@/components/next/backend';
+import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 import { pactView, signPactAt } from './pact-data';
 
@@ -11,16 +10,14 @@ export type PactSheet = 'first' | 'step' | 'rule' | 'pact' | 'sign';
 
 /**
  * What both pact versions share: the data, which sheet is open, and signing. Signing goes through
- * the shared sample world (signPact), so Overview and every other page see it; the toast's Undo
- * takes it back.
+ * the shared sample world (signPact), so Overview and every other page see it. No toast: the
+ * signed screen shows it happened.
  */
 export function usePact() {
   const world = useWorld();
   const backend = useBackend();
-  const undoAction = useUndoAction();
   const view = pactView(world);
   const { navigate } = useNav();
-  const toast = useToast();
   const [sheet, setSheet] = useState<PactSheet | null>(null);
   // The rule in the rule sheet, kept after it closes so the sheet keeps its content while it falls.
   const [ruleId, setRuleId] = useState<string | null>(null);
@@ -43,7 +40,6 @@ export function usePact() {
       backend.act({ type: 'signPact' }, (w) =>
         signPactAt(w, view.you.id, view.signAt),
       );
-      toast({ text: 'You signed the pact', ...undoAction() });
     },
     goToOverview: () => navigate('overview'),
     practice: () => navigate('practice'),

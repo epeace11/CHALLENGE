@@ -27,7 +27,6 @@ export function NewPassword({ onDone }: { onDone: () => void }) {
     setBusy(true);
     try {
       await api.setPassword(password);
-      toast('Password saved');
       onDone();
     } catch (e) {
       toast(

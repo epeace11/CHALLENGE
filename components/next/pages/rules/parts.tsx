@@ -30,7 +30,6 @@ import {
   RowButton,
   Sheet,
   StatusPill,
-  useToast,
 } from '@/components/next/ui';
 import { useWorld } from '@/components/next/world';
 import { cn } from '@/lib/utils';
@@ -51,7 +50,6 @@ export function useProposals() {
   const world = useWorld();
   // Proposals reach the partner only in the preview so far; the live app adds them later.
   const enabled = !useBackend().live;
-  const toast = useToast();
   const [list, setList] = useState<Proposal[]>([]);
   const made = useRef(0);
   // The form: open or not, what it starts on, and a key so each opening starts fresh.
@@ -72,23 +70,8 @@ export function useProposals() {
     };
     setList((l) => [...l, proposal]);
     setForm((f) => ({ ...f, open: false }));
-    toast({
-      text: `Sent to ${world.partner.name}`,
-      action: {
-        label: 'Undo',
-        onClick: () => setList((l) => l.filter((x) => x.id !== proposal.id)),
-      },
-    });
   };
-  const withdraw = (id: string) => {
-    const gone = list.find((p) => p.id === id);
-    setList((l) => l.filter((p) => p.id !== id));
-    if (gone)
-      toast({
-        text: 'Proposal withdrawn',
-        action: { label: 'Undo', onClick: () => setList((l) => [...l, gone]) },
-      });
-  };
+  const withdraw = (id: string) => setList((l) => l.filter((p) => p.id !== id));
   const sheet = (
     <ProposalSheet
       key={form.key}

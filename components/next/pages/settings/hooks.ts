@@ -4,7 +4,6 @@ import type { World } from '@/lib/next/model';
 import { askToEnd, dropEndAsk } from '@/lib/next/actions';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
-import { useToast } from '@/components/next/ui';
 import { exportFile } from './data';
 
 /* ── Appearance ────────────────────────────────────────────────────────── */
@@ -79,22 +78,12 @@ function download(filename: string, text: string) {
 }
 
 /** Ending the running challenge early takes both: ask, take the request back, or turn the partner's down. */
-export function useEndAsk(world: World) {
+export function useEndAsk() {
   const backend = useBackend();
-  const toast = useToast();
   return {
-    ask: () => {
-      backend.act({ type: 'askToEnd' }, (w) => askToEnd(w, w.me.id));
-      toast(`Sent to ${world.partner.name}`);
-    },
-    withdraw: () => {
-      backend.act({ type: 'withdrawEnd' }, dropEndAsk);
-      toast('Withdrawn');
-    },
-    decline: () => {
-      backend.act({ type: 'declineEnd' }, dropEndAsk);
-      toast(`${world.challenge.name} keeps going`);
-    },
+    ask: () => backend.act({ type: 'askToEnd' }, (w) => askToEnd(w, w.me.id)),
+    withdraw: () => backend.act({ type: 'withdrawEnd' }, dropEndAsk),
+    decline: () => backend.act({ type: 'declineEnd' }, dropEndAsk),
   };
 }
 
@@ -102,26 +91,19 @@ export function useEndAsk(world: World) {
 export function useAccount(world: World) {
   const { navigate } = useNav();
   const { host } = useBackend();
-  const toast = useToast();
   return {
     exportData: () => {
       const file = exportFile(world);
       download(file.filename, file.text);
-      toast(`Downloaded ${file.filename}`);
     },
     signOut: () => {
       if (host) return void host.signOut();
-      toast('Signed out');
       navigate('signup');
     },
     leave: async () => {
       if (host) return void (await host.cancelChallenge());
-      toast(`${world.challenge.name} ended`);
       navigate('home');
     },
-    deleteAccount: () => {
-      toast('Account deleted');
-      navigate('landing');
-    },
+    deleteAccount: () => navigate('landing'),
   };
 }

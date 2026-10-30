@@ -33,7 +33,7 @@ export default function SharedV1() {
   const { navigate } = useNav();
   const { host } = useBackend();
   const shared = sharedChallenge(world);
-  const { saved, toggle } = useSaveForLater(shared.name);
+  const { saved, toggle } = useSaveForLater();
   const [sheet, setSheet] = useState<string | null>(null);
   const start = () => {
     setSheet(null);
