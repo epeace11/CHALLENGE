@@ -32,7 +32,8 @@ export type Outcome =
   | 'conceded'
   | 'replied';
 
-const STAMP: Record<
+/** Each outcome's word, icon and colours: the stamp on a leaving card, and the Undo line. */
+export const STAMP: Record<
   Outcome,
   { label: string; icon: LucideIcon; tint: string; ink: string }
 > = {

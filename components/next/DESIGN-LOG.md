@@ -2,6 +2,16 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, October 30, 2026 (third design critique)
+
+A third critique scored the app 26/40 (26, then 28, then 26; each run has a fresh reviewer). Two points were real regressions from the second round: Review lost its Undo when the pop-ups went, and the screenshot message doesn't scroll to the field. Erin's answers: Review safety first, keep "points" but say it plainly, show the count on a day with a miss, and take on the two P1s and the red days.
+
+Built first, Review safety:
+
+- **Every decision can be undone for 5 seconds, on the page.** Approve, Dispute, Forgive, Decline, Concede and a reply show at once (the card leaves with its stamp) and a line above the next card says "Approved · 10,000 steps" with Undo. The decision is sent only when the 5 seconds are up, so Undo needs nothing from the database and works in the live app too. The next decision, leaving Review or hiding the app sends the one waiting straight away.
+- **The pinned bar only ever holds an answer's Dispute and Approve.** Forgive and Decline, and Reply to Jordan and Concede, are buttons inside their cards, so a quick second tap on the bar can't forgive a point or concede a dispute you never saw. Taps in the 0.6 s after a decision are ignored.
+- **The bar comes right after the card,** so a keyboard reaches it before the rows below and it scrolls away with the card (it replaces the bar's "step aside" from October 29). Its buttons are in reading order: Dispute, then Approve.
+
 ## Decisions, October 29, 2026 (second design critique)
 
 A second critique scored the app 28/40 (up from 26). Erin's answers: fix Review and disputes first, take on everything it found, give signing and the verdict their own layouts within Calm, and make ending the challenge need the partner's OK, like a rename.

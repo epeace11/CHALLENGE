@@ -1,6 +1,6 @@
-// One thing at a time on a big card with a large screenshot; its two buttons stay pinned at the bottom while the card is on screen.
+// One thing at a time on a big card with a large screenshot; an answer's two buttons stay pinned below it, forgiveness and disputes decide in the card, and each decision can be undone for a moment.
 'use client';
-import { useEffect, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Check, CheckCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
 import {
@@ -17,7 +17,7 @@ import {
 } from '@/components/next/ui';
 import { formatDayShort, formatWeekday } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
-import { Deck, OutcomeContext } from './motion';
+import { Deck, OutcomeContext, STAMP } from './motion';
 import {
   CaughtUp,
   DisputeSheet,
@@ -35,7 +35,7 @@ import {
   type ReviewItem,
 } from './queue';
 import { PointActions } from './points';
-import { useReview } from './use-review';
+import { useReview, type Held } from './use-review';
 
 const KIND: Record<ReviewItem['kind'], string> = {
   answer: 'Answer',
@@ -48,21 +48,71 @@ const dayOf = (item: ReviewItem) =>
   item.kind === 'forgiveness' ? item.point.day : item.entry.day;
 
 /**
- * Whether an element can be seen below the top bar. Returns a ref for it; until it is measured it
- * counts as seen.
+ * The decision just made, with Undo while it waits to be sent: on the page, above the next card,
+ * never a pop-up. A screen reader hears the decision.
  */
-function useSeen() {
-  const [el, setEl] = useState<HTMLElement | null>(null);
-  const [seen, setSeen] = useState(true);
-  useEffect(() => {
-    if (!el) return;
-    const watch = new IntersectionObserver(([e]) => setSeen(e.isIntersecting), {
-      rootMargin: '-64px 0px 0px 0px',
-    });
-    watch.observe(el);
-    return () => watch.disconnect();
-  }, [el]);
-  return [setEl, seen] as const;
+function UndoLine({ held, onUndo }: { held: Held; onUndo: () => void }) {
+  const s = STAMP[held.outcome];
+  const Icon = s.icon;
+  return (
+    <div
+      className={cn(
+        'nx-enter flex min-h-12 items-center gap-3 rounded-nx py-1 pr-1 pl-4',
+        s.tint,
+      )}
+    >
+      <Icon
+        size={20}
+        strokeWidth={2.4}
+        className={cn('shrink-0', s.ink)}
+        aria-hidden="true"
+      />
+      <output className="min-w-0 flex-1 text-nx-body text-nx-ink">
+        <span className={cn('font-semibold', s.ink)}>{s.label}</span> ·{' '}
+        {held.about}
+      </output>
+      <Button variant="quiet" onClick={onUndo}>
+        Undo
+      </Button>
+    </div>
+  );
+}
+
+/** Two decision buttons side by side: the other choice first, the main one on the right. */
+function Choices({
+  main,
+  alt,
+  mainIcon,
+  onMain,
+  onAlt,
+}: {
+  main: string;
+  alt: string;
+  mainIcon?: typeof Check;
+  onMain: () => void;
+  onAlt: () => void;
+}): ReactNode {
+  return (
+    <>
+      <Button
+        variant="secondary"
+        size="lg"
+        className="flex-1 px-3"
+        onClick={onAlt}
+      >
+        {alt}
+      </Button>
+      <Button
+        variant="primary"
+        size="lg"
+        icon={mainIcon}
+        className="flex-1 px-3"
+        onClick={onMain}
+      >
+        {main}
+      </Button>
+    </>
+  );
 }
 
 /** Review, version 2. */
@@ -111,12 +161,17 @@ export default function ReviewV2() {
   const [listOpen, setListOpen] = useState(false);
   const disputing = useSheetFor<AnswerItem>();
   const replying = useSheetFor<DisputeItem>();
-  // The bar acts on the card, so it steps aside once the card has scrolled away.
-  const [cardRef, cardSeen] = useSeen();
   const actions = current && actionsFor(current.kind, world.partner.name);
+  // An answer's Approve and Dispute stay pinned below the card; forgiveness and disputes, whose
+  // choices move money, decide in the card, so the pinned bar never turns into Forgive or Concede.
+  const inBar = current?.kind === 'answer' || current?.kind === 'correction';
+  // Taps in the moment after a decision are ignored, so a double tap can't decide the next card.
+  const settle = useRef(0);
 
   /** Acts on the card on screen, remembering it so the next open one follows. */
   const decide = (item: ReviewItem, main: boolean) => {
+    if (performance.now() < settle.current) return;
+    settle.current = performance.now() + 600;
     setPick(item.id);
     if (item.kind === 'answer')
       return main ? review.approve(item) : disputing.show(item);
@@ -200,19 +255,43 @@ export default function ReviewV2() {
             </Enter>
           )}
 
-          <Enter index={2}>
-            <div ref={cardRef}>
-              <Deck id={current?.id ?? null} direction={shown.direction}>
-                {current && (
-                  <GlassCard pad="lg" as="article">
-                    <ItemBody world={world} item={current} size="lg" showDay />
-                    {approveDay}
-                  </GlassCard>
-                )}
-              </Deck>
-            </div>
+          <Enter index={2} className="flex flex-col gap-3">
+            {review.held && (
+              <UndoLine held={review.held} onUndo={review.undo} />
+            )}
+            <Deck id={current?.id ?? null} direction={shown.direction}>
+              {current && (
+                <GlassCard pad="lg" as="article">
+                  <ItemBody world={world} item={current} size="lg" showDay />
+                  {approveDay}
+                  {!inBar && actions && (
+                    <div className="mt-6 flex items-stretch gap-2">
+                      <Choices
+                        main={actions.main}
+                        alt={actions.alt}
+                        onMain={() => decide(current, true)}
+                        onAlt={() => decide(current, false)}
+                      />
+                    </div>
+                  )}
+                </GlassCard>
+              )}
+            </Deck>
             {!current && <CaughtUp world={world} />}
           </Enter>
+
+          {/* Right after the card, so it comes next for a keyboard and scrolls away with the card. */}
+          {current && inBar && actions && (
+            <ActionBar className="flex-row items-stretch">
+              <Choices
+                main={actions.main}
+                alt={actions.alt}
+                mainIcon={Check}
+                onMain={() => decide(current, true)}
+                onAlt={() => decide(current, false)}
+              />
+            </ActionBar>
+          )}
 
           <Enter index={3}>
             <WaitingForPartner review={review} />
@@ -221,35 +300,6 @@ export default function ReviewV2() {
           <Enter index={4}>
             <PointActions world={world} />
           </Enter>
-
-          {current && actions && (
-            <ActionBar
-              away={!cardSeen}
-              className="flex-row-reverse items-stretch"
-            >
-              <Button
-                variant="primary"
-                size="lg"
-                icon={
-                  current.kind === 'answer' || current.kind === 'correction'
-                    ? Check
-                    : undefined
-                }
-                className="flex-1 px-3"
-                onClick={() => decide(current, true)}
-              >
-                {actions.main}
-              </Button>
-              <Button
-                variant="secondary"
-                size="lg"
-                className="flex-1 px-3"
-                onClick={() => decide(current, false)}
-              >
-                {actions.alt}
-              </Button>
-            </ActionBar>
-          )}
         </div>
       </OutcomeContext.Provider>
 
