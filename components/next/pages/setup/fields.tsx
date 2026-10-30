@@ -1,7 +1,8 @@
 'use client';
 import { useId, type ReactNode } from 'react';
 import type { Weekday } from '@/lib/next/model';
-import { formatMoney } from '@/lib/next/selectors';
+import { CalendarDays } from 'lucide-react';
+import { formatDay, formatMoney } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import styles from './setup.module.css';
 
@@ -11,7 +12,11 @@ import styles from './setup.module.css';
  * and filter chips. They reuse the kit's field classes, so they line up with TextField and NumberField.
  */
 
-/** A labelled date field (the phone's own date picker). */
+/**
+ * A labelled date field that reads like the rest of the app ("Monday, Nov 2"), not the browser's
+ * own format ("2026-11-02"). The phone's date picker sits invisibly on top, so a tap opens it; on
+ * a laptop a click opens it too, and the box shows a focus ring for the keyboard.
+ */
 export function DateField({
   label,
   value,
@@ -31,16 +36,32 @@ export function DateField({
       <label htmlFor={id} className="nx-field-label">
         {label}
       </label>
-      <input
-        id={id}
-        type="date"
-        className="nx-input"
-        value={value}
-        aria-describedby={hint ? `${id}-note` : undefined}
-        onChange={(e) => {
-          if (e.target.value) onChange(e.target.value);
-        }}
-      />
+      <div className={styles.date}>
+        <span className="nx-input flex items-center justify-between gap-3">
+          <span className="min-w-0 truncate">{formatDay(value)}</span>
+          <CalendarDays
+            size={20}
+            aria-hidden="true"
+            className="shrink-0 text-nx-ink-2"
+          />
+        </span>
+        <input
+          id={id}
+          type="date"
+          value={value}
+          aria-describedby={hint ? `${id}-note` : undefined}
+          onClick={(e) => {
+            try {
+              e.currentTarget.showPicker();
+            } catch {
+              // Older browsers open it on their own, or the keyboard edits it.
+            }
+          }}
+          onChange={(e) => {
+            if (e.target.value) onChange(e.target.value);
+          }}
+        />
+      </div>
       {hint && (
         <p id={`${id}-note`} className="nx-field-hint">
           {hint}

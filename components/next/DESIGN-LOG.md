@@ -48,7 +48,13 @@ Then clarify, October 30, 2026 (the copy the critique flagged):
 - **Gifts shows Jordan's note once:** a point's sheet left out the answer's note when the forgiveness request said the same words.
 - **Recap's streaks say when:** "Longest streaks that week · 14 days · No phones in the bedroom", then "18 days now, still going".
 
-Still to build from this critique: the polish fixes.
+Then polish, October 30, 2026:
+
+- **Set up's First day reads like the rest of the app:** "Monday, Nov 2" with a calendar icon, in a box like the Name field, instead of the browser's "2026-11-02". The phone's own date picker still opens on a tap.
+- **The first-point keys have room on phones:** a little less gap and 16px type below 420px, so "$0.25" no longer touches its border.
+- Check in's "Add a note to this answer" stays as it is: its background shows only when pressed and reaches 12px left of the column so the icon lines up with the text, like every quiet button in the app.
+
+That's everything from the second critique; the next step is a third critique to compare with 28/40.
 
 ## Decisions, October 27, 2026 (design critique)
 
