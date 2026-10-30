@@ -12,6 +12,11 @@ Built first, Review safety:
 - **The pinned bar only ever holds an answer's Dispute and Approve.** Forgive and Decline, and Reply to Jordan and Concede, are buttons inside their cards, so a quick second tap on the bar can't forgive a point or concede a dispute you never saw. Taps in the 0.6 s after a decision are ignored.
 - **The bar comes right after the card,** so a keyboard reaches it before the rows below and it scrolls away with the card (it replaces the bar's "step aside" from October 29). Its buttons are in reading order: Dispute, then Approve.
 
+Then the points wording ("keep points, say it plainly"):
+
+- **Overview gives both numbers and who's ahead:** "6 points to Jordan's 9 · you're ahead" ("… · Jordan's ahead", "6 points each · tied"), as a line under the two gift cards that opens Gifts (it said "You're ahead by 3 points" beside the heading, which read as having more). Gifts' pill says "Ahead · 3 fewer points".
+- **The gift you get, the gift you give.** No "your gift" or "the gift you owe" anywhere: forgiving one of Jordan's points says "The gift you get goes from $45 to $36"; conceding says "the gift you give Jordan goes from $21 to $28"; How it works and a shared challenge say "The gift you give".
+
 ## Decisions, October 29, 2026 (second design critique)
 
 A second critique scored the app 28/40 (up from 26). Erin's answers: fix Review and disputes first, take on everything it found, give signing and the verdict their own layouts within Calm, and make ending the challenge need the partner's OK, like a rename.

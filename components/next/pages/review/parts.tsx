@@ -404,8 +404,8 @@ export function DisputeBody({
       <Quote person={world.partner}>{dispute.comment}</Quote>
       {dispute.reply && <Quote person={world.me}>{dispute.reply}</Quote>}
       <GiftsLink>
-        If you concede, it becomes a point and your gift to {world.partner.name}{' '}
-        goes from{' '}
+        If you concede, it becomes a point and the gift you give{' '}
+        {world.partner.name} goes from{' '}
         <b className="font-semibold text-nx-ink">{formatMoney(effect.now)}</b>{' '}
         to{' '}
         <b className="font-semibold text-nx-ink">{formatMoney(effect.after)}</b>

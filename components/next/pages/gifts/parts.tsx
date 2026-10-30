@@ -185,7 +185,7 @@ export function GiftCard({
       {ahead ? (
         <StatusPill
           status="done"
-          label={`Ahead by ${plural(ahead, 'point')}`}
+          label={`Ahead · ${plural(ahead, 'fewer point')}`}
           className="mt-3"
         />
       ) : null}
@@ -303,7 +303,7 @@ export function PointSheet({ sheet }: { sheet: SheetFor<OpenPoint> }) {
         ) : (
           <p className="text-nx-body">
             {mine
-              ? `If ${partner.name} forgives it, your gift to ${partner.name} goes from `
+              ? `If ${partner.name} forgives it, the gift you give ${partner.name} goes from `
               : 'If you forgive it, the gift you get goes from '}
             <b className="font-semibold">{formatMoney(effect.now)}</b> to{' '}
             <b className="font-semibold">{formatMoney(effect.after)}</b>.

@@ -183,8 +183,8 @@ export function PointActions({ world }: { world: World }) {
         {forgiveNow && (
           <p className="text-nx-body text-nx-ink-2">
             {forgiveNow.now === forgiveNow.after
-              ? `Your gift stays ${formatMoney(forgiveNow.now)}.`
-              : `Your gift goes from ${formatMoney(forgiveNow.now)} to ${formatMoney(forgiveNow.after)}.`}
+              ? `The gift you get stays ${formatMoney(forgiveNow.now)}.`
+              : `The gift you get goes from ${formatMoney(forgiveNow.now)} to ${formatMoney(forgiveNow.after)}.`}
             {backend.live && ' This can’t be taken back.'}
           </p>
         )}

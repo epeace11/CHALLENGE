@@ -193,7 +193,9 @@ function CostExample({ step, cap }: { step: number; cap: number | null }) {
         max={31}
       />
       <div className="flex flex-col gap-1.5" aria-live="polite">
-        <p className="text-nx-2 font-semibold">The gift you owe your partner</p>
+        <p className="text-nx-2 font-semibold">
+          The gift you give your partner
+        </p>
         <p className="font-nx-serif text-nx-num text-nx-accent">
           <CountUp value={total} format={formatMoney} />
         </p>

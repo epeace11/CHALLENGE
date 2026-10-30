@@ -165,19 +165,7 @@ function Running() {
           </Enter>
 
           <div className="-mt-5 flex flex-col gap-8">
-            <Section
-              title="Gifts"
-              index={2}
-              action={
-                <Button
-                  variant="quiet"
-                  className="-mr-3"
-                  onClick={() => navigate('gifts')}
-                >
-                  {o.aheadLine}
-                </Button>
-              }
-            >
+            <Section title="Gifts" index={2}>
               <div className="grid grid-cols-2 gap-3">
                 <StatButton
                   label="You get"
@@ -194,6 +182,14 @@ function Running() {
                   onClick={() => navigate('gifts')}
                 />
               </div>
+              {/* Both numbers and who's ahead (fewer points is ahead); it wraps on narrow phones. */}
+              <Button
+                variant="quiet"
+                className="-ml-3 self-start text-left whitespace-normal"
+                onClick={() => navigate('gifts')}
+              >
+                {o.aheadLine}
+              </Button>
             </Section>
 
             <Enter index={3} className="grid gap-3 sm:grid-cols-2">

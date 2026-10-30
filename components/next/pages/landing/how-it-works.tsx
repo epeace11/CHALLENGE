@@ -46,7 +46,7 @@ function GiftExample() {
         aria-live="polite"
       >
         <div className="flex min-w-0 flex-col">
-          <p className="text-nx-2 font-semibold">The gift you owe</p>
+          <p className="text-nx-2 font-semibold">The gift you give</p>
           {/* On phones the sum is left out, so the sheet fits without scrolling. */}
           {misses > 0 && (
             <p className="hidden text-nx-2 text-nx-ink-2 sm:block">

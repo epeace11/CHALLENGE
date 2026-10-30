@@ -158,12 +158,13 @@ export function overviewOf(w: World) {
     theirs,
     /** Who has fewer points, and by how many. */
     lead,
+    /** Both numbers, then who's ahead (points are misses, so fewer is ahead): "6 points to Jordan's 9 · you're ahead". */
     aheadLine:
       lead.personId === null
-        ? 'You are tied'
-        : lead.personId === w.me.id
-          ? `You’re ahead by ${plural(lead.margin, 'point')}`
-          : `${w.partner.name} is ahead by ${plural(lead.margin, 'point')}`,
+        ? `${plural(mine.points, 'point')} each · tied`
+        : `${plural(mine.points, 'point')} to ${w.partner.name}’s ${theirs.points} · ${
+            lead.personId === w.me.id ? 'you’re' : `${w.partner.name}’s`
+          } ahead`,
     gym: gymWeek(w),
     streak: streakToProtect(w, w.me.id),
     partnerStreak: streakToProtect(w, w.partner.id),

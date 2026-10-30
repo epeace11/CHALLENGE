@@ -321,7 +321,7 @@ function GiftCard({
               variant="quiet"
               aria-label={
                 giving
-                  ? `Undo: mark your ${formatMoney(g.amount)} gift as not given`
+                  ? `Undo: mark the ${formatMoney(g.amount)} gift you give as not given`
                   : `Undo: mark the ${formatMoney(g.amount)} gift as not received`
               }
               onClick={onUnmark}

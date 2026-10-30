@@ -45,7 +45,7 @@ export function GiftsSheet({
             </p>
             <p className="text-nx-2 text-nx-ink-2">
               {gets.isMe
-                ? `Your gift from ${from.person.name}: ${formatMoney(gets.gets)}.`
+                ? `The gift you get from ${from.person.name}: ${formatMoney(gets.gets)}.`
                 : `${gets.person.name}’s gift from you: ${formatMoney(gets.gets)}.`}
               {from.forgiven > 0 ? ' Forgiven points cost nothing.' : ''}
             </p>
