@@ -17,6 +17,12 @@ Then the points wording ("keep points, say it plainly"):
 - **Overview gives both numbers and who's ahead:** "6 points to Jordan's 9 · you're ahead" ("… · Jordan's ahead", "6 points each · tied"), as a line under the two gift cards that opens Gifts (it said "You're ahead by 3 points" beside the heading, which read as having more). Gifts' pill says "Ahead · 3 fewer points".
 - **The gift you get, the gift you give.** No "your gift" or "the gift you owe" anywhere: forgiving one of Jordan's points says "The gift you get goes from $45 to $36"; conceding says "the gift you give Jordan goes from $21 to $28"; How it works and a shared challenge say "The gift you give".
 
+Then the miss count ("show the count"):
+
+- **A missed day says how many.** It keeps the missed colour and X (any miss makes it a missed day), and now shows the count beside the X: "✗ 1" on Overview's week and under the date on the Progress calendar. Opening it says "1 of 6 missed" (on Overview's day sheet, per person), and a screen reader hears "You: missed 1 of 6". A day with one miss out of six no longer looks like a day with six.
+
+That finishes the round Erin chose from the third critique (Review safety, the points wording, the miss count).
+
 ## Decisions, October 29, 2026 (second design critique)
 
 A second critique scored the app 28/40 (up from 26). Erin's answers: fix Review and disputes first, take on everything it found, give signing and the verdict their own layouts within Calm, and make ending the challenge need the partner's OK, like a rename.

@@ -34,6 +34,9 @@ import {
   weekTarget,
   weeksOf,
   countsForWeek,
+  dayColor,
+  dayMisses,
+  missesLine,
 } from '@/lib/next/selectors';
 import { Medal } from './medal';
 import { SimpleLegend, SimpleMonth, type SquareTone } from './simple-month';
@@ -375,9 +378,18 @@ function DayBody({
 }) {
   const rows = dayCheckins(world, view.personId, view.day);
   const notes = notesOn(world, view.day);
+  const misses =
+    dayColor(world, view.personId, view.day) === 'missed'
+      ? dayMisses(world, view.personId, view.day)
+      : null;
   return (
     <div className="flex flex-col gap-5">
       <Whose world={world} personId={view.personId} />
+      {misses && (
+        <p className="text-nx-body font-semibold text-nx-missed">
+          {missesLine(misses)}
+        </p>
+      )}
       <ul className="flex flex-col gap-2">
         {rows.map(({ rule, entry, pill }) => {
           const Icon = habitIcon(rule);

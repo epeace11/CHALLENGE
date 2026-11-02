@@ -9,6 +9,8 @@ import {
   calendar,
   checkinCount,
   dayColor,
+  dayMisses,
+  missesLine,
   dayNumber,
   daysLeft,
   entryFor,
@@ -273,8 +275,24 @@ assert.equal(color(JORDAN, '2026-11-18'), 'review');
 assert.equal(color(JORDAN, '2026-11-19'), 'review');
 const cal = calendar(w, MAYA);
 assert.equal(cal.length, 30);
-assert.deepEqual(cal[17], { day: '2026-11-19', number: 18, color: 'open' });
-assert.deepEqual(cal[18], { day: '2026-11-20', number: 19, color: 'ahead' });
+assert.deepEqual(cal[17], {
+  day: '2026-11-19',
+  number: 18,
+  color: 'open',
+  misses: null,
+});
+assert.deepEqual(cal[18], {
+  day: '2026-11-20',
+  number: 19,
+  color: 'ahead',
+  misses: null,
+});
+// A missed day says how many of its check-ins were missed, out of how many it asked.
+const missedDay = cal.find((d) => d.color === 'missed');
+assert.ok(missedDay.misses.missed >= 1);
+assert.ok(missedDay.misses.missed <= missedDay.misses.due);
+assert.deepEqual(missedDay.misses, dayMisses(w, MAYA, missedDay.day));
+assert.equal(missesLine({ missed: 1, due: 8 }), '1 of 8 missed');
 
 // Status pills.
 const pill = (p, rule, d) =>

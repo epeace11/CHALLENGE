@@ -3,6 +3,7 @@ import {
   dateIn,
   dateRange,
   dayColor,
+  dayMisses,
   entryFor,
   entryPill,
   formatAnswer,
@@ -81,12 +82,21 @@ export type WeekDay = {
   date: string;
   me: DayColor;
   partner: DayColor;
+  /** On a missed day, how many of its check-ins each missed ("1 of 8"); null otherwise. */
+  meMisses: Misses | null;
+  partnerMisses: Misses | null;
   today: boolean;
   /** Past days inside the challenge open a sheet with both people's answers. */
   opens: boolean;
 };
 
 const SHORT_DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+type Misses = ReturnType<typeof dayMisses>;
+
+/** A missed day's count, or null when the day isn't a missed one. */
+const missesOn = (w: World, personId: string, day: DateString) =>
+  dayColor(w, personId, day) === 'missed' ? dayMisses(w, personId, day) : null;
 
 /** The calendar week around today (Monday to Sunday), with both people's day colours. */
 function weekAround(w: World): WeekDay[] {
@@ -99,6 +109,8 @@ function weekAround(w: World): WeekDay[] {
     date: String(Number(day.slice(8))),
     me: dayColor(w, w.me.id, day),
     partner: dayColor(w, w.partner.id, day),
+    meMisses: missesOn(w, w.me.id, day),
+    partnerMisses: missesOn(w, w.partner.id, day),
     today: day === w.today,
     opens: day < w.today && day >= c.start && day <= lastDay(c),
   }));

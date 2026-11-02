@@ -49,7 +49,12 @@ export function SimpleMonth({
   marked,
   onOpen,
 }: {
-  days: { day: DateString; color: SquareTone }[];
+  /** `misses` on a missed day of the whole calendar: how many of its check-ins were missed. */
+  days: {
+    day: DateString;
+    color: SquareTone;
+    misses?: { missed: number; due: number } | null;
+  }[];
   weekStart: Weekday;
   today: DateString;
   /** A day to ring, such as the day the calendar was opened from. */
@@ -83,9 +88,22 @@ export function SimpleMonth({
           const inside = (
             <>
               <span aria-hidden="true">{Number(d.day.slice(8))}</span>
-              <DayIcon tone={d.color} size={14} />
+              <span className="flex items-center gap-0.5" aria-hidden="true">
+                <DayIcon tone={d.color} size={14} />
+                {d.misses && (
+                  <span className="text-nx-min leading-none font-semibold">
+                    {d.misses.missed}
+                  </span>
+                )}
+              </span>
               <span className="sr-only">
-                {`${formatDay(d.day)}: ${isToday ? 'today' : WORDS[d.color]}`}
+                {`${formatDay(d.day)}: ${
+                  isToday
+                    ? 'today'
+                    : d.misses
+                      ? `missed ${d.misses.missed} of ${d.misses.due}`
+                      : WORDS[d.color]
+                }`}
               </span>
             </>
           );

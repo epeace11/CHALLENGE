@@ -1,7 +1,13 @@
 'use client';
 import { useState, type CSSProperties } from 'react';
 import type { DateString, DayColor } from '@/lib/next/model';
-import { formatDay, formatWeekday } from '@/lib/next/selectors';
+import {
+  dayColor,
+  dayMisses,
+  formatDay,
+  formatWeekday,
+  missesLine,
+} from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
@@ -21,16 +27,33 @@ import { COLOR_WORDS, dayActions, dayRows, type WeekDay } from './data';
  * do nothing.
  */
 
-function Cell({ color }: { color: DayColor }) {
+/** One person's day: the day square, and on a missed day how many it missed beside the X. */
+function Cell({
+  color,
+  misses,
+}: {
+  color: DayColor;
+  misses: { missed: number } | null;
+}) {
   return (
     <span
-      className="nx-day h-8 w-full max-w-12 rounded-[10px]"
+      className="nx-day h-8 w-full max-w-12 grid-flow-col gap-0.5 rounded-[10px] text-nx-min font-semibold tabular-nums"
       data-tone={color}
     >
-      <DayIcon tone={color} size={17} />
+      <DayIcon tone={color} size={misses ? 15 : 17} />
+      {misses && <span className="leading-none">{misses.missed}</span>}
     </span>
   );
 }
+
+/** What a person's day was, in words: "missed 1 of 8", "done", "waiting". */
+const dayWords = (
+  color: DayColor,
+  misses: { missed: number; due: number } | null,
+) =>
+  misses
+    ? `missed ${misses.missed} of ${misses.due}`
+    : COLOR_WORDS[color].toLowerCase();
 
 export function WeekStrip({
   days,
@@ -43,7 +66,7 @@ export function WeekStrip({
 }) {
   const world = useWorld();
   const say = (d: WeekDay) =>
-    `${formatDay(d.day)}. You: ${COLOR_WORDS[d.me].toLowerCase()}. ${world.partner.name}: ${COLOR_WORDS[d.partner].toLowerCase()}.`;
+    `${formatDay(d.day)}. You: ${dayWords(d.me, d.meMisses)}. ${world.partner.name}: ${dayWords(d.partner, d.partnerMisses)}.`;
   return (
     <div
       className={cn(
@@ -93,8 +116,8 @@ export function WeekStrip({
             >
               {d.date}
             </span>
-            <Cell color={d.me} />
-            <Cell color={d.partner} />
+            <Cell color={d.me} misses={d.meMisses} />
+            <Cell color={d.partner} misses={d.partnerMisses} />
           </>
         );
         const style = { ['--nx-i' as string]: i } as CSSProperties;
@@ -214,11 +237,20 @@ export function DaySheet({
           {people.map((p) => {
             const rows = dayRows(world, p.id, d);
             const mine = p.id === world.me.id;
+            const misses =
+              dayColor(world, p.id, d) === 'missed'
+                ? dayMisses(world, p.id, d)
+                : null;
             return (
               <section key={p.id} aria-label={mine ? 'You' : p.name}>
                 <h3 className="flex items-center gap-2.5 font-nx-serif text-nx-h3">
                   <Avatar person={p} size="sm" decorative />
                   {mine ? 'You' : p.name}
+                  {misses && (
+                    <span className="ml-auto font-nx-sans text-nx-2 font-semibold text-nx-missed">
+                      {missesLine(misses)}
+                    </span>
+                  )}
                 </h3>
                 <ul className="mt-1 divide-y divide-nx-line">
                   {rows.map((r) => (

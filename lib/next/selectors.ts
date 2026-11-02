@@ -613,30 +613,62 @@ export function dayColor(
     entryFor(w, personId, r.id, day),
   );
   if (!closed && entries.some((e) => !isAnswered(e))) return 'open';
-  let missed = false,
+  const t = tally(w, entries);
+  return t.missed
+    ? 'missed'
+    : t.review
+      ? 'review'
+      : t.excused
+        ? 'excused'
+        : 'done';
+}
+
+/** How a day's daily check-ins stand: how many missed, and whether any wait or were forgiven. */
+function tally(w: World, entries: (Entry | undefined)[]) {
+  let missed = 0,
     review = false,
     excused = false;
   for (const e of entries) {
-    if (!e) missed = true;
+    if (!e) missed++;
     else if (e.correction || e.status === 'pending' || e.status === 'disputed')
       review = true;
     else if (e.status === 'excused') excused = true;
     else if (MISS.has(e.status) || !e.done) {
       const point = pointOfEntry(w, e.id);
       if (point && pendingRequestFor(w, point.id)) review = true;
-      else missed = true;
+      else missed++;
     }
   }
-  return missed ? 'missed' : review ? 'review' : excused ? 'excused' : 'done';
+  return { missed, review, excused };
 }
 
-/** Every day of the challenge for `personId`, with its number and colour. */
+/**
+ * How many of a day's daily check-ins `personId` missed, out of how many were asked: "1 of 8
+ * missed". A missed day is a missed day however many it was, so the colour stays; this says how
+ * close it came. Only meaningful when `dayColor` is 'missed'.
+ */
+export function dayMisses(w: World, personId: string, day: DateString) {
+  const entries = dailyRulesOn(w.challenge, personId, day).map((r) =>
+    entryFor(w, personId, r.id, day),
+  );
+  return { missed: tally(w, entries).missed, due: entries.length };
+}
+
+/** "1 of 8 missed". */
+export const missesLine = (m: { missed: number; due: number }) =>
+  `${m.missed} of ${m.due} missed`;
+
+/** Every day of the challenge for `personId`, with its number, colour and how many it missed. */
 export const calendar = (w: World, personId: string) =>
-  challengeDays(w.challenge).map((day, i) => ({
-    day,
-    number: i + 1,
-    color: dayColor(w, personId, day),
-  }));
+  challengeDays(w.challenge).map((day, i) => {
+    const color = dayColor(w, personId, day);
+    return {
+      day,
+      number: i + 1,
+      color,
+      misses: color === 'missed' ? dayMisses(w, personId, day) : null,
+    };
+  });
 
 /* ── Status pills ──────────────────────────────────────────────────────── */
 

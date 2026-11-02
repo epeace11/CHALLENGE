@@ -102,25 +102,25 @@ Friday, Nov 20, 2026, 7:30 pm, Toronto. Day 19 of 30 of **Fall Reset** (Mon Nov 
 
 Import from `@/lib/next/selectors` (it also re-exports every date helper and formatter). All are pure functions of the world.
 
-| Question                           | Selector                                                                                                                             |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| What is left to log?               | `openCheckins(world, personId, day?)` → rules; `checkinProgress(world, personId)` → `{ due, answered, left }`                        |
-| Which day is open, and until when? | `openDay(world)`, `timeLeft(world)` (ms) with `formatDuration`, `lockTime(challenge, day)`                                           |
-| What waits for review?             | `reviewQueue(world, personId)` → `{ items, answers, corrections, forgiveness, disputes, count }`                                     |
-| What waits on my partner?          | `waitingOnPartner(world, personId)`                                                                                                  |
-| Points and gifts                   | `standings(world)` (both, viewer first), `activePoints`, `owes`, `gets`, `pointCost`, `nextMissCost`, `giftTotal(points, step, cap)` |
-| Who is ahead?                      | `leader(world)` → `{ personId, margin }`                                                                                             |
-| Gym this week                      | `weekProgress(world, personId, 'gym')` → `{ have, need, left, daysLeft, met, week }`                                                 |
-| Streaks                            | `streaks(world, personId)`, `streakToProtect(world, personId)`                                                                       |
-| Calendar                           | `calendar(world, personId)` → `{ day, number, color }[]`; `dayColor` is done / excused / missed / review / open / ahead              |
-| An answer's pill                   | `entryPill(world, rule, entry, day)` → `{ status, label }` for `StatusPill`                                                          |
-| Day number, days left              | `dayNumber(challenge, world.today)` (19), `daysLeft(challenge, world.today)` (12)                                                    |
-| Stakes before starting             | `stakesPreview(plan, 0.1, [maya, jordan])` → `{ gift, perPerson }`; a theme needs a `start`                                          |
-| Badges                             | `badges(world, personId)`, `nextBadge(world, personId)`                                                                              |
-| Monday recap                       | `lastRecap(world)`, `weekRecap(world, week)`                                                                                         |
-| Rules                              | `rulesFor`, `rulesOn(challenge, personId, day)`, `ruleById`, `libraryByGroup(world.library)`, `LOOKS`, `RULE_GROUPS`                 |
-| Entries                            | `entryFor(world, personId, ruleId, day)`, `entriesOn`, `formatAnswer(rule, entry)`                                                   |
-| Jordan's point of view             | `asViewer(world, 'jordan')` swaps `me` and `partner`                                                                                 |
+| Question                           | Selector                                                                                                                                                                                                               |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What is left to log?               | `openCheckins(world, personId, day?)` → rules; `checkinProgress(world, personId)` → `{ due, answered, left }`                                                                                                          |
+| Which day is open, and until when? | `openDay(world)`, `timeLeft(world)` (ms) with `formatDuration`, `lockTime(challenge, day)`                                                                                                                             |
+| What waits for review?             | `reviewQueue(world, personId)` → `{ items, answers, corrections, forgiveness, disputes, count }`                                                                                                                       |
+| What waits on my partner?          | `waitingOnPartner(world, personId)`                                                                                                                                                                                    |
+| Points and gifts                   | `standings(world)` (both, viewer first), `activePoints`, `owes`, `gets`, `pointCost`, `nextMissCost`, `giftTotal(points, step, cap)`                                                                                   |
+| Who is ahead?                      | `leader(world)` → `{ personId, margin }`                                                                                                                                                                               |
+| Gym this week                      | `weekProgress(world, personId, 'gym')` → `{ have, need, left, daysLeft, met, week }`                                                                                                                                   |
+| Streaks                            | `streaks(world, personId)`, `streakToProtect(world, personId)`                                                                                                                                                         |
+| Calendar                           | `calendar(world, personId)` → `{ day, number, color, misses }[]`; `dayColor` is done / excused / missed / review / open / ahead; on a missed day `dayMisses` → `{ missed, due }` and `missesLine` says "1 of 8 missed" |
+| An answer's pill                   | `entryPill(world, rule, entry, day)` → `{ status, label }` for `StatusPill`                                                                                                                                            |
+| Day number, days left              | `dayNumber(challenge, world.today)` (19), `daysLeft(challenge, world.today)` (12)                                                                                                                                      |
+| Stakes before starting             | `stakesPreview(plan, 0.1, [maya, jordan])` → `{ gift, perPerson }`; a theme needs a `start`                                                                                                                            |
+| Badges                             | `badges(world, personId)`, `nextBadge(world, personId)`                                                                                                                                                                |
+| Monday recap                       | `lastRecap(world)`, `weekRecap(world, week)`                                                                                                                                                                           |
+| Rules                              | `rulesFor`, `rulesOn(challenge, personId, day)`, `ruleById`, `libraryByGroup(world.library)`, `LOOKS`, `RULE_GROUPS`                                                                                                   |
+| Entries                            | `entryFor(world, personId, ruleId, day)`, `entriesOn`, `formatAnswer(rule, entry)`                                                                                                                                     |
+| Jordan's point of view             | `asViewer(world, 'jordan')` swaps `me` and `partner`                                                                                                                                                                   |
 
 Formatters (`lib/next/format.ts`): `formatDay` ("Thursday, Nov 19"), `formatDayShort` ("Thu, Nov 19"), `formatDate` ("Nov 19"), `formatRange` ("Nov 2 – Dec 1"), `formatMoney` ("$45", "$0.25"), `formatNumber`, `plural(6, 'point')`, `formatWeekdays` ("Sun–Thu"), `formatWhen(rule)` ("4 days a week"), `formatTarget` ("60 min or less"), `formatValue(rule, 48)` ("48 min"), `formatTime(world.now, tz)` ("7:30 pm"), `formatDeadline` ("11:59 pm the next day"), `formatDuration` ("4h 29m").
 
