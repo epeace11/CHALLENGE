@@ -6,7 +6,6 @@ import {
   dayMisses,
   formatDay,
   formatRange,
-  formatWeekday,
   missesLine,
   weekOf,
   weekProgress,
@@ -234,9 +233,10 @@ export function DaySheet({
             Review
           </Button>
         )}
-        {acts.open > 0 && d && (
+        {/* The sheet's title names the day, so the button doesn't again (as on Progress). */}
+        {acts.open > 0 && (
           <Button variant="primary" onClick={() => navigate('log')}>
-            Log {formatWeekday(d)}
+            Log this day
           </Button>
         )}
       </>
@@ -314,7 +314,7 @@ export function DaySheet({
                 </div>
                 {r.said ? (
                   <p className="rounded-nx-sm bg-nx-sunken px-3 py-1.5 text-nx-2 text-nx-ink">
-                    {r.said.by}: “{r.said.text}”
+                    {r.said.by && `${r.said.by}: `}“{r.said.text}”
                   </p>
                 ) : (
                   r.note && (
@@ -393,7 +393,7 @@ function WeeklyRows({
               </div>
               {r.said && (
                 <p className="rounded-nx-sm bg-nx-sunken px-3 py-1.5 text-nx-2 text-nx-ink">
-                  {r.said.by}: “{r.said.text}”
+                  {r.said.by && `${r.said.by}: `}“{r.said.text}”
                 </p>
               )}
             </li>

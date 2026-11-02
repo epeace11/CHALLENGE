@@ -30,7 +30,7 @@ export type Choice = {
   rules: Rule[];
   /** Rules that start switched off and can be added at setup. */
   optionalIds: string[];
-  /** One plain line for the sheet: the theme's summary, or where a saved one came from. */
+  /** One plain line for the sheet: how long a theme runs, or where a saved one came from. */
   about: string;
   /** Days and rules, each kept on one line when they wrap: ["30 days", "1 rule + 1 optional"]. */
   facts: string[];
@@ -74,23 +74,37 @@ function ruleCount(rules: Rule[], optionalIds: string[]) {
 const firstRequired = (rules: Rule[], optionalIds: string[]) =>
   rules.find((r) => !optionalIds.includes(r.id)) ?? rules[0];
 
+/** "30 days", or nothing when the name already says it ("75-Day Challenge"), so it is said once. */
+function daysFact(name: string, days: number) {
+  return new RegExp(`\\b${days}[- ]day`, 'i').test(name)
+    ? null
+    : plural(days, 'day');
+}
+
 /** The four themes, in catalogue order. */
 export function themeChoices(w: World): Choice[] {
-  return w.themes.map((t) => ({
-    kind: 'theme',
-    id: t.id,
-    name: t.name,
-    look: t.look,
-    days: t.days,
-    rules: t.rules,
-    optionalIds: t.optionalRuleIds,
-    about: t.summary,
-    facts: [plural(t.days, 'day'), ruleCount(t.rules, t.optionalRuleIds)],
-    sample: firstRequired(t.rules, t.optionalRuleIds),
-    icon: LOOK_ICON[t.look],
-    sharedBy: null,
-    ran: false,
-  }));
+  return w.themes.map((t) => {
+    const days = daysFact(t.name, t.days);
+    return {
+      kind: 'theme',
+      id: t.id,
+      name: t.name,
+      look: t.look,
+      days: t.days,
+      rules: t.rules,
+      optionalIds: t.optionalRuleIds,
+      // The theme's summary lists the rules the sheet lists right under it, so the sheet says only
+      // how long it runs.
+      about: days ?? '',
+      facts: [days, ruleCount(t.rules, t.optionalRuleIds)].filter(
+        (f): f is string => !!f,
+      ),
+      sample: firstRequired(t.rules, t.optionalRuleIds),
+      icon: LOOK_ICON[t.look],
+      sharedBy: null,
+      ran: false,
+    };
+  });
 }
 
 /** "July": the month a past challenge started, said as a word. */

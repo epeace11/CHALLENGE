@@ -131,13 +131,18 @@ function describe(w: World, view: DetailView, bothPeople?: boolean) {
 function actionOf(w: World, view: DetailView): MainAction | null {
   if (view.kind === 'habit')
     return sheetAction(w, view.personId, { ruleId: view.ruleId });
+  // A day's sheet names the day in its title (a check-in's, under it), so its button doesn't again.
+  const thisDay = (a: MainAction | null) =>
+    a?.page === 'log' ? { ...a, label: 'Log this day' } : a;
   if (view.kind === 'day')
-    return sheetAction(w, view.personId, { day: view.day });
+    return thisDay(sheetAction(w, view.personId, { day: view.day }));
   if (view.kind === 'checkin')
-    return sheetAction(w, view.personId, {
-      day: view.day,
-      ruleId: view.ruleId,
-    });
+    return thisDay(
+      sheetAction(w, view.personId, {
+        day: view.day,
+        ruleId: view.ruleId,
+      }),
+    );
   return null;
 }
 
@@ -650,7 +655,11 @@ function CheckinBody({
   const { rule, entry, pill } = row;
   const answer =
     pill.status === 'open' || !entry ? null : formatAnswer(rule, entry);
-  const shown = answer && answer !== pill.label ? answer : null;
+  // As in the day's list: a Yes beside Done (or a No beside Missed) says the same thing twice.
+  const plain =
+    rule.kind === 'yesno' &&
+    (pill.status === 'done' || pill.status === 'missed');
+  const shown = answer && answer !== pill.label && !plain ? answer : null;
   const disputes = entry
     ? world.disputes.filter((d) => d.entryId === entry.id)
     : [];
@@ -741,11 +750,14 @@ function BadgeBody({
         <Medal id={badge.id} earned={badge.earned} size={72} />
         <div className="min-w-0">
           <p className="text-nx-body">{badge.how}.</p>
-          <p className="mt-1 text-nx-2 text-nx-ink-2">
-            {badge.earned && badge.earnedOn
-              ? `Earned ${formatDay(badge.earnedOn)}`
-              : 'Not earned yet'}
-          </p>
+          {/* A badge with a count says how close it is below, which already says it isn't earned. */}
+          {(badge.earned || !badge.progress) && (
+            <p className="mt-1 text-nx-2 text-nx-ink-2">
+              {badge.earned && badge.earnedOn
+                ? `Earned ${formatDay(badge.earnedOn)}`
+                : 'Not earned yet'}
+            </p>
+          )}
         </div>
       </div>
       {!badge.earned && badge.progress && (
@@ -761,11 +773,12 @@ function BadgeBody({
           </p>
         </div>
       )}
+      {/* The habit carrying the run; its length is the count above, so the row only names it. */}
       {!badge.earned && run && run.current > 0 && (
         <RowButton
           glass={false}
           title={run.rule.title}
-          detail={`${runLength(run.current, 'day')} in a row now`}
+          aria-label={`${run.rule.title}: ${runLength(run.current, 'day')} in a row now`}
           onClick={() =>
             push({
               kind: 'habit',
@@ -791,7 +804,8 @@ function BadgesBody({
   const all = badges(world, view.personId);
   const earned = all.filter((b) => b.earned);
   const rest = all.filter((b) => !b.earned);
-  // Two to a row, so nine badges fit without scrolling. How to earn one is a tap away.
+  // Two to a row, so nine badges fit without scrolling. How to earn one is a tap away. Under the
+  // Earned heading a badge shows only its date: "Earned Nov 8" would say Earned again.
   const row = (b: (typeof all)[number]): ReactNode => (
     <li key={b.id} className="flex">
       <RowButton
@@ -802,7 +816,7 @@ function BadgesBody({
         title={b.title}
         detail={
           b.earned && b.earnedOn
-            ? `Earned ${formatDate(b.earnedOn)}`
+            ? formatDate(b.earnedOn)
             : b.progress && b.progress.have > 0
               ? `${b.progress.have} of ${b.progress.need} ${b.progress.unit}`
               : undefined

@@ -22,7 +22,7 @@ export function ResetPanel({
 }) {
   const { host } = useBackend();
   const [email, setEmail] = useState(startEmail);
-  // A new code went out: said on the page, next to the button.
+  // A new code went out: said on the page, next to the button (the address is in the line above).
   const [resent, setResent] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -83,19 +83,16 @@ export function ResetPanel({
           <h1 ref={title} tabIndex={-1} className="nx-page-title outline-none">
             {sentTo ? 'Choose a new password' : 'Reset your password'}
           </h1>
-          <p className="text-nx-body text-nx-ink-2">
-            {sentTo ? (
-              <>
-                We sent a code to{' '}
-                <strong className="font-semibold break-words text-nx-ink">
-                  {sentTo}
-                </strong>
-                . Enter it with your new password.
-              </>
-            ) : (
-              'We’ll email you a code to choose a new one.'
-            )}
-          </p>
+          {/* The first step needs no line: the title and Email me a code say it all. */}
+          {sentTo && (
+            <p className="text-nx-body text-nx-ink-2">
+              We sent a code to{' '}
+              <strong className="font-semibold break-words text-nx-ink">
+                {sentTo}
+              </strong>
+              .
+            </p>
+          )}
         </header>
         <GlassCard className="flex flex-col gap-5">
           {sentTo ? (
@@ -146,7 +143,7 @@ export function ResetPanel({
             Back to sign in
           </Button>
           <output className="w-full pl-3 text-nx-2 text-nx-ink-2 empty:hidden">
-            {resent && sentTo ? `Sent a new code to ${sentTo}.` : ''}
+            {resent && sentTo ? 'Sent a new code.' : ''}
           </output>
         </div>
       </form>

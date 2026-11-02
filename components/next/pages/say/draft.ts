@@ -107,10 +107,17 @@ const UNIT_WORD: Record<string, string> = {
 
 export const unitWord = (unit: string) => UNIT_WORD[unit] ?? unit;
 
-/** "Yes or No", "Number of steps, 10,000 or more". */
+/**
+ * "Yes or No", "Number of minutes, 60 or less", or just "Number of steps" when the title already
+ * says the target ("10,000 steps").
+ */
 export function answerWord(rule: Rule) {
   if (rule.kind !== 'number' || !rule.target) return 'Yes or No';
   const t = rule.target;
+  const said = !!rule.title
+    .match(/\d[\d,.]*\d|\d/g)
+    ?.includes(formatNumber(t.value));
+  if (said) return `Number of ${unitWord(t.unit)}`;
   return `Number of ${unitWord(t.unit)}, ${formatNumber(t.value)} or ${t.op === '>=' ? 'more' : 'less'}`;
 }
 

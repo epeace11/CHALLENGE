@@ -159,8 +159,10 @@ export default function SettingsV1() {
           />
         </Section>
 
+        {/* "The challenge", not its name: the name is the first row (and the card below names it when
+            asking to end it), so a heading with it would say it twice. */}
         {!later && (
-          <Section title={c.name} index={4}>
+          <Section title="The challenge" index={4}>
             <div className="flex flex-col gap-2.5">
               <RowButton
                 title="Challenge name"
@@ -194,7 +196,7 @@ export default function SettingsV1() {
         )}
 
         {later && world.challenge.status === 'running' && (
-          <Section title={c.name} index={4}>
+          <Section title="The challenge" index={4}>
             {endControls}
           </Section>
         )}

@@ -34,9 +34,13 @@ export const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
   },
 ];
 
-/** "75 days · 6 rules", or "30 days · 1 rule + 1 optional" (Dry Month's no weed), as on Start. */
+/**
+ * "30 days · 5 rules", or "30 days · 1 rule + 1 optional" (Dry Month's no weed), as on Start. A
+ * name that already says its length ("75-Day Challenge") gets just "6 rules", not 75 twice.
+ */
 export function themeFacts(theme: Theme) {
   const optional = theme.optionalRuleIds.length;
-  const rules = theme.rules.length - optional;
-  return `${plural(theme.days, 'day')} · ${plural(rules, 'rule')}${optional ? ` + ${optional} optional` : ''}`;
+  const rules = `${plural(theme.rules.length - optional, 'rule')}${optional ? ` + ${optional} optional` : ''}`;
+  const named = new RegExp(`\\b${theme.days}[- ]day`, 'i').test(theme.name);
+  return named ? rules : `${plural(theme.days, 'day')} · ${rules}`;
 }

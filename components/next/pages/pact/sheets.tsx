@@ -6,8 +6,9 @@ import {
   formatTarget,
   formatWhen,
   giftTotal,
+  titleSays,
 } from '@/lib/next/selectors';
-import { Avatar, Button, Sheet } from '@/components/next/ui';
+import { Avatar, Button, PairAvatars, Sheet } from '@/components/next/ui';
 import { RuleIcon, RuleLine, StepBars, Terms } from './parts';
 import type { PactFlow } from './use-pact';
 
@@ -64,7 +65,7 @@ function FirstDaySheet({ flow }: { flow: PactFlow }) {
     >
       <dl className="flex flex-col divide-y divide-nx-line">
         <Fact label="First check-in">
-          For {flow.firstCheckin.day}, by {flow.firstCheckin.until}
+          For Day 1, by {flow.firstCheckin.until}
         </Fact>
         <Fact label="After that">
           Every day, check in for the day before, by {flow.deadlineClock}.
@@ -140,11 +141,13 @@ function RuleSheet({ flow }: { flow: PactFlow }) {
           <dl className="flex flex-col divide-y divide-nx-line">
             <Fact label="For">{group?.title}</Fact>
             <Fact label="When">
-              {rule.kind === 'weekly'
-                ? `${formatWhen(rule)}, Monday to Sunday`
-                : formatWhen(rule)}
+              {rule.kind !== 'weekly'
+                ? formatWhen(rule)
+                : titleSays(rule.title, rule.weeklyTarget)
+                  ? 'Any day, counted Monday to Sunday'
+                  : `${formatWhen(rule)}, Monday to Sunday`}
             </Fact>
-            {rule.target && (
+            {rule.target && !titleSays(rule.title, rule.target.value) && (
               <Fact label="Target">{formatTarget(rule.target)}</Fact>
             )}
             {rule.kind === 'weekly' && (
@@ -200,7 +203,8 @@ function WholePactSheet({ flow }: { flow: PactFlow }) {
       open={flow.sheet === 'pact'}
       onOpenChange={onOpenChange(flow)}
       title={`The ${c.name} pact`}
-      description={`Starts ${flow.start}. ${flow.step} step.`}
+      // The terms under it say what a point costs.
+      description={`Starts ${flow.start}.`}
       footer={
         <Button variant="primary" onClick={flow.close}>
           Close
@@ -209,15 +213,22 @@ function WholePactSheet({ flow }: { flow: PactFlow }) {
     >
       <div className="flex flex-col gap-7">
         <Terms terms={flow.terms} />
-        {flow.signers.map((s) => (
-          <section key={s.person.id} className="flex flex-col gap-1">
+        {/* Grouped as Both of you, then each one's own, so a shared rule is listed once. */}
+        {flow.groups.map((g) => (
+          <section key={g.key} className="flex flex-col gap-1">
             <div className="flex items-center gap-3 pb-1">
-              <Avatar person={s.person} size="sm" decorative />
+              <span aria-hidden="true" className="flex">
+                {g.people.length > 1 ? (
+                  <PairAvatars people={g.people} size="sm" />
+                ) : (
+                  <Avatar person={g.people[0]} size="sm" decorative />
+                )}
+              </span>
               <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
-                {s.you ? 'You' : s.person.name}
+                {g.title}
               </h3>
             </div>
-            {s.rules.map((r) => (
+            {g.rules.map((r) => (
               <RuleLine key={r.id} rule={r} />
             ))}
           </section>

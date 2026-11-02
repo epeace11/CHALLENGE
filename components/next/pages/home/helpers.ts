@@ -11,6 +11,7 @@ import {
   formatTarget,
   formatWhen,
   plural,
+  titleSays,
 } from '@/lib/next/selectors';
 
 /** Copies text to the clipboard; false when the browser refuses. */
@@ -34,9 +35,12 @@ export const sourceLine = (s: SavedChallenge) =>
 export const sizeLine = (s: Pick<SavedChallenge, 'days' | 'rules'>) =>
   `${plural(s.days, 'day')}, ${plural(s.rules.length, 'rule')}`;
 
-/** What Start again says: "Start again" for one of ours, "Start Dry October" for one we have not run. */
+/**
+ * What the start button says: "Start again" for one of ours, "Start this challenge" for one we have
+ * not run (its name is the title right above).
+ */
 export const startLabel = (s: SavedChallenge) =>
-  s.source === 'mine' ? 'Start again' : `Start ${s.name}`;
+  s.source === 'mine' ? 'Start again' : 'Start this challenge';
 
 /** "You won, 4 points to Jordan's 7", "Jordan won, 3 points to your 5", "A tie, 4 points each". Fewer wins. */
 export function verdictLine(w: World, past: PastChallenge) {
@@ -54,19 +58,23 @@ export function verdictLine(w: World, past: PastChallenge) {
 export const savedFor = (w: World, past: PastChallenge) =>
   w.saved.find((s) => s.source === 'mine' && s.name === past.challenge.name);
 
-/** "Every day · 10,000 steps or more · Screenshot required", "Any 3 days, Monday to Sunday". */
+/**
+ * "Every day · Screenshot required", "Any 3 days, Monday to Sunday". A number the title already
+ * says ("10,000 steps", "Gym, 3 days a week") is not said again under it.
+ */
 export function ruleLine(rule: Rule) {
   const parts = [
-    rule.kind === 'weekly'
-      ? `Any ${plural(rule.weeklyTarget ?? 0, 'day')}, Monday to Sunday`
-      : formatWhen(rule),
+    rule.kind !== 'weekly'
+      ? formatWhen(rule)
+      : titleSays(rule.title, rule.weeklyTarget)
+        ? 'Any day, counted Monday to Sunday'
+        : `Any ${plural(rule.weeklyTarget ?? 0, 'day')}, Monday to Sunday`,
   ];
-  if (rule.kind === 'number' && rule.target)
-    parts.push(
-      rule.personalTarget
-        ? 'Each sets their own limit'
-        : formatTarget(rule.target),
-    );
+  if (rule.kind === 'number' && rule.target) {
+    if (rule.personalTarget) parts.push('Each sets their own limit');
+    else if (!titleSays(rule.title, rule.target.value))
+      parts.push(formatTarget(rule.target));
+  }
   if (rule.proof === 'required') parts.push('Screenshot required');
   else if (rule.proof === 'optional') parts.push('Screenshot optional');
   return parts.join(' · ');

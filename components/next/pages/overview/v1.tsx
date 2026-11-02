@@ -132,11 +132,12 @@ function Running() {
                     <p className="font-nx-serif text-nx-h3">
                       {o.day ? `${o.dayName} is logged` : 'Nothing to log'}
                     </p>
-                    <p className="text-nx-2 text-nx-ink-2">
-                      {o.waiting > 0
-                        ? `${partner}’s answers are next.`
-                        : 'Nothing waits for you either.'}
-                    </p>
+                    {/* With something to review, the button under the card says what is next. */}
+                    {o.waiting === 0 && (
+                      <p className="text-nx-2 text-nx-ink-2">
+                        Nothing waits for you either.
+                      </p>
+                    )}
                   </div>
                 </GlassCard>
                 {o.waiting > 0 ? (
@@ -166,19 +167,20 @@ function Running() {
 
           <div className="-mt-5 flex flex-col gap-8">
             <Section title="Gifts" index={2}>
+              {/* The hints say whose points set each gift; the line under them gives both counts. */}
               <div className="grid grid-cols-2 gap-3">
                 <StatButton
                   label="You get"
                   value={o.mine.gets}
                   format={formatMoney}
-                  hint={`From ${partner}’s ${plural(o.theirs.points, 'point')}`}
+                  hint={`From ${partner}’s points`}
                   onClick={() => navigate('gifts')}
                 />
                 <StatButton
                   label={`${partner} gets`}
                   value={o.theirs.gets}
                   format={formatMoney}
-                  hint={`From your ${plural(o.mine.points, 'point')}`}
+                  hint="From your points"
                   onClick={() => navigate('gifts')}
                 />
               </div>

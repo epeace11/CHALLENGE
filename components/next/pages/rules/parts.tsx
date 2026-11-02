@@ -17,6 +17,7 @@ import {
   formatDeadline,
   formatMoney,
   owes,
+  whenUnlessTitled,
 } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
 import {
@@ -36,7 +37,6 @@ import { cn } from '@/lib/utils';
 import {
   answerLabel,
   describe,
-  whenLabel,
   whoLabel,
   type Proposal,
   type ProposalKind,
@@ -173,10 +173,13 @@ export function RuleSheet({
   if (rule && rule.id !== shown?.id) setShown(rule);
   const pending = shown ? proposals.pendingFor(shown.id) : undefined;
   const c = world.challenge;
+  // As in the rows: no Days when the title says them ("Gym, 4 days a week"), and the Answer leaves
+  // out a target the title already names.
+  const when = shown && whenUnlessTitled(shown);
   const facts: [string, string][] = shown
     ? [
         ['For', whoLabel(world, shown.who)],
-        ['Days', whenLabel(shown)],
+        ...(when ? [['Days', when] as [string, string]] : []),
         ['Answer', answerLabel(shown)],
         [
           'Screenshot',
@@ -367,25 +370,22 @@ export function HowItWorks({ className }: { className?: string }) {
       q: 'How does forgiveness work?',
       a: `With a miss, you can ask ${partner} to forgive it and say why. If ${partner} agrees, the point costs nothing. Either of you can also forgive a point without being asked.`,
     },
-    {
-      id: 'cost',
-      q: 'What does a point cost?',
-      a: `The first point costs ${formatMoney(c.step)}, the second ${formatMoney(2 * c.step)}, and so on, so misses add up faster as they pile up.${c.cap !== null ? ` No gift goes over ${formatMoney(c.cap)}.` : ''}`,
-      more:
-        mine > 0 ? (
-          <AnswerLink icon={Gift} onClick={() => navigate('gifts')}>
-            Your {mine} points: {c.cap === null ? `${sum} = ` : ''}
-            {formatMoney(owes(world, world.me.id))}
-          </AnswerLink>
-        ) : undefined,
-    },
+    // What a point costs is the row above How it works, so there is no question repeating it; the
+    // sum of your own points, which shows that rule at work, goes with the gift it sets.
     {
       id: 'gift',
       q: 'How does the gift work?',
       a: `Your points set the gift you give ${partner}, and ${partner}’s points set the gift you get. You give them when the challenge ends. Fewer points wins.`,
       more: (
         <AnswerLink icon={Gift} onClick={() => navigate('gifts')}>
-          See the gifts
+          {mine > 0 ? (
+            <>
+              Your {mine} points: {c.cap === null ? `${sum} = ` : ''}
+              {formatMoney(owes(world, world.me.id))}
+            </>
+          ) : (
+            'See the gifts'
+          )}
         </AnswerLink>
       ),
     },

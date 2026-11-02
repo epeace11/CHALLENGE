@@ -12,7 +12,6 @@ import {
   lockTime,
   ms,
   partnerOf,
-  rulesFor,
   stakesPreview,
   zonedTime,
 } from '@/lib/next/selectors';
@@ -80,8 +79,6 @@ export type Signer = {
   /** True for the one the page speaks to as "you". */
   you: boolean;
   signedAt: Instant | null;
-  /** Every rule this person checks in on. */
-  rules: Rule[];
 };
 
 export type RuleGroupView = {
@@ -102,7 +99,6 @@ export function pactView(world: World, you: Person) {
     person,
     you: isYou,
     signedAt: signedAt(person.id),
-    rules: rulesFor(c, person.id),
   });
   const moment = pactMoment(world, other.id);
   const left = Math.max(0, zonedTime(c.start, '00:00', c.timeZone) - moment);
@@ -161,7 +157,6 @@ export function pactView(world: World, you: Person) {
     steps: [step(1), step(2), step(3)] as const,
     deadlineClock: clock(c.deadline.time),
     firstCheckin: {
-      day: formatDay(c.start),
       until: dayAndTime(firstLock, c.timeZone),
     },
   };

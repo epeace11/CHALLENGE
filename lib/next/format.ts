@@ -113,6 +113,22 @@ export function formatWhen(rule: Rule) {
   return formatWeekdays(rule.days);
 }
 
+/**
+ * Whether a rule's title already says this number ("Read 10 pages" says 10, "Gym, 4 days a week"
+ * says 4), so the line under the title needn't say it again.
+ */
+export function titleSays(title: string, n: number | undefined) {
+  if (n === undefined) return false;
+  const s = formatNumber(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^\\d.,])${s}([^\\d.,]|$)`).test(title);
+}
+
+/** When a rule is asked, unless its title already says it ("Gym, 4 days a week"): then null. */
+export function whenUnlessTitled(rule: Rule) {
+  const when = formatWhen(rule);
+  return rule.title.toLowerCase().includes(when.toLowerCase()) ? null : when;
+}
+
 /** "7:30 pm" in `timeZone`. */
 export function formatTime(instant: Instant | number, timeZone: string) {
   return new Intl.DateTimeFormat('en-US', {

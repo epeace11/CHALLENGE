@@ -14,7 +14,7 @@ import {
 } from '@/components/next/ui';
 import { useWorld } from '@/components/next/world';
 import type { Rule } from '@/lib/next/model';
-import { GROUP_ICON, rulesByWho, whenUnlessTitled } from './facts';
+import { GROUP_ICON, rulesByWho } from './facts';
 import {
   GroupMark,
   HowItWorks,
@@ -25,6 +25,7 @@ import {
   type Proposals,
 } from './parts';
 import styles from './rules.module.css';
+import { whenUnlessTitled } from '@/lib/next/selectors';
 
 export default function RulesV1() {
   const world = useWorld();

@@ -187,13 +187,17 @@ export type DayRow = {
   answer: string;
   pill: { status: PillStatus; label: string };
   note: string;
-  /** A dispute or a forgiveness request on this answer, in the other person's words or the owner's. */
+  /**
+   * A dispute or a forgiveness request on this answer, in the other person's words or the owner's.
+   * `by` is empty for the owner: the sheet's chip already says whose answers these are.
+   */
   said?: { by: string; text: string };
 };
 
 export function dayRows(w: World, personId: string, day: DateString) {
   const mine = personId === w.me.id;
-  const who = (id: string) => (id === w.me.id ? 'You' : nameOf(w, id));
+  const who = (id: string) =>
+    id === personId ? '' : id === w.me.id ? 'You' : nameOf(w, id);
   return rulesOn(w.challenge, personId, day).map((rule): DayRow => {
     const e = entryFor(w, personId, rule.id, day);
     const pill = entryPill(w, rule, e, day);

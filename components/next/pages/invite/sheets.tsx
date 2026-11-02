@@ -14,6 +14,7 @@ import {
   formatTarget,
   formatWhen,
   giftTotal,
+  titleSays,
 } from '@/lib/next/selectors';
 import { Button, Sheet, TextField } from '@/components/next/ui';
 import {
@@ -93,11 +94,13 @@ function RuleSheet({ flow }: { flow: InviteFlow }) {
           <dl className="flex flex-col divide-y divide-nx-line">
             <Fact label="For">{group?.title}</Fact>
             <Fact label="When">
-              {rule.kind === 'weekly'
-                ? `${formatWhen(rule)}, Monday to Sunday`
-                : formatWhen(rule)}
+              {rule.kind !== 'weekly'
+                ? formatWhen(rule)
+                : titleSays(rule.title, rule.weeklyTarget)
+                  ? 'Any day, counted Monday to Sunday'
+                  : `${formatWhen(rule)}, Monday to Sunday`}
             </Fact>
-            {rule.target && (
+            {rule.target && !titleSays(rule.title, rule.target.value) && (
               <Fact label="Target">{formatTarget(rule.target)}</Fact>
             )}
             {rule.kind === 'weekly' && (
@@ -141,7 +144,7 @@ function DatesSheet({ flow }: { flow: InviteFlow }) {
         <Fact label="Day 1">{flow.start}</Fact>
         <Fact label="Last day">{flow.end}</Fact>
         <Fact label="First check-in">
-          For {flow.firstCheckin.day}, by {flow.firstCheckin.until}
+          For Day 1, by {flow.firstCheckin.until}
         </Fact>
       </dl>
     </Sheet>
@@ -158,7 +161,8 @@ function StepSheet({ flow }: { flow: InviteFlow }) {
       open={flow.sheet === 'gift'}
       onOpenChange={onOpenChange(flow)}
       title="What a point costs"
-      description={`Each miss is a point. The first point costs ${flow.steps[0]}, the second ${flow.steps[1]}, and so on.`}
+      // The bars under it show what each point costs.
+      description="Each miss is a point."
       footer={
         <>
           {flow.canSuggest && (

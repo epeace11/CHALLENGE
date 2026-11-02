@@ -14,6 +14,7 @@ import {
   lastDay,
   plural,
   stakesPreview,
+  titleSays,
 } from '@/lib/next/selectors';
 
 /**
@@ -90,6 +91,10 @@ export const STEPS = [0.25, 0.5, 1, 2, 5];
 export const stepLine = (step: number) =>
   `The first point costs ${formatMoney(step)}, the second ${formatMoney(step * 2)}, the third ${formatMoney(step * 3)}, and so on.`;
 
+/** "The second costs $2, the third $3, and so on.", under "First point costs" and its $1. */
+export const laterStepsLine = (step: number) =>
+  `The second costs ${formatMoney(step * 2)}, the third ${formatMoney(step * 3)}, and so on.`;
+
 /** The cap suggested when the cap is switched on, until it is changed. */
 export const DEFAULT_CAP = 100;
 
@@ -127,7 +132,10 @@ export function clock(time: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
 }
 
-/** An example of the deadline: "Thursday’s check-ins close at 11:59 pm on Friday." */
+/**
+ * An example of the deadline: "Thursday’s check-ins close on Friday." The time is in the label
+ * above it ("Log each day by 11:59 pm"), so it is not said again.
+ */
 export function deadlineLine(d: Deadline) {
   const when =
     d.daysAfter === 0
@@ -135,7 +143,7 @@ export function deadlineLine(d: Deadline) {
       : d.daysAfter === 1
         ? 'on Friday'
         : `${d.daysAfter} days later`;
-  return `Thursday’s check-ins close at ${clock(d.time)} ${when}.`;
+  return `Thursday’s check-ins close ${when}.`;
 }
 
 /* ── Time zones ────────────────────────────────────────────────────────── */
@@ -161,32 +169,27 @@ export const zoneRegion = (id: string) =>
 
 /* ── Rules ─────────────────────────────────────────────────────────────── */
 
-/** "Sun–Thu", "Every day · 60 min or less · Screenshot required", "Any 4 days, Monday to Sunday". */
+/**
+ * "Sun–Thu", "Every day · Screenshot required", "Any 4 days, Monday to Sunday". A number the
+ * title already says ("Gym, 4 days a week", "Read 10 pages") is not said again under it.
+ */
 export function ruleSummary(rule: Rule) {
   const parts = [
-    rule.kind === 'weekly'
-      ? `Any ${plural(rule.weeklyTarget ?? 0, 'day')}, Monday to Sunday`
-      : formatWhen(rule),
+    rule.kind !== 'weekly'
+      ? formatWhen(rule)
+      : titleSays(rule.title, rule.weeklyTarget)
+        ? 'Any day, counted Monday to Sunday'
+        : `Any ${plural(rule.weeklyTarget ?? 0, 'day')}, Monday to Sunday`,
   ];
-  if (rule.kind === 'number' && rule.target)
-    parts.push(
-      rule.personalTarget
-        ? 'Each sets their own limit'
-        : formatTarget(rule.target),
-    );
+  if (rule.kind === 'number' && rule.target) {
+    if (rule.personalTarget) parts.push('Each sets their own limit');
+    else if (!titleSays(rule.title, rule.target.value))
+      parts.push(formatTarget(rule.target));
+  }
   if (rule.proof === 'required') parts.push('Screenshot required');
   else if (rule.proof === 'optional') parts.push('Screenshot optional');
   return parts.join(' · ');
 }
-
-export const whoName = (who: string, me: Person, partner: Person) =>
-  who === 'both'
-    ? 'Both of you'
-    : who === me.id
-      ? me.name
-      : who === partner.id
-        ? partner.name
-        : who;
 
 export type RulesByWho = {
   key: string;

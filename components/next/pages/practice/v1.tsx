@@ -196,7 +196,8 @@ export default function PracticeV2() {
 
         <ol className="flex flex-col gap-6" key={p.run}>
           <Step state={state('answer')} title="Answer three check-ins">
-            {p.saved > 0 && (
+            {/* Once Jordan reviews, each answer is on its review card, so the list here goes. */}
+            {p.saved > 0 && p.phase === 'answer' && (
               <div className="relative flex flex-col gap-2">
                 <Presence mode="popLayout" initial={false}>
                   {p.questions.slice(0, p.saved).map((q, n) => (
@@ -241,7 +242,7 @@ export default function PracticeV2() {
           <Step
             state={state('review')}
             title={`${partner} reviews them`}
-            preview={`${partner} approves or disputes each answer. A miss needs no review.`}
+            preview="They approve or dispute each answer. A miss needs no review."
             anchor={review}
             headingId="practice-review"
           >
@@ -262,7 +263,7 @@ export default function PracticeV2() {
           >
             {p.phase === 'gift' && (
               <div className="nx-enter flex flex-col gap-4">
-                <MissLine p={p} heading={false} />
+                <MissLine p={p} />
                 <GiftSteps p={p} onHow={() => setHow(true)} />
               </div>
             )}

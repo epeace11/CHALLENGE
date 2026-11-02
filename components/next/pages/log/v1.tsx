@@ -3,8 +3,8 @@
 import { Flame } from 'lucide-react';
 import { useNav } from '@/components/next/nav';
 import { Enter } from '@/components/next/ui';
-import { formatWeekday, plural } from '@/lib/next/selectors';
-import { DaySquares } from './day-squares';
+import { plural } from '@/lib/next/selectors';
+import { DaySquares, dayTally } from './day-squares';
 import { NextActions, shortTitle, streakAfter } from './end';
 import { CheckinPage, type EndProps } from './page';
 import { LinkLine } from './question';
@@ -26,7 +26,8 @@ function AtAGlance({ ci, headingRef }: EndProps) {
           tabIndex={-1}
           className="font-nx-serif text-nx-h2 text-balance outline-none sm:text-nx-h1"
         >
-          {formatWeekday(day)} is logged
+          {/* The day is on the button above, so the heading doesn't name it again. */}
+          All logged
         </h2>
       </Enter>
       <DaySquares ci={ci} />
@@ -44,7 +45,7 @@ function AtAGlance({ ci, headingRef }: EndProps) {
           </LinkLine>
         )}
         <p className="text-nx-2 text-nx-ink-2">
-          You can change an answer until {ci.lockLabel(day)}.
+          {dayTally(ci)}. You can change an answer until {ci.lockLabel(day)}.
         </p>
       </Enter>
     </section>

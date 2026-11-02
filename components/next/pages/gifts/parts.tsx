@@ -291,8 +291,9 @@ export function PointSheet({ sheet }: { sheet: SheetFor<OpenPoint> }) {
       }
     >
       <div className="flex flex-col gap-4">
-        {/* The answer's note, unless the forgiveness request below says the same words. */}
-        {row.note && row.note.trim() !== row.pending?.reason.trim() && (
+        {/* The answer's note, unless the forgiveness request below already says it (a reason often
+            starts with the note and adds to it). */}
+        {row.note && !row.pending?.reason.includes(row.note.trim()) && (
           <Quote person={mine ? world.me : partner}>{row.note}</Quote>
         )}
         {row.forgiven ? (
@@ -303,7 +304,7 @@ export function PointSheet({ sheet }: { sheet: SheetFor<OpenPoint> }) {
         ) : (
           <p className="text-nx-body">
             {mine
-              ? `If ${partner.name} forgives it, the gift you give ${partner.name} goes from `
+              ? `If ${partner.name} forgives it, the gift you give goes from `
               : 'If you forgive it, the gift you get goes from '}
             <b className="font-semibold">{formatMoney(effect.now)}</b> to{' '}
             <b className="font-semibold">{formatMoney(effect.after)}</b>.

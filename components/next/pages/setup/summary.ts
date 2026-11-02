@@ -4,11 +4,8 @@ import { draftCap, draftDays, rangeLine, zoneCity, type Draft } from './draft';
 
 /** Each part of the draft in plain words, for the checklist rows that sum it up. */
 
-/** "Fall Reset · Mon, Nov 2 – Tue, Dec 1" */
-export const detailsLine = (d: Draft) =>
-  [d.name.trim() || 'No name yet', rangeLine(d.start, draftDays(d))].join(
-    ' · ',
-  );
+/** "Mon, Nov 2 – Tue, Dec 1": the name is in the page title ("Set up Fall Reset") right above. */
+export const detailsLine = (d: Draft) => rangeLine(d.start, draftDays(d));
 
 /** "No alcohol, Gym and 5 more" */
 export function rulesLine(rules: Rule[]) {

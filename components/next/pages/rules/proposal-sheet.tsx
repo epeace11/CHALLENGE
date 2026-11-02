@@ -311,8 +311,9 @@ export function ProposalSheet({
           )}
         </div>
 
+        {/* Send says who it goes to, so the note's label doesn't. */}
         <TextField
-          label={`Note to ${partner} (optional)`}
+          label="Note (optional)"
           multiline
           rows={2}
           maxLength={500}

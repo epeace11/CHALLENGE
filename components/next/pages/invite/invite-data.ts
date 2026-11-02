@@ -103,7 +103,6 @@ export function inviteView(world: World) {
     stakes: formatMoney(stakesPreview(c, 0.1, [you.id, inviter.id]).gift),
     deadline: formatDeadline(c.deadline),
     firstCheckin: {
-      day: formatDay(c.start),
       until: `${formatDay(dateIn(c.timeZone, firstLock))} at ${formatTime(firstLock, c.timeZone)}`,
     },
     how: [

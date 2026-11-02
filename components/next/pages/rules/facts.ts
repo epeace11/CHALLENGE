@@ -30,6 +30,7 @@ import {
   nameOf,
   shift,
   weekday,
+  titleSays,
 } from '@/lib/next/selectors';
 
 /** Plain facts about rules and rule-change proposals, for both versions of Rules and help. */
@@ -51,16 +52,15 @@ export const whoLabel = (world: World, who: string) =>
 /** "Every day", "Sun–Thu", "4 days a week". */
 export const whenLabel = (rule: Rule) => formatWhen(rule);
 
-/** When it is asked, for a row under the rule's title; null when the title already says it ("Gym, 4 days a week"). */
-export function whenUnlessTitled(rule: Rule) {
-  const when = whenLabel(rule);
-  return rule.title.toLowerCase().includes(when.toLowerCase()) ? null : when;
-}
-
-/** How it is answered: "Yes or No", "A number: 60 min or less". */
+/** How it is answered: "Yes or No", "A number: 60 min or less" ("A number" when the name says the target). */
 export function answerLabel(rule: Rule) {
-  if (rule.kind === 'number' && rule.target)
+  if (
+    rule.kind === 'number' &&
+    rule.target &&
+    !titleSays(rule.title, rule.target.value)
+  )
     return `A number: ${formatTarget(rule.target)}`;
+  if (rule.kind === 'number') return 'A number';
   if (rule.kind === 'weekly') return 'Yes or No each day';
   return 'Yes or No';
 }

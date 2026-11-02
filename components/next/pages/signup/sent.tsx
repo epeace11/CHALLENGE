@@ -8,7 +8,7 @@ import { codeError } from './form';
 import type { SignupMode } from './mode';
 
 /**
- * "Check your email", after "Email me a sign-in link": the email has a link and a six-digit code, so
+ * "Check your email", after "Send link": the email has a link and a six-digit code, so
  * it works on another device too. The main action finishes signing up or signing in.
  */
 export function SentPanel({
@@ -23,7 +23,7 @@ export function SentPanel({
   onBack: () => void;
 }) {
   const { host } = useBackend();
-  // A new link went out: said on the page, next to the button.
+  // A new link went out: said on the page, next to the button (the address is in the line above).
   const [resent, setResent] = useState(false);
   const [code, setCode] = useState('');
   const [tried, setTried] = useState(false);
@@ -94,7 +94,7 @@ export function SentPanel({
           Use a different email
         </Button>
         <output className="w-full pl-3 text-nx-2 text-nx-ink-2 empty:hidden">
-          {resent ? `Sent a new link to ${email}.` : ''}
+          {resent ? 'Sent a new link.' : ''}
         </output>
       </div>
     </form>

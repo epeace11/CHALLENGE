@@ -12,7 +12,6 @@ import {
 import { formatMoney, plural } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import {
-  capLine,
   formatClock,
   giftsUnder,
   ifEndedNow,
@@ -125,8 +124,8 @@ export function TermsFields({
             })
           }
           label="Cap each gift"
-          description={capLine(terms.cap)}
         />
+        {/* No line under the switch: "No cap" says the switch again, and the amount is the field below. */}
         {terms.cap !== null && (
           <NumberField
             label="Cap"
@@ -190,9 +189,9 @@ export function EndWaitCard({
         <Clock3 size={18} aria-hidden="true" />
         Waiting for {partner}
       </h3>
+      {/* The heading says it waits for them, so this doesn't add "It ends once they agree". */}
       <p className="text-nx-body text-nx-ink">
-        You asked to end {world.challenge.name} now. It ends once {partner}{' '}
-        agrees.
+        You asked to end {world.challenge.name} now.
       </p>
       <Button className="self-start" onClick={onWithdraw}>
         Withdraw
@@ -297,8 +296,9 @@ export function AskEndSheet({
                 {formatMoney(now.get)}
               </dd>
             </div>
+            {/* The title names them, so this is just "the gift you give". */}
             <div className="flex items-baseline justify-between gap-4">
-              <dt>The gift you give {partner}</dt>
+              <dt>The gift you give</dt>
               <dd className="font-semibold tabular-nums">
                 {formatMoney(now.give)}
               </dd>
@@ -376,6 +376,8 @@ export function LeaveSheet({
   // Nothing has counted before Day 1 is over, so the challenge is deleted instead.
   const early = world.today <= c.start;
   const asked = endAskFrom(world) ? `${partner} asked to end it. ` : '';
+  // Once their request has named them, "for you both" says who it ends for without naming them again.
+  const forWhom = asked ? 'you both' : `you and ${partner}`;
   return (
     <Sheet
       open={open}
@@ -383,8 +385,8 @@ export function LeaveSheet({
       title={`End ${c.name}?`}
       description={
         early
-          ? `${asked}It’s deleted for you and ${partner}, since no day has counted yet. This can’t be undone.`
-          : `${asked}It ends now for you and ${partner}. The days that are over count, and the verdict opens. This can’t be undone.`
+          ? `${asked}It’s deleted for ${forWhom}, since no day has counted yet. This can’t be undone.`
+          : `${asked}It ends now for ${forWhom}. The days that are over count, and the verdict opens. This can’t be undone.`
       }
       footer={
         <>

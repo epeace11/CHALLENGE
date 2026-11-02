@@ -17,7 +17,6 @@ import {
 import {
   badges,
   calendar,
-  formatWeekday,
   keepNumbersWithWords,
   nextBadge,
   openDay,
@@ -56,8 +55,9 @@ export function MainAction() {
   return (
     <div className="nx-enter flex flex-col gap-3 sm:flex-row sm:items-center">
       <p className="flex-1 text-nx-body text-nx-ink">
+        {/* The button names the day ("Log Thursday"), so the line only says until when. */}
         {action.page === 'log' && open
-          ? `${formatWeekday(open)} is open ${lockWords(world, open)}.`
+          ? `Open ${lockWords(world, open)}.`
           : `${world.partner.name} is waiting on your review.`}
       </p>
       <Button

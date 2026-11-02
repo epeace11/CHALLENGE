@@ -174,8 +174,9 @@ export default function RecapV2() {
                   <span className="flex items-center gap-3">
                     <IconBubble icon={CalendarDays} size={40} />
                     <span className="flex min-w-0 flex-col">
+                      {/* How many it needs is in each bar ("2 of 4"), so the name doesn't say it too. */}
                       <span className="text-nx-body font-semibold">
-                        {shortTitle(rule)}, {me.need} times each
+                        {shortTitle(rule)}
                       </span>
                       <span className="text-nx-2 text-nx-ink-2">
                         {me.met

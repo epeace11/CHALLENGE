@@ -40,12 +40,9 @@ export default function SignupV2() {
   };
   const signup = f.mode === 'signup';
   const slide = { duration: still ? 0 : DURATION.base, ease: EASE };
+  // With a link, the choice above already says "Email me a link", so the button just sends it.
   const action =
-    method === 'link'
-      ? 'Email me a sign-in link'
-      : signup
-        ? 'Create account'
-        : 'Sign in';
+    method === 'link' ? 'Send link' : signup ? 'Create account' : 'Sign in';
 
   return (
     <PlainFrame

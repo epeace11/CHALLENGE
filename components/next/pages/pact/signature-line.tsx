@@ -1,4 +1,4 @@
-// A signature line: labelled with the person's name, inked while Hold to sign is held.
+// A signature line: named until it is signed, inked while Hold to sign is held.
 'use client';
 import { dateIn, formatDate, formatTime } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
@@ -7,11 +7,11 @@ import { CheckBadge, HOLD_MS, Script } from './parts';
 import type { Signer } from './pact-data';
 
 /**
- * One signature: a baseline with the name written on it once signed, and under it the person's
- * name and when they signed. An empty line inks from left to right while `holding` (in step with
- * Hold to sign's fill) and lets go when the hold does; `drawn` writes the name in. `size="sm"` is
- * the small pair under the countdown. The line is the same height signed or not, so signing moves
- * nothing.
+ * One signature: a baseline with the name written on it once signed, and under it when they
+ * signed (before that, the person's name). An empty line inks from left to right while `holding`
+ * (in step with Hold to sign's fill) and lets go when the hold does; `drawn` writes the name in.
+ * `size="sm"` is the small pair under the countdown. The line is the same height signed or not, so
+ * signing moves nothing.
  */
 export function SignatureLine({
   signer,
@@ -83,11 +83,17 @@ export function SignatureLine({
           )}
         </div>
         <p className="mt-2 text-nx-2 text-nx-ink-2">
-          <span className="font-semibold text-nx-ink">{person.name}</span>
           {signedAt ? (
-            ` · Signed ${formatDate(dateIn(timeZone, signedAt))} at ${formatTime(signedAt, timeZone)}`
+            <>
+              {/* The signature above is the name, so here it is for screen readers only. */}
+              <span className="sr-only">{person.name} · </span>
+              {`Signed ${formatDate(dateIn(timeZone, signedAt))} at ${formatTime(signedAt, timeZone)}`}
+            </>
           ) : (
-            <span className="sr-only"> · Not signed yet</span>
+            <>
+              <span className="font-semibold text-nx-ink">{person.name}</span>
+              <span className="sr-only"> · Not signed yet</span>
+            </>
           )}
         </p>
       </div>

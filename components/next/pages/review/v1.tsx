@@ -16,7 +16,7 @@ import {
   Sheet,
   StatusPill,
 } from '@/components/next/ui';
-import { formatDayShort, formatWeekday } from '@/lib/next/selectors';
+import { formatDayShort } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import { Deck, OutcomeContext, STAMP, type Outcome } from './motion';
 import {
@@ -137,7 +137,7 @@ export default function ReviewV2() {
   const disputing = useSheetFor<AnswerItem>();
   const replying = useSheetFor<DisputeItem>();
   const approving = useSheetFor<DayGroup>();
-  const actions = current && actionsFor(current.kind, world.partner.name);
+  const actions = current && actionsFor(current.kind);
   // An answer's Approve and Dispute stay pinned below the card; forgiveness and disputes, whose
   // choices move money, decide in the card, so the pinned bar never turns into Forgive or Concede.
   const inBar = current?.kind === 'answer' || current?.kind === 'correction';
@@ -180,13 +180,14 @@ export default function ReviewV2() {
   const approveDay =
     current && day && day.items.length > 1 ? (
       <div className="mt-6 border-t border-nx-line pt-3">
+        {/* The card's kicker has the day, so the button names the answers instead. */}
         <Button
           variant="quiet"
           icon={CheckCheck}
           className="-ml-3"
           onClick={() => approving.show(day)}
         >
-          {approveAllLabel(day.items.length)} for {formatWeekday(day.day)}
+          {approveAllLabel(day.items.length)} answers
         </Button>
       </div>
     ) : null;

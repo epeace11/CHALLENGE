@@ -4,7 +4,13 @@ import type { Person } from '@/lib/next/model';
 import { formatMoney, giftTotal, plural } from '@/lib/next/selectors';
 import { Button, NumberField, Sheet, Toggle } from '@/components/next/ui';
 import { StepPicker } from './fields';
-import { DEFAULT_CAP, STEPS, pointsToCap, stepLine } from './draft';
+import {
+  DEFAULT_CAP,
+  STEPS,
+  laterStepsLine,
+  pointsToCap,
+  stepLine,
+} from './draft';
 
 type Stakes = {
   gift: number;
@@ -46,7 +52,7 @@ export function StakesFields({
         steps={STEPS}
         value={step}
         onChange={(s) => onChange({ step: s })}
-        hint={stepLine(step)}
+        hint={laterStepsLine(step)}
       />
       {readout}
       <div className="flex flex-col gap-3">

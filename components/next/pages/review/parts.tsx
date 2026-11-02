@@ -11,10 +11,11 @@ import {
   formatNumber,
   formatTarget,
   formatWeekday,
-  formatWhen,
   meetsTarget,
   openCheckins,
   openDay,
+  titleSays,
+  whenUnlessTitled,
 } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
 import {
@@ -27,7 +28,6 @@ import {
   ProofViewer,
   RowButton,
   Sheet,
-  StatusPill,
   TextField,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
@@ -258,14 +258,18 @@ function Value({
 /**
  * The target beside the partner's number. A number that meets it is only what they say, so the
  * line stays neutral and the reviewer judges it against the screenshot; one that misses is their
- * own admission, so it says so.
+ * own admission, so it says so. A rule whose name already says the target ("10,000 steps") or the
+ * days ("Gym, 4 days a week") doesn't get them again under it.
  */
 function TargetLine({ rule, shown }: { rule: Rule; shown: Shown }) {
-  if (rule.kind === 'weekly')
-    return <p className="text-nx-2 text-nx-ink-2">{formatWhen(rule)}</p>;
+  if (rule.kind === 'weekly') {
+    const when = whenUnlessTitled(rule);
+    return when ? <p className="text-nx-2 text-nx-ink-2">{when}</p> : null;
+  }
   if (!rule.target || shown.value === undefined) return null;
+  const titled = titleSays(rule.title, rule.target?.value);
   if (meetsTarget(rule.target, shown.value))
-    return (
+    return titled ? null : (
       <p className="text-nx-2 text-nx-ink-2">
         Target: {formatTarget(rule.target)}
       </p>
@@ -278,7 +282,11 @@ function TargetLine({ rule, shown }: { rule: Rule; shown: Shown }) {
         className="mt-0.5 shrink-0"
         aria-hidden="true"
       />
-      <span>Misses the target: {formatTarget(rule.target)}</span>
+      <span>
+        {titled
+          ? 'Misses the target'
+          : `Misses the target: ${formatTarget(rule.target)}`}
+      </span>
     </p>
   );
 }
@@ -452,9 +460,9 @@ export function DisputeBody({
       </div>
       <Quote person={world.partner}>{dispute.comment}</Quote>
       {dispute.reply && <Quote person={world.me}>{dispute.reply}</Quote>}
+      {/* The kicker names the partner, so the gift line says only which gift. */}
       <GiftsLink>
-        If you concede, it becomes a point and the gift you give{' '}
-        {world.partner.name} goes from{' '}
+        If you concede, it becomes a point and the gift you give goes from{' '}
         <b className="font-semibold text-nx-ink">{formatMoney(effect.now)}</b>{' '}
         to{' '}
         <b className="font-semibold text-nx-ink">{formatMoney(effect.after)}</b>
@@ -744,8 +752,8 @@ export function ReplySheet({
       onOpenChange={sheet.setOpen}
       title={`Reply to ${partner.name}`}
       description={`No point while it’s open. ${partner.name} can withdraw it, and you can still concede later.`}
+      // The title says who reads it, so the field has no hint saying so again.
       label="Your reply"
-      hint={`${partner.name} reads exactly what you write.`}
       submit="Send reply"
       missing="Write your reply first."
       onSubmit={(text) => {
@@ -837,26 +845,17 @@ export function WaitingForPartner({
             className={state.waiting > 0 ? 'mb-3' : undefined}
           />
         )}
+        {/* Everything here waits for the partner, as the title says, so no item has a pill saying it. */}
         {state.waiting > 0 && (
           <ul ref={list} className="flex flex-col gap-3">
             {[...theirs.answers, ...theirs.corrections].map((i) => (
-              <Card as="li" pad="sm" key={i.id} className="flex flex-col gap-2">
+              <Card as="li" pad="sm" key={i.id}>
                 {answer(
                   i.rule,
-                  `${formatDay(i.entry.day)} · You answered ${formatAnswer(
-                    i.rule,
-                    shownAnswer(i),
-                  )}`,
+                  `${formatDay(i.entry.day)} · ${
+                    i.kind === 'correction' ? 'Late answer:' : 'You answered'
+                  } ${formatAnswer(i.rule, shownAnswer(i))}`,
                 )}
-                <StatusPill
-                  status="review"
-                  label={
-                    i.kind === 'correction'
-                      ? 'Late answer waiting'
-                      : 'Waiting for review'
-                  }
-                  className="self-start"
-                />
               </Card>
             ))}
             {theirs.forgiveness.map((i) => (
@@ -868,11 +867,6 @@ export function WaitingForPartner({
                   )}
                 </div>
                 <Quote person={world.me}>{i.request.reason}</Quote>
-                <StatusPill
-                  status="review"
-                  label="Forgiveness asked"
-                  className="self-start"
-                />
               </Card>
             ))}
             {theirs.disputes.map((i) => (

@@ -363,7 +363,7 @@ function NameStep({
 
 /**
  * One thing to settle: a big row with its value (or, when it is not ready, what is missing),
- * opening in place to change it.
+ * opening in place to change it. While open, the value line goes: the fields say it.
  */
 function ChecklistItem({
   id,
@@ -403,14 +403,17 @@ function ChecklistItem({
             <span className="text-nx-lead font-semibold text-nx-ink">
               {title}
             </span>
-            <span
-              className={cn(
-                'text-nx-2',
-                problem ? 'text-nx-missed' : 'text-nx-ink-2',
-              )}
-            >
-              {problem ?? value}
-            </span>
+            {/* Open, the fields under it show the value, so only a problem stays. */}
+            {(problem || !open) && (
+              <span
+                className={cn(
+                  'text-nx-2',
+                  problem ? 'text-nx-missed' : 'text-nx-ink-2',
+                )}
+              >
+                {problem ?? value}
+              </span>
+            )}
           </span>
           <ChevronDown
             size={22}

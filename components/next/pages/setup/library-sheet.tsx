@@ -61,6 +61,7 @@ export function LibrarySheet({
               <LibraryGroup
                 key={g.group}
                 group={g.group}
+                titled={filter === 'All'}
                 rules={g.rules}
                 added={rules}
                 onToggle={onToggle}
@@ -75,11 +76,17 @@ export function LibrarySheet({
 
 function LibraryGroup({
   group,
+  titled,
   rules,
   added,
   onToggle,
 }: {
   group: RuleGroup;
+  /**
+   * Off when its chip is the one picked: the chip already says the group, so the title is for
+   * screen readers only.
+   */
+  titled: boolean;
   rules: Rule[];
   added: Rule[];
   onToggle: (rule: Rule) => void;
@@ -87,7 +94,7 @@ function LibraryGroup({
   const id = useId();
   return (
     <section aria-labelledby={id} className="flex flex-col gap-3">
-      <h3 id={id} className="font-nx-serif text-nx-h3">
+      <h3 id={id} className={titled ? 'font-nx-serif text-nx-h3' : 'sr-only'}>
         {group}
       </h3>
       <ul className="flex flex-col gap-2">

@@ -31,9 +31,12 @@ function openPoints(w: World, personId: string): Open[] {
   });
 }
 
-/** "Jordan has 9 points", or "Jordan has 9 points · 8 not asked about yet": the total always matches Overview and Gifts. */
-function pointsDetail(who: string, total: number, open: number) {
-  const has = `${who} ${plural(total, 'point')}`;
+/**
+ * "You have 6 points", or "9 points · 8 not asked about yet" under a row whose title already names
+ * whose they are: the total always matches Overview and Gifts.
+ */
+function pointsDetail(total: number, open: number, who?: string) {
+  const has = who ? `${who} ${plural(total, 'point')}` : plural(total, 'point');
   return open === total ? has : `${has} · ${open} not asked about yet`;
 }
 
@@ -122,9 +125,9 @@ export function PointActions({ review }: { review: Review }) {
           leading={<Avatar person={world.me} decorative />}
           title={`Ask ${partner.name} to forgive a point`}
           detail={pointsDetail(
-            'You have',
             activePoints(world, world.me.id).length,
             mine.length,
+            'You have',
           )}
           onClick={() => openList('mine')}
         />
@@ -136,7 +139,6 @@ export function PointActions({ review }: { review: Review }) {
           leading={<Avatar person={partner} decorative />}
           title={`Forgive one of ${partner.name}’s points`}
           detail={pointsDetail(
-            `${partner.name} has`,
             activePoints(world, partner.id).length,
             theirs.length,
           )}
@@ -183,7 +185,8 @@ export function PointActions({ review }: { review: Review }) {
             ? `${asking.target.rule.title} · ${formatDay(asking.target.point.day)} · ${asking.target.why}`
             : undefined
         }
-        label={`Why should ${partner.name} forgive it?`}
+        // The title asks it; the field only needs a name, as Dispute's does.
+        label="Your reason"
         submit="Ask"
         missing="Write your reason first."
         onSubmit={(reason) => {

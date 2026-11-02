@@ -20,7 +20,7 @@ import {
 } from '@/components/next/ui';
 import { CheckinPreview } from './checkin-preview';
 import { Labeled, WeekdayPicker } from './fields';
-import { newRuleId, whoName } from './draft';
+import { newRuleId } from './draft';
 
 type Form = {
   title: string;
@@ -331,12 +331,7 @@ export function RuleBuilderSheet({
           </Labeled>
         </div>
         <div className="min-w-0 lg:sticky lg:top-0">
-          <CheckinPreview
-            key={shown.times}
-            rule={preview}
-            who={whoName(form.who, me, partner)}
-            day={day}
-          />
+          <CheckinPreview key={shown.times} rule={preview} day={day} />
         </div>
       </div>
     </Sheet>

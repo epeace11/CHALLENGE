@@ -40,7 +40,7 @@ const KIND: Record<PillStatus, Kind> = {
   open: 'open',
 };
 
-/** What each kind is called in the legend. */
+/** What each kind is called, in the line under the squares. */
 const word = (kind: Kind, partner: string) =>
   ({
     done: 'Done',
@@ -69,6 +69,24 @@ function squaresOf(ci: Checkin, day: DateString) {
 }
 
 /**
+ * The squares in words, without their icons again: "5 done, 1 waiting for Jordan". Each square
+ * already shows its colour and icon, so the page says what they add up to instead of a legend.
+ */
+export function dayTally(ci: Checkin) {
+  const day = ci.day;
+  if (!day) return '';
+  const squares = squaresOf(ci, day);
+  return (Object.keys(TONE) as Kind[])
+    .map((k) => {
+      const n = squares.filter((s) => s.kind === k).length;
+      const w = word(k, ci.partner);
+      return n ? `${n} ${w[0].toLowerCase()}${w.slice(1)}` : '';
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+/**
  * A square per check-in of the day, coloured and marked by where its answer stands, with the
  * rule's short name under it. Four across on phones, seven from 640px. A square opens its answer to
  * change it, or Review for a disputed one.
@@ -84,9 +102,6 @@ export function DaySquares({
   const day = ci.day;
   if (!day) return null;
   const squares = squaresOf(ci, day);
-  const kinds = (Object.keys(TONE) as Kind[]).filter((k) =>
-    squares.some((s) => s.kind === k),
-  );
   return (
     <div className={cn('flex flex-col gap-3 sm:gap-4', className)}>
       <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-7">
@@ -120,20 +135,6 @@ export function DaySquares({
             </li>
           );
         })}
-      </ul>
-      {/* What the colours and icons mean, for the ones on screen; each square says it to screen readers. */}
-      <ul
-        className="flex flex-wrap gap-x-4 gap-y-1.5 text-nx-min text-nx-ink-2"
-        aria-hidden="true"
-      >
-        {kinds.map((k) => (
-          <li key={k} className="flex items-center gap-1.5">
-            <span className="nx-day size-5 rounded-md" data-tone={TONE[k]}>
-              <DayIcon tone={TONE[k]} size={12} />
-            </span>
-            {word(k, ci.partner)}
-          </li>
-        ))}
       </ul>
     </div>
   );

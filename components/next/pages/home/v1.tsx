@@ -8,7 +8,7 @@ import {
   Plus,
   Trophy,
 } from 'lucide-react';
-import type { SavedChallenge } from '@/lib/next/model';
+import type { PastChallenge, SavedChallenge } from '@/lib/next/model';
 import { AccountMenu, AppFrame, PlainFrame } from '@/components/next/frames';
 import {
   Button,
@@ -154,6 +154,7 @@ export default function HomeV2() {
                     onClick={() => navigate('review')}
                   />
                 </Rows>
+                {/* The card's title names it, so the button does not. */}
                 <Button
                   variant="primary"
                   size="lg"
@@ -161,7 +162,7 @@ export default function HomeV2() {
                   className="w-full sm:w-auto sm:self-start"
                   onClick={() => navigate('overview')}
                 >
-                  Open {run.name}
+                  Open challenge
                 </Button>
               </ChallengeCard>
             </Enter>
@@ -173,7 +174,7 @@ export default function HomeV2() {
           {finished.map(({ past, saved }, i) => (
             <Enter key={past.challenge.id} index={3 + i}>
               <ChallengeCard
-                kicker={`Finished ${formatDate(past.verdict.finishedOn)}`}
+                kicker={finishedLine(past)}
                 name={past.challenge.name}
                 detail={formatRange(
                   past.challenge.start,
@@ -260,6 +261,17 @@ export default function HomeV2() {
       />
     </>,
   );
+}
+
+/**
+ * "Finished Jul 28", or just "Finished" when it ended on its last day: the dates under the name
+ * ("Jul 6 – 26") already say that day.
+ */
+function finishedLine(past: PastChallenge) {
+  const on = past.verdict.finishedOn;
+  return on === lastDay(past.challenge)
+    ? 'Finished'
+    : `Finished ${formatDate(on)}`;
 }
 
 /** The challenge being set up, invited or signed: where it stands and the one step left. */

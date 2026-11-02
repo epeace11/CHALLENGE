@@ -183,7 +183,10 @@ export function NoteList({
   );
 }
 
-/** The day's journal as a section on the page; "Add a note" opens a field right under the notes. */
+/**
+ * The day's journal as a section on the page; "Add a note" opens a field right under the notes. The
+ * day is in the page's title (and in JournalSheet's), so the journal doesn't name it again.
+ */
 export function DayJournal({
   day,
   index = 0,
@@ -220,16 +223,12 @@ export function DayJournal({
         )
       }
     >
-      <NoteList
-        notes={notes}
-        actions={actions}
-        empty={`No notes for ${formatWeekday(day)} yet.`}
-      />
+      <NoteList notes={notes} actions={actions} empty="No notes yet." />
       {writing && (
         <div ref={box}>
           <Card className="nx-enter flex flex-col gap-3">
             <TextField
-              label={`Note for ${formatWeekday(day)}`}
+              label="New note"
               multiline
               maxLength={1000}
               value={text}
@@ -291,11 +290,7 @@ export function JournalSheet({
       }
     >
       <div className="flex flex-col gap-5">
-        <NoteList
-          notes={notes}
-          actions={actions}
-          empty={`No notes for ${formatWeekday(day)} yet.`}
-        />
+        <NoteList notes={notes} actions={actions} empty="No notes yet." />
         <TextField
           label="New note"
           multiline

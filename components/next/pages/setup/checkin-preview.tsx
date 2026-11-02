@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import type { DateString, Proof, Rule } from '@/lib/next/model';
-import { formatWhen } from '@/lib/next/selectors';
 import { screenTimeShot, stepsShot } from '@/lib/next/shots';
 import { Glide, NumberField, ProofStrip, YesNo } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
@@ -14,12 +13,9 @@ import styles from './setup.module.css';
  */
 export function CheckinPreview({
   rule,
-  who,
   day,
 }: {
   rule: Rule;
-  /** "Both of you", "Jordan". */
-  who: string;
   /** The day sample screenshots are dated. */
   day: DateString;
 }) {
@@ -43,12 +39,8 @@ export function CheckinPreview({
 
   return (
     <section className={styles.preview} aria-label="Preview of the check-in">
-      <div className="flex flex-col gap-1">
-        <p className="nx-kicker">How it looks at check-in</p>
-        <p className="text-nx-2 text-nx-ink-2">
-          {who} · {formatWhen(rule)}
-        </p>
-      </div>
+      {/* Who it is for and its days are in the fields, so the preview does not say them again. */}
+      <p className="nx-kicker">How it looks at check-in</p>
       <h3
         className={cn('font-nx-serif text-nx-h3', !question && 'text-nx-ink-2')}
       >

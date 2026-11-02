@@ -54,11 +54,15 @@ export function LinkLine({
   );
 }
 
-/** The rule's group and when it is asked, above the question: "Screens · Every day". */
+/**
+ * The rule's group and when it is asked, above the question: "Screens · Every day". A weekly rule
+ * shows only its group: its week card ("2 of 4 this week") already says how many days.
+ */
 export function Eyebrow({ rule }: { rule: Rule }) {
   return (
     <p className="text-nx-2 font-semibold text-nx-accent">
-      {rule.group} · {formatWhen(rule)}
+      {rule.group}
+      {rule.kind !== 'weekly' && ` · ${formatWhen(rule)}`}
     </p>
   );
 }
@@ -243,8 +247,9 @@ export function QuestionFields({
               className="-mx-2 w-[calc(100%+16px)]"
               onClick={() => navigate('gifts')}
             >
+              {/* The toggle under it names the partner, so this line doesn't. */}
               A miss adds {formatMoney(nextMissCost(world, me))} to the gift you
-              give {partner}.
+              give.
             </LinkLine>
           )}
           <Toggle
@@ -260,7 +265,8 @@ export function QuestionFields({
             {draft.forgive && (
               <TextField
                 className="nx-enter pb-2"
-                label={`Why should ${partner} forgive it?`}
+                // The toggle above asks it; the field only needs a name.
+                label="Your reason"
                 multiline
                 rows={3}
                 maxLength={500}

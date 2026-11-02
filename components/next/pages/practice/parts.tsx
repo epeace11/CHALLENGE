@@ -4,7 +4,6 @@ import { ChevronRight, FlaskConical } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
 import { formatDeadline, formatMoney } from '@/lib/next/selectors';
 import {
-  Avatar,
   Button,
   CountUp,
   NumberField,
@@ -114,51 +113,24 @@ export function Question({
   );
 }
 
-/** The pretend partner with a dashed ring, so it never reads as the real one. */
-export function PretendPartner({ detail }: { detail: string }) {
-  const world = useWorld();
-  return (
-    <div className="flex items-center gap-3">
-      <span className="rounded-full border-2 border-dashed border-nx-accent-line p-0.5">
-        <Avatar person={world.partner} decorative />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-2 text-nx-body font-semibold">
-          {world.partner.name}
-          <span className="rounded-full bg-nx-sunken px-2.5 py-0.5 text-nx-min text-nx-ink-2">
-            Pretend
-          </span>
-        </p>
-        <p className="text-nx-2 text-nx-ink-2" aria-live="polite">
-          {detail}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/** The pretend partner's review: each Yes turns Approved or Disputed as it comes in; each miss is already a point. */
+/**
+ * The pretend partner's review: each Yes turns Approved or Disputed as it comes in; each miss is
+ * already a point. The step's title says who reviews and the banner that it is practice, so the
+ * cards follow it with no header of their own.
+ */
 export function PartnerReview({ p }: { p: Practice }) {
   const partner = p.world.partner.name;
   const { reviewed, misses } = p.result;
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <PretendPartner
-            detail={
-              !reviewed.length
-                ? 'Nothing to review'
-                : p.reviewDone
-                  ? 'Reviewed your answers'
-                  : 'Reviewing your answers'
-            }
-          />
-        </div>
-        {!p.reviewDone && (
-          <span className="nx-spinner text-nx-accent" aria-hidden="true" />
-        )}
-      </div>
+      {/* Screen readers still hear how the review is going. */}
+      <p className="sr-only" aria-live="polite">
+        {!reviewed.length
+          ? 'Nothing to review'
+          : p.reviewDone
+            ? `${partner} reviewed your answers`
+            : `${partner} is reviewing your answers`}
+      </p>
       <ul className="flex flex-col gap-3">
         {reviewed.map((r, i) => {
           const shown = i < p.revealed;
@@ -202,7 +174,7 @@ export function PartnerReview({ p }: { p: Practice }) {
                   )}
                   <p className="text-nx-2 text-nx-ink-2">
                     It costs nothing while it is disputed. Concede it and it
-                    becomes a point, or reply so {partner} can withdraw it.
+                    becomes a point, or reply so they can withdraw it.
                   </p>
                 </div>
               )}
@@ -235,52 +207,22 @@ export function PartnerReview({ p }: { p: Practice }) {
   );
 }
 
-/** What the misses did, above the gift. The amounts themselves are on the gift, one tap from how points work. */
-export function MissLine({
-  p,
-  heading = true,
-  headingId,
-}: {
-  p: Practice;
-  /** Off where the page already titles this part. */
-  heading?: boolean;
-  /** Lets the page move focus to the heading when this step appears. */
-  headingId?: string;
-}) {
-  const r = p.result,
-    partner = p.world.partner.name;
-  const sets = `Your points set the gift you give ${partner}.`;
-  const [title, line] =
+/**
+ * What the misses did, above the gift. Each miss is on its card just above and the gift says whom
+ * it is for, so this says only that misses are points; the amounts are on the gift, one tap from
+ * how points work.
+ */
+export function MissLine({ p }: { p: Practice }) {
+  const r = p.result;
+  const line =
     r.misses.length === 1
-      ? [
-          'Your miss is a point',
-          `${shortTitle(r.misses[0].rule)}: you said ${answerText(r.misses[0].rule, r.misses[0].answer)}. ${sets}`,
-        ]
+      ? 'Your miss is a point.'
       : r.misses.length > 1
-        ? [
-            'Your misses are points',
-            `${sets} Each point costs ${formatMoney(r.step)} more than the one before.`,
-          ]
-        : [
-            'No misses, no points',
-            r.example
-              ? `A No to “${r.example.question}” would be a point. ${sets}`
-              : `A miss would be a point. ${sets}`,
-          ];
-  return (
-    <div className="flex flex-col gap-2">
-      {heading && (
-        <h2
-          id={headingId}
-          tabIndex={headingId ? -1 : undefined}
-          className="font-nx-serif text-nx-h2"
-        >
-          {title}
-        </h2>
-      )}
-      <p className="text-nx-body text-nx-ink-2">{line}</p>
-    </div>
-  );
+        ? `Your misses are points. Each point costs ${formatMoney(r.step)} more than the one before.`
+        : r.example
+          ? `No misses, no points. A No to “${r.example.question}” would be a point.`
+          : 'No misses, no points.';
+  return <p className="text-nx-body text-nx-ink-2">{line}</p>;
 }
 
 /** The gift so far and its steps, as one button that opens how points work. */
@@ -339,9 +281,7 @@ export function GiftSteps({
       </span>
       <span className="flex w-full flex-col gap-3 border-t border-nx-line pt-4">
         <span className="text-nx-2 text-nx-ink-2">
-          {r.misses.length
-            ? `Your next miss would add ${formatMoney(r.nextCost)}.`
-            : ladderLine(r.step)}
+          {`Your ${r.misses.length ? 'next' : 'first'} miss would add ${formatMoney(r.nextCost)}.`}
         </span>
         <span className="inline-flex items-center gap-1 text-nx-body font-semibold text-nx-accent">
           How points work

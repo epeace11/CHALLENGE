@@ -251,16 +251,16 @@ export function DayListSheet({
             <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
               Left to answer
             </h3>
+            {/* The heading says they're open, so only the one on screen gets a pill. */}
             {ci.open.map((r) => (
               <RowButton
                 key={r.id}
                 glass={false}
                 title={r.title}
                 trailing={
-                  <StatusPill
-                    status="open"
-                    label={r.id === ci.current?.id ? 'On screen' : 'Open'}
-                  />
+                  r.id === ci.current?.id ? (
+                    <StatusPill status="open" label="On screen" />
+                  ) : undefined
                 }
                 onClick={() => {
                   ci.openRule(r.id);

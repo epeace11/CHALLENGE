@@ -147,11 +147,11 @@ export function waitingSummary(s: ReviewState) {
  */
 export const actionsFor = (
   kind: ReviewItem['kind'],
-  partner: string,
 ): { main: string; alt: string } =>
   ({
     answer: { main: 'Approve', alt: 'Dispute' },
     correction: { main: 'Approve', alt: 'Decline' },
     forgiveness: { main: 'Forgive', alt: 'Decline' },
-    dispute: { main: `Reply to ${partner}`, alt: 'Concede' },
+    // The card's kicker names the partner, so the button doesn't again.
+    dispute: { main: 'Reply', alt: 'Concede' },
   })[kind];
