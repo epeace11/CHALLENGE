@@ -1,13 +1,11 @@
 import type {
   DateString,
-  Look,
   Person,
   Rule,
   SavedChallenge,
   World,
 } from '@/lib/next/model';
 import {
-  LOOKS,
   formatMoney,
   formatTarget,
   formatWhen,
@@ -43,10 +41,6 @@ export function sharers(by: string | null): [Who, Who] | null {
   return [a, b];
 }
 
-/** A look's name: "Dry". */
-export const lookName = (look: Look) =>
-  LOOKS.find((l) => l.id === look)?.label ?? 'Classic';
-
 /** "Yes or No", or "A number, 60 min or less". */
 export const answerText = (rule: Rule) =>
   rule.kind === 'number' && rule.target
@@ -67,23 +61,23 @@ export const ruleFacts = (rule: Rule) =>
     .filter(Boolean)
     .join(' · ');
 
-/** "$2 + $4 + $6": what the first `n` misses cost one by one. */
+/** "$2 + $4 + $6": what the first `n` points cost one by one. */
 export const costSteps = (n: number, step: number) =>
   Array.from({ length: n }, (_, i) => formatMoney((i + 1) * step)).join(' + ');
 
-/** "$2, $4, $6…": how each miss costs one step more than the last. */
+/** "$2, $4, $6…": how each point costs one step more than the last. */
 export const costSequence = (step: number) =>
   `${[1, 2, 3].map((i) => formatMoney(i * step)).join(', ')}…`;
 
-/** "3 misses cost $2 + $4 + $6 = $12", the one-line example (or where the cap stops it). */
+/** "3 points cost $2 + $4 + $6 = $12", the one-line example (or where the cap stops it). */
 export function costExample(
   s: Pick<SavedChallenge, 'step' | 'cap'>,
   misses = 3,
 ) {
   const total = giftTotal(misses, s.step, s.cap);
   if (total < giftTotal(misses, s.step))
-    return `${misses} misses cost ${formatMoney(total)}, the most a gift can be`;
-  return `${misses} misses cost ${costSteps(misses, s.step)} = ${formatMoney(total)}`;
+    return `${misses} points cost ${formatMoney(total)}, the most a gift can be`;
+  return `${misses} points cost ${costSteps(misses, s.step)} = ${formatMoney(total)}`;
 }
 
 /** The Monday after `today`: a sample first day, to show where the dates would land. */

@@ -10,6 +10,7 @@ import {
   Check,
   HeartHandshake,
   MessageCircle,
+  Send,
   TriangleAlert,
   X,
   type LucideIcon,
@@ -30,48 +31,67 @@ export type Outcome =
   | 'declined'
   | 'forgiven'
   | 'conceded'
-  | 'replied';
+  | 'replied'
+  /** Asked the partner to forgive one of your points (from the forgiveness rows). */
+  | 'asked';
 
-/** Each outcome's word, icon and colours: the stamp on a leaving card, and the Undo line. */
+/**
+ * Each outcome's word, icon and colours: the stamp on a leaving card and the Undo line (`tint`,
+ * `ink`), and its step in the strip at the top (`bar`: done when it costs nothing, missed when it
+ * was turned down, waiting while it's still being talked about).
+ */
 export const STAMP: Record<
   Outcome,
-  { label: string; icon: LucideIcon; tint: string; ink: string }
+  { label: string; icon: LucideIcon; tint: string; ink: string; bar: string }
 > = {
   approved: {
     label: 'Approved',
     icon: Check,
     tint: 'bg-nx-done-soft',
     ink: 'text-nx-done',
+    bar: 'bg-nx-done-bar',
   },
   forgiven: {
     label: 'Forgiven',
     icon: HeartHandshake,
     tint: 'bg-nx-excused-soft',
     ink: 'text-nx-excused',
+    bar: 'bg-nx-done-bar',
   },
   disputed: {
     label: 'Disputed',
     icon: TriangleAlert,
     tint: 'bg-nx-missed-soft',
     ink: 'text-nx-missed',
+    bar: 'bg-nx-missed-bar',
   },
   declined: {
     label: 'Declined',
     icon: X,
     tint: 'bg-nx-sunken',
     ink: 'text-nx-ink',
+    bar: 'bg-nx-missed-bar',
   },
   conceded: {
     label: 'Conceded',
     icon: Check,
     tint: 'bg-nx-wait-soft',
     ink: 'text-nx-wait',
+    bar: 'bg-nx-wait-bar',
   },
   replied: {
     label: 'Reply sent',
     icon: MessageCircle,
     tint: 'bg-nx-accent-soft',
     ink: 'text-nx-accent',
+    bar: 'bg-nx-wait-bar',
+  },
+  asked: {
+    label: 'Asked',
+    icon: Send,
+    tint: 'bg-nx-accent-soft',
+    ink: 'text-nx-accent',
+    bar: 'bg-nx-wait-bar',
   },
 };
 

@@ -117,7 +117,8 @@ export function CountUp({
     let frame = 0;
     const t0 = performance.now();
     const tick = (t: number) => {
-      const p = Math.min(1, (t - t0) / duration),
+      // The first frame's timestamp can come before t0; never count below the start.
+      const p = Math.min(1, Math.max(0, (t - t0) / duration)),
         v = start + delta * (1 - Math.pow(1 - p, 3));
       from.current = v;
       setShown(v);

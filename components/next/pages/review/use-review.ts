@@ -1,15 +1,18 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { World } from '@/lib/next/model';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Point, Rule, World } from '@/lib/next/model';
 import {
   approve,
+  askForgiveness,
   concede,
   decideForgiveness,
   dispute,
+  forgivePoint,
   rejectCorrection,
   replyToDispute,
   withdrawDispute,
 } from '@/lib/next/actions';
+import { formatDate } from '@/lib/next/selectors';
 import { useBackend, type Command } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 import type { Outcome } from './motion';
@@ -31,9 +34,18 @@ export type Held = {
   outcome: Outcome;
   /** What it was about: "10,000 steps", "2 answers". */
   about: string;
+  /**
+   * Where it was decided, so its Undo line shows there: the card (the line sits above it), the
+   * forgiveness rows under it, or the "Waiting for Jordan" sheet (and above the card once it closes).
+   */
+  from: 'card' | 'points' | 'waiting';
   command: Command | Command[];
   change: (w: World) => World;
 };
+
+/** A point in an Undo line: "No eating out, Nov 18" (one rule can have several points). */
+const pointAbout = (point: Point, rule: Rule) =>
+  `${shortTitle(rule)}, ${formatDate(point.day)}`;
 
 /**
  * Everything a Review version does. Each decision shows at once (the item leaves with its stamp)
@@ -76,7 +88,8 @@ export function useReview() {
     };
   }, [flush]);
 
-  function act(h: Held) {
+  function act(decision: Omit<Held, 'from'> & { from?: Held['from'] }) {
+    const h: Held = { from: 'card', ...decision };
     flush();
     setOutcomes((o) => {
       const next = { ...o };
@@ -104,11 +117,15 @@ export function useReview() {
   };
 
   // The page shows the world as if the decision waiting were already made.
-  const shown = held ? held.change(world) : world;
+  const shown = useMemo(
+    () => (held ? held.change(world) : world),
+    [held, world],
+  );
+  const state = useMemo(() => reviewState(shown), [shown]);
 
   return {
     world: shown,
-    state: reviewState(shown),
+    state,
     outcomes,
     held,
     undo,
@@ -170,10 +187,11 @@ export function useReview() {
         },
         change: (w) => decideForgiveness(w, item.request.id, 'denied'),
       }),
-    concede: (item: DisputeItem) =>
+    concede: (item: DisputeItem, from: Held['from'] = 'card') =>
       act({
         ids: [item.id],
         outcome: 'conceded',
+        from,
         about: shortTitle(item.rule),
         command: { type: 'concede', disputeId: item.dispute.id },
         change: (w) => concede(w, item.dispute.id),
@@ -189,6 +207,26 @@ export function useReview() {
           reply: text,
         },
         change: (w) => replyToDispute(w, item.dispute.id, text),
+      }),
+    /** Forgives one of the partner's points nobody asked about (from the forgiveness rows). */
+    forgivePoint: (point: Point, rule: Rule) =>
+      act({
+        ids: [`point:${point.id}`],
+        outcome: 'forgiven',
+        about: pointAbout(point, rule),
+        from: 'points',
+        command: { type: 'forgivePoint', pointId: point.id },
+        change: (w) => forgivePoint(w, point.id),
+      }),
+    /** Asks the partner to forgive one of the viewer's points (from the forgiveness rows). */
+    askForgiveness: (point: Point, rule: Rule, reason: string) =>
+      act({
+        ids: [`point:${point.id}`],
+        outcome: 'asked',
+        about: pointAbout(point, rule),
+        from: 'points',
+        command: { type: 'askForgiveness', pointId: point.id, reason },
+        change: (w) => askForgiveness(w, point.id, reason),
       }),
     /** Takes back a dispute the viewer raised on the partner's answer (sent at once). */
     withdraw: (disputeId: string) => {

@@ -14,7 +14,7 @@ import {
 } from '@/components/next/ui';
 import { useWorld } from '@/components/next/world';
 import type { Rule } from '@/lib/next/model';
-import { GROUP_ICON, rulesByWho, whenLabel } from './facts';
+import { GROUP_ICON, rulesByWho, whenUnlessTitled } from './facts';
 import {
   GroupMark,
   HowItWorks,
@@ -97,7 +97,7 @@ export default function RulesV1() {
   );
 }
 
-/** One rule: its name, when it is asked, how it is answered, and whether it needs a screenshot. */
+/** One rule: its name, when it is asked (unless its name says), how it is answered, and whether it needs a screenshot. */
 function RuleRow({
   rule,
   proposals,
@@ -115,7 +115,7 @@ function RuleRow({
         ? 'Yes or No each day'
         : 'Yes or No';
   const detail = [
-    whenLabel(rule),
+    whenUnlessTitled(rule),
     how,
     rule.proof === 'required'
       ? 'Screenshot'

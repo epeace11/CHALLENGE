@@ -1,7 +1,7 @@
 // One step at a time: the stakes and Day 1, then the rules, then your signature; after signing the countdown to Day 1 is the hero.
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, ChevronRight, ScrollText } from 'lucide-react';
+import { ArrowRight, ChevronRight } from 'lucide-react';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
 import {
@@ -12,10 +12,11 @@ import {
   Glide,
   StatButton,
 } from '@/components/next/ui';
-import { HoldToSign, SealRing, SOLID_BAR } from './parts';
+import { HoldToSign, SealRing, SOLID_BAR, Terms } from './parts';
+import { cn } from '@/lib/utils';
 import { afterSheets } from './after-sheets';
 import { PactSheets } from './sheets';
-import { ListRow, RuleList } from './rows';
+import { RuleList } from './rows';
 import { SignatureLine } from './signature-line';
 import { usePact, type PactFlow } from './use-pact';
 
@@ -57,7 +58,7 @@ export default function PactV1() {
             : // In the live app the invite has been accepted, so Back goes to Your challenges.
               { to: live ? 'home' : 'invite' }
       }
-      aside={<AccountMenu cancel={!signed} />}
+      aside={<AccountMenu cancel={!signed} person={flow.you} />}
     >
       <Glide id={signed ? 'signed' : step} direction={direction}>
         {signed ? (
@@ -71,8 +72,9 @@ export default function PactV1() {
         )}
       </Glide>
 
-      {/* One bar for every step: Next turns into Hold to sign, then Go to Overview, in the same place. */}
-      <ActionBar className={SOLID_BAR}>
+      {/* One bar for every step: Next turns into Hold to sign, then Go to Overview, in the same place.
+          From 640px it is a compact bar centred under the page, the same width on every step. */}
+      <ActionBar className={cn(SOLID_BAR, 'sm:mx-auto sm:w-96')}>
         <Glide id={action} direction={direction} className="w-full">
           {action === 'signed' ? (
             <div className="flex flex-col gap-2 sm:flex-row-reverse sm:items-center">
@@ -80,7 +82,7 @@ export default function PactV1() {
                 variant="primary"
                 size="lg"
                 iconEnd={ArrowRight}
-                className="w-full sm:w-auto sm:min-w-56"
+                className="w-full sm:w-auto sm:flex-1"
                 onClick={flow.goToOverview}
               >
                 Go to Overview
@@ -89,27 +91,23 @@ export default function PactV1() {
                 See the pact
               </Button>
             </div>
+          ) : action === 'sign' ? (
+            <HoldToSign
+              className="w-full"
+              onSign={sign}
+              onAsk={() => flow.open('sign')}
+              onHoldChange={setHolding}
+            />
           ) : (
-            <div className="flex sm:justify-end">
-              {action === 'sign' ? (
-                <HoldToSign
-                  className="w-full sm:w-auto sm:min-w-56"
-                  onSign={sign}
-                  onAsk={() => flow.open('sign')}
-                  onHoldChange={setHolding}
-                />
-              ) : (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  iconEnd={ArrowRight}
-                  className="w-full sm:w-auto sm:min-w-56"
-                  onClick={() => go(step + 1)}
-                >
-                  Next
-                </Button>
-              )}
-            </div>
+            <Button
+              variant="primary"
+              size="lg"
+              iconEnd={ArrowRight}
+              className="w-full"
+              onClick={() => go(step + 1)}
+            >
+              Next
+            </Button>
           )}
         </Glide>
       </ActionBar>
@@ -192,8 +190,12 @@ function Rules({ flow, focus }: { flow: PactFlow; focus: boolean }) {
   );
 }
 
-/* ── Step 3: your line, with what you both agree to one tap above it ───── */
+/* ── Step 3: what you both agree to, then the signature lines under it ─── */
 
+/**
+ * The promises sit right above the lines, in one card like a signed page, so they are on screen
+ * as you sign. They are compact (15px) so Hold to sign never covers your line on a phone.
+ */
 function SignStep({
   flow,
   focus,
@@ -207,25 +209,33 @@ function SignStep({
   return (
     <div className="flex flex-col gap-7">
       <StepTitle title="Your signature" step={3} focus={focus} />
-      <div className="flex flex-col gap-4">
-        <GlassCard pad="none" className="p-1.5">
-          <ListRow
-            icon={ScrollText}
-            title="What you both agree to"
-            detail={`${flow.terms.length} promises`}
-            onClick={() => flow.open('pact')}
-          />
-        </GlassCard>
-        <GlassCard pad="lg" className="flex flex-col gap-6">
-          <h2 className="sr-only">Signatures</h2>
+      <GlassCard pad="none" className="flex flex-col px-5 pt-5 pb-4 sm:p-7">
+        <section
+          aria-labelledby="pact-promises"
+          className="flex flex-col gap-2"
+        >
+          <h2
+            id="pact-promises"
+            className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2"
+          >
+            What you both agree to
+          </h2>
+          <Terms terms={flow.terms} compact />
+        </section>
+        <div
+          aria-hidden="true"
+          className="my-4 border-t border-nx-line sm:my-6"
+        />
+        <h2 className="sr-only">Signatures</h2>
+        <div className="flex flex-col gap-4 sm:gap-6">
           <SignatureLine signer={flow.theirs} timeZone={c.timeZone} />
           <SignatureLine
             signer={flow.yours}
             timeZone={c.timeZone}
             holding={holding}
           />
-        </GlassCard>
-      </div>
+        </div>
+      </GlassCard>
     </div>
   );
 }

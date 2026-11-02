@@ -126,8 +126,8 @@ export function StepButton({
       )}
       onClick={onClick}
     >
-      Each point costs {formatMoney(world.challenge.step)} more than the one
-      before
+      The first point costs {formatMoney(world.challenge.step)}, the second{' '}
+      {formatMoney(2 * world.challenge.step)}, and so on
     </Button>
   );
 }
@@ -354,11 +354,11 @@ export function HowSheet({
   const { step, cap } = world.challenge;
   const partner = world.partner.name;
   const lines = [
-    `Each miss is a point. The 1st point costs ${formatMoney(step)}, the 2nd ${formatMoney(2 * step)}, the 3rd ${formatMoney(3 * step)}, and so on.`,
-    `Your points set the gift you buy ${partner}. ${partner}’s points set the gift you get.`,
+    `Each miss is a point. The first point costs ${formatMoney(step)}, the second ${formatMoney(2 * step)}, the third ${formatMoney(3 * step)}, and so on.`,
+    `Your points set the gift you give ${partner}. ${partner}’s points set the gift you get.`,
     'A forgiven point costs nothing, and the points after it each move down one place.',
     ...(cap !== null ? [`No gift goes over ${formatMoney(cap)}.`] : []),
-    'When the challenge ends, you each buy the other a gift worth that amount.',
+    'You give the gifts when the challenge ends.',
   ];
   return (
     <Sheet
@@ -369,7 +369,7 @@ export function HowSheet({
         <>
           {!live && (
             <Button onClick={() => navigate('settings')}>
-              Change the step
+              Change what a point costs
             </Button>
           )}
           <Button variant="primary" onClick={() => onOpenChange(false)}>

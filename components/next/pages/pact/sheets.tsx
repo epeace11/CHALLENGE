@@ -95,10 +95,11 @@ function StepSheet({ flow }: { flow: PactFlow }) {
         <StepBars step={step} count={n} />
         <p className="text-nx-body text-nx-ink">
           So {n} misses cost {formatMoney(giftTotal(n, step, null))} in all.
-          When it ends, each of you buys the other a gift worth your own points.
+          When it ends, your points set the gift you give {flow.other.name}, and{' '}
+          {flow.other.name}’s points set the gift you get.
         </p>
         <p className="text-nx-body text-nx-ink-2">
-          A point {flow.inviter.name} forgives costs nothing.
+          A point {flow.other.name} forgives costs nothing.
         </p>
       </div>
     </Sheet>

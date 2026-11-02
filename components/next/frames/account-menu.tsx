@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { ChevronDown, LayoutGrid, LogOut, X } from 'lucide-react';
+import type { Person } from '@/lib/next/model';
+import { partnerOf } from '@/lib/next/selectors';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { Button } from '@/components/next/ui/button';
@@ -13,15 +15,28 @@ import { useWorld } from '@/components/next/world';
  * The viewer's name at the top right of the pages before Day 1 (Start, Set up, the invite, the
  * pact), opening Your challenges, Sign out and, with `cancel`, Cancel this challenge. Cancelling asks first, then
  * deletes the challenge for both people.
+ *
+ * `person` is who the page speaks to, if not `world.me`: the preview's pact shows Jordan's side, so
+ * its chip says Jordan. In the live app every page is the viewer's own side.
  */
-export function AccountMenu({ cancel }: { cancel?: boolean }) {
+export function AccountMenu({
+  cancel,
+  person,
+}: {
+  cancel?: boolean;
+  person?: Person;
+}) {
   const world = useWorld();
   const { host } = useBackend();
   const { navigate } = useNav();
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
-  const you = world.me;
-  const partner = world.partnerPending ? null : world.partner.name;
+  const you = person ?? world.me;
+  const partner = world.partnerPending
+    ? null
+    : you.id === world.me.id
+      ? world.partner.name
+      : partnerOf(world, you.id).name;
 
   const items: MenuItem[] = [
     {

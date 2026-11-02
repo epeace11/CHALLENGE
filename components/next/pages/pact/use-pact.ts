@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNav } from '@/components/next/nav';
 import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
-import { pactView, signPactAt } from './pact-data';
+import { pactView, pactViewer, signPactAt } from './pact-data';
 
 /** The sheets the pact opens: Day 1 and the first check-in, the dollar step, one rule, the whole pact, and Sign without holding. */
 export type PactSheet = 'first' | 'step' | 'rule' | 'pact' | 'sign';
@@ -16,12 +16,13 @@ export type PactSheet = 'first' | 'step' | 'rule' | 'pact' | 'sign';
 export function usePact() {
   const world = useWorld();
   const backend = useBackend();
-  const view = pactView(world);
+  // The live app always shows the viewer's own side; the preview shows Jordan's, who hasn't signed.
+  const view = pactView(world, pactViewer(world, backend.live));
   const { navigate } = useNav();
   const [sheet, setSheet] = useState<PactSheet | null>(null);
   // The rule in the rule sheet, kept after it closes so the sheet keeps its content while it falls.
   const [ruleId, setRuleId] = useState<string | null>(null);
-  // True once Jordan presses Sign here, so his name is written in rather than already there.
+  // True once you press Sign here, so your name is written in rather than already there.
   const [justSigned, setJustSigned] = useState(false);
 
   return {

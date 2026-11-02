@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { HandHeart } from 'lucide-react';
 import type { Point, Rule, World } from '@/lib/next/model';
-import { askForgiveness, forgivePoint } from '@/lib/next/actions';
+import { forgivePoint } from '@/lib/next/actions';
 import {
   activePoints,
   formatDay,
@@ -12,10 +12,10 @@ import {
   plural,
   ruleById,
 } from '@/lib/next/selectors';
-import { useBackend } from '@/components/next/backend';
 import { Avatar, Button, RowButton, Sheet } from '@/components/next/ui';
-import { ReasonSheet, useSheetFor } from './parts';
+import { ReasonSheet, UndoLine, useFocusLater, useSheetFor } from './parts';
 import { missWhy } from './queue';
+import type { Review } from './use-review';
 
 /** A point that still counts and has no request waiting on it. */
 type Open = { point: Point; rule: Rule; why: string };
@@ -38,12 +38,28 @@ function pointsDetail(who: string, total: number, open: number) {
 }
 
 /**
+ * What forgiving one of the partner's points does to the gift the viewer gets. Any one does the
+ * same, since a gift is set by how many points there are.
+ */
+function forgiveCost(w: World, rows: Open[]) {
+  const now = gets(w, w.me.id);
+  const off = rows[0]
+    ? now - gets(forgivePoint(w, rows[0].point.id), w.me.id)
+    : 0;
+  const which = rows.length === 1 ? 'Forgiving it' : 'Forgiving any one';
+  return off > 0
+    ? `${which} takes ${formatMoney(off)} off the gift you get.`
+    : `${which} leaves the gift you get at ${formatMoney(now)}.`;
+}
+
+/**
  * Forgiveness that nobody has asked about yet, under the queue: ask the partner to forgive one of
  * your points (a miss you never logged, a short gym week), or forgive one of theirs. Each row opens
  * the list of points; picking one asks for a reason, or shows what forgiving it does to the gift.
+ * Both wait in the review's Undo window like every decision, with their Undo line here.
  */
-export function PointActions({ world }: { world: World }) {
-  const backend = useBackend();
+export function PointActions({ review }: { review: Review }) {
+  const { world, held } = review;
   const partner = world.partner;
   const mine = openPoints(world, world.me.id);
   const theirs = openPoints(world, partner.id);
@@ -72,11 +88,36 @@ export function PointActions({ world }: { world: World }) {
       }
     : null;
 
-  if (!mine.length && !theirs.length) return null;
+  // Focus after a decision here: back to the row it came from (the sheet does that as it closes),
+  // or to the Undo line when that row has gone. After Undo, back to the row.
+  const section = useRef<HTMLElement>(null);
+  const line = useRef<HTMLDivElement>(null);
+  const focusLater = useFocusLater();
+  const rowFor = (which: 'mine' | 'theirs') =>
+    section.current?.querySelector<HTMLElement>(`[data-points="${which}"]`);
+  const afterDecision = () =>
+    focusLater(() => {
+      const at = document.activeElement;
+      return !at || at === document.body ? line.current : null;
+    });
+  const undo = () => {
+    const which = held?.outcome === 'asked' ? 'mine' : 'theirs';
+    review.undo();
+    focusLater(() => rowFor(which));
+  };
+  const heldHere = held?.from === 'points' ? held : null;
+
+  if (!mine.length && !theirs.length && !heldHere) return null;
   return (
-    <section className="flex flex-col gap-2.5" aria-label="Forgiveness">
+    <section
+      ref={section}
+      className="flex flex-col gap-2.5"
+      aria-label="Forgiveness"
+    >
+      {heldHere && <UndoLine ref={line} held={heldHere} onUndo={undo} />}
       {mine.length > 0 && (
         <RowButton
+          data-points="mine"
           glass={false}
           leading={<Avatar person={world.me} decorative />}
           title={`Ask ${partner.name} to forgive a point`}
@@ -90,6 +131,7 @@ export function PointActions({ world }: { world: World }) {
       )}
       {theirs.length > 0 && (
         <RowButton
+          data-points="theirs"
           glass={false}
           leading={<Avatar person={partner} decorative />}
           title={`Forgive one of ${partner.name}’s points`}
@@ -109,6 +151,11 @@ export function PointActions({ world }: { world: World }) {
           shownList === 'mine'
             ? 'Which of your points?'
             : `Which of ${partner.name}’s points?`
+        }
+        description={
+          shownList === 'theirs' && rows.length > 0
+            ? forgiveCost(world, rows)
+            : undefined
         }
         footer={<Button onClick={() => setList(null)}>Cancel</Button>}
       >
@@ -140,13 +187,11 @@ export function PointActions({ world }: { world: World }) {
         submit="Ask"
         missing="Write your reason first."
         onSubmit={(reason) => {
-          const row = asking.target;
+          const target = asking.target;
           asking.setOpen(false);
-          if (!row) return;
-          backend.act(
-            { type: 'askForgiveness', pointId: row.point.id, reason },
-            (w) => askForgiveness(w, row.point.id, reason),
-          );
+          if (!target) return;
+          review.askForgiveness(target.point, target.rule, reason);
+          afterDecision();
         }}
       />
 
@@ -166,13 +211,11 @@ export function PointActions({ world }: { world: World }) {
               variant="primary"
               icon={HandHeart}
               onClick={() => {
-                const row = forgiving.target;
+                const target = forgiving.target;
                 forgiving.setOpen(false);
-                if (!row) return;
-                backend.act(
-                  { type: 'forgivePoint', pointId: row.point.id },
-                  (w) => forgivePoint(w, row.point.id),
-                );
+                if (!target) return;
+                review.forgivePoint(target.point, target.rule);
+                afterDecision();
               }}
             >
               Forgive
@@ -185,7 +228,6 @@ export function PointActions({ world }: { world: World }) {
             {forgiveNow.now === forgiveNow.after
               ? `The gift you get stays ${formatMoney(forgiveNow.now)}.`
               : `The gift you get goes from ${formatMoney(forgiveNow.now)} to ${formatMoney(forgiveNow.after)}.`}
-            {backend.live && ' This can’t be taken back.'}
           </p>
         )}
       </Sheet>

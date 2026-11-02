@@ -1,6 +1,6 @@
 // A calm list of grouped rows that show each setting's value; tapping one opens a sheet to change just that.
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Clock3, Download, LogOut, Trash2 } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
@@ -25,8 +25,8 @@ import {
   changesOf,
   remindersLine,
   renamePerson,
-  stepLine,
   termsError,
+  thenLine,
   termsOf,
   type Reminders,
   type Terms,
@@ -35,6 +35,7 @@ import {
   AskEndSheet,
   DeleteSheet,
   EndAskCard,
+  EndWaitCard,
   LeaveSheet,
   ProposalCard,
   TermsFields,
@@ -66,22 +67,35 @@ export default function SettingsV1() {
   // Ending early takes both: the button asks, then the request waits for the partner (Withdraw);
   // a request from the partner is answered here or on Overview.
   const ending = useEndAsk();
+  // Focus follows the request: once asked, the waiting card takes it (the button that opened the
+  // sheet has gone); once withdrawn or turned down, End the challenge takes it back.
+  const [asked, setAsked] = useState(false);
+  const refocusEnd = useRef(false);
+  const settled = (answer: () => void) => () => {
+    refocusEnd.current = true;
+    answer();
+  };
   const theirAsk = endAskFrom(world);
   const myAsk = c.status === 'running' && c.endAsk && !theirAsk;
   const endControls = theirAsk ? (
     <EndAskCard
       world={world}
-      onKeep={ending.decline}
+      onKeep={settled(ending.decline)}
       onEnd={() => setOpen('leave')}
     />
   ) : myAsk ? (
-    <ProposalCard
-      partner={partner}
-      changes={[`End ${c.name} now`]}
-      onWithdraw={ending.withdraw}
+    <EndWaitCard
+      world={world}
+      focus={asked}
+      onWithdraw={settled(ending.withdraw)}
     />
   ) : (
     <Button
+      ref={(el) => {
+        if (!el || !refocusEnd.current) return;
+        refocusEnd.current = false;
+        el.focus();
+      }}
       variant="quiet"
       icon={LogOut}
       className="-ml-3 self-start text-nx-danger"
@@ -154,8 +168,8 @@ export default function SettingsV1() {
                 onClick={() => setOpen('terms')}
               />
               <RowButton
-                title={`First miss: ${formatMoney(c.step)}`}
-                detail={stepLine(c.step)}
+                title={`First point: ${formatMoney(c.step)}`}
+                detail={thenLine(c.step)}
                 onClick={() => setOpen('terms')}
               />
               <RowButton
@@ -255,7 +269,10 @@ export default function SettingsV1() {
         world={world}
         open={open === 'ask'}
         onOpenChange={close}
-        onAsk={ending.ask}
+        onAsk={() => {
+          setAsked(true);
+          ending.ask();
+        }}
       />
       <LeaveSheet
         world={world}

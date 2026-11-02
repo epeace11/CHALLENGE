@@ -125,7 +125,7 @@ export function StepBars({
   return (
     <>
       <p className="sr-only">
-        Misses 1 to {count} cost {costs.join(', ')}.
+        Points 1 to {count} cost {costs.join(', ')}.
       </p>
       <div
         aria-hidden="true"

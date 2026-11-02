@@ -1,4 +1,4 @@
-// Original order: the whole challenge first, then each habit worst first, then the simple month with its own You / Jordan switch, then badges.
+// Original order: the whole challenge first, then the three weakest habits, then the simple month with its own You / Jordan switch, then a badges row each.
 'use client';
 import styles from './progress.module.css';
 import { AppFrame } from '@/components/next/frames';

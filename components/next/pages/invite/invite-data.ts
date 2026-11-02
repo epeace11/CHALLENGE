@@ -33,15 +33,24 @@ export type RuleGroupView = {
   rules: Rule[];
 };
 
-/** A rule's second line: "Sun–Thu", "Every day · Screenshot", "4 days a week". */
+/**
+ * A rule's second line: "Sun–Thu", "Every day · Screenshot". When it is asked is left out when the
+ * title already says it ("Gym, 4 days a week"), so such a rule may have no second line ("").
+ */
 export function ruleDetail(rule: Rule) {
+  const when = formatWhen(rule);
   const proof =
     rule.proof === 'required'
       ? 'Screenshot'
       : rule.proof === 'optional'
         ? 'Screenshot optional'
         : null;
-  return [formatWhen(rule), proof].filter(Boolean).join(' · ');
+  return [
+    rule.title.toLowerCase().includes(when.toLowerCase()) ? null : when,
+    proof,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /** "Toronto" from "America/Toronto". */
@@ -126,7 +135,7 @@ export function topicOptions(c: Challenge) {
       { value: 'length', label: `Length (${c.days} days)` },
       {
         value: 'step',
-        label: `What the first miss costs (${formatMoney(c.step)})`,
+        label: `What the first point costs (${formatMoney(c.step)})`,
       },
       { value: 'deadline', label: `Deadline (${formatDeadline(c.deadline)})` },
       { value: 'other', label: 'Something else' },
@@ -141,7 +150,7 @@ export function topicLabel(c: Challenge, topic: Topic) {
   return {
     start: 'Start date',
     length: 'Length',
-    step: 'What the first miss costs',
+    step: 'What the first point costs',
     deadline: 'Deadline',
     other: 'Something else',
   }[topic as Exclude<Topic, `rule:${string}`>];

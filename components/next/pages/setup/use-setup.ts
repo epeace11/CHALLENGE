@@ -58,18 +58,25 @@ const firstProblem = (found: Errors): Part | null =>
     PARTS[part].some((key) => found[key]),
   ) ?? null;
 
+/** How long a removed rule's "Removed · No eating out · Undo" row stays, unless something else changes first. */
+const UNDO_MS = 5000;
+
+/** A rule just removed from the list, and where it was, while its Undo row shows. */
+export type Removed = { rule: Rule; index: number };
+
 /**
  * The page's state: the draft, which sheet is open, the rule being built, the errors, removing a
- * rule with Undo, adding from the library, and finishing (the live app's finishSetup, or the
- * Invite page in the preview).
+ * rule (its row says Removed, with Undo, for a few seconds or until the next change), adding from
+ * the library, and finishing (the live app's finishSetup, or the Invite page in the preview).
  */
 export function useSetup() {
   const world = useWorld();
   const { navigate } = useNav();
   const { host } = useBackend();
   const drafted = useDraft();
-  const { draft, saveRule, removeRule } = drafted;
+  const { draft, removeRule, putBackRule } = drafted;
   const [open, setOpen] = useState<SetupSheet | null>(null);
+  const [removed, setRemoved] = useState<Removed | null>(null);
   const [editing, setEditing] = useState<Rule | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
@@ -103,11 +110,43 @@ export function useSetup() {
     if (errors[key]) setErrors({ ...errors, [key]: undefined });
   };
 
-  const remove = (rule: Rule) => removeRule(rule.id);
+  // The Undo row goes after a few seconds, or as soon as anything else changes.
+  useEffect(() => {
+    if (!removed) return;
+    const t = setTimeout(() => setRemoved(null), UNDO_MS);
+    return () => clearTimeout(t);
+  }, [removed]);
+  const patch: typeof drafted.patch = (next) => {
+    setRemoved(null);
+    drafted.patch(next);
+  };
+  const saveRule = (rule: Rule) => {
+    setRemoved(null);
+    drafted.saveRule(rule);
+  };
+
+  /** Removes a rule from the list; its row says Removed, with Undo, for a few seconds. */
+  const remove = (rule: Rule) => {
+    const index = draft.rules.findIndex((r) => r.id === rule.id);
+    if (index < 0) return;
+    removeRule(rule.id);
+    setRemoved({ rule, index });
+  };
+  /** Puts the rule just removed back where it was. */
+  const undoRemove = () => {
+    if (removed) putBackRule(removed.rule, removed.index);
+    setRemoved(null);
+  };
+  /** Lets the Undo row go now (another part of the checklist opened). */
+  const settleRemoved = () => setRemoved(null);
+
+  // The library's Added mark takes a rule out again, so it needs no Undo row.
   const toggleLibrary = (rule: Rule) => {
     const existing = matchingRule(draft.rules, rule);
-    if (existing) remove(existing);
-    else {
+    if (existing) {
+      setRemoved(null);
+      removeRule(existing.id);
+    } else {
       saveRule(rule);
       clear('rules');
     }
@@ -162,6 +201,8 @@ export function useSetup() {
 
   return {
     ...drafted,
+    patch,
+    saveRule,
     world,
     open,
     setOpen,
@@ -170,6 +211,9 @@ export function useSetup() {
     errors,
     clear,
     remove,
+    removed,
+    undoRemove,
+    settleRemoved,
     toggleLibrary,
     build,
     builderSaved,

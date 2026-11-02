@@ -2,6 +2,51 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 2, 2026 (fourth design critique)
+
+A fourth critique scored the app 27/40 (26, 28, 26, 27). It found no P0s and four P1s: money words that drift, two actions with no Undo, numbers that disagree between pages, and a Progress page 4,351px tall on a phone. Erin asked for everything to be fixed overnight without questions, so the calls below were made without her; each is small to reverse.
+
+Undo and safety:
+
+- **Set up's Remove leaves an Undo row.** Removing a rule puts "Removed · No eating out" with Undo in its place for a few seconds, or until the next change; Undo puts the rule back where it was and focuses its Remove button.
+- **Review's point rows wait like every decision.** Forgiving one of Jordan's points and asking Jordan to forgive one of yours are held for 5 seconds with the same Undo line, and say what they change first: "Forgiving it takes $9 off the gift you get."
+- **Approve both shows both.** On a day with several answers waiting, it opens a sheet with every answer, its rule and screenshot, and approves only from there.
+- **Review's progress strip colours each item by what you did,** so a dispute is no longer green. The badge counts a decision still in its Undo window as done. After a decision, focus moves to the next card's heading.
+- **Asking to end says what it would settle:** an "If it ended now" box with each gift and the check-ins still open.
+
+The same numbers everywhere:
+
+- **Points come from points.** Progress counted a point with a forgiveness request as waiting; it's a point ("1 asked to forgive"). Totals count only closed days and finished weeks ("95 of 102 done", not "of 169"), and a weekly habit counts weeks.
+- **Overview's day sheet counts weekly rules too,** so "1 of 6 missed" matches its rows, with weekly ones in their own group.
+- **Recap shows the gifts as they are now** ("$45", what Gifts shows), with "Now, up $15 last week" under each.
+
+Progress, shorter (4,351px to 2,100px on a phone):
+
+- It leads with what's open today and Log, then the whole challenge for each of you, then the three weakest habits, worst first, and "All 8 habits", which opens the rest in a sheet. Badges are one row each. A wrapped line ends with its "·" instead of starting with one.
+
+Money words, one set:
+
+- **Never "buy".** "buys" and "buy" are gone from Practice, Gifts, Rules and help, Set up, the shared page, Invite and the pact ("the gift you give", "the gift you get"). The setting is "What a point costs" everywhere, and Settings' "First point: $1". The landing page's fourth step is "Points set the gift you give: Each miss is a point."
+- Set up explains its estimate and the cap: how many points take a gift to the cap, and that points after that cost nothing.
+
+Smaller fixes:
+
+- **Check in's Save looks like a filled button** even before it can save; pressing it early scrolls to the missing part and focuses it (the hint still says why). A late answer's sheet does the same.
+- **The end of a day drops See answers** (the squares above already show them) and shows the streak on its own line.
+- **Your challenges fills "Open Fall Reset"** while one is running; Start a new challenge becomes the filled button only once it's finished. Share link says what's shared: "its name, rules and stakes, never your answers".
+- **The pact uses the signed-in person** in the live app (a signed viewer saw the partner as "you"); step 3 shows the promises as a card; on laptops the Hold to sign bar is 384px and centred.
+- **Practice's sample answers include the screenshot** a required rule needs, so every sample can be saved as it is. Landing's How it works says "Each day, answer for the day before."
+- **Say your rules' example sits under the box,** so Draft my rules stays in view on a phone.
+- **Sign up keeps its password hint** when there's an error: "Choose a password of at least 8 characters."
+- The shared page drops its "Dry colours" label; a rule's row skips "4 days a week" when its title already says it; the top bar's challenge name is one row with the day at every width; the count-up never starts below its first number.
+
+Not changed, on purpose:
+
+- A calendar day with a forgiveness request still shows Waiting (the clock): the point isn't settled.
+- The 5-option picker for what a point costs, the 720px laptop column, and Overview's "Waiting for you" card (it says what's waiting; the badge only counts).
+
+For Erin, from the critique (not decided overnight): should Reply be a free veto, since a dispute still open at the end never becomes a point? Should each person name the gift they'd like? Should Progress fold into Overview?
+
 ## Decisions, October 30, 2026 (third design critique)
 
 A third critique scored the app 26/40 (26, then 28, then 26; each run has a fresh reviewer). Two points were real regressions from the second round: Review lost its Undo when the pop-ups went, and the screenshot message doesn't scroll to the field. Erin's answers: Review safety first, keep "points" but say it plainly, show the count on a day with a miss, and take on the two P1s and the red days.

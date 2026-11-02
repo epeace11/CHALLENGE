@@ -43,11 +43,11 @@ import {
   stakesPreview,
 } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
-import { answerText, costSteps, lookName, nextMonday, sharers } from './facts';
+import { answerText, costSteps, nextMonday, sharers } from './facts';
 
 /** The pieces both versions of the shared-link page are built from. */
 
-/* ── Who shared it, and its look ───────────────────────────────────────── */
+/* ── Who shared it ─────────────────────────────────────────────────────── */
 
 /** "Shared by Priya & Sam" with their two avatars (decorative: the names are written out). */
 export function SharedBy({ by }: { by: string | null }) {
@@ -62,32 +62,6 @@ export function SharedBy({ by }: { by: string | null }) {
       )}
       <p className="text-nx-2 font-semibold text-nx-accent">Shared by {by}</p>
     </div>
-  );
-}
-
-/** "● Dry colours": the challenge's colours, as a dot and their name. */
-export function LookLabel({
-  look,
-  className,
-}: {
-  look: Look;
-  className?: string;
-}) {
-  return (
-    <p
-      className={cn(
-        'flex items-center gap-2 text-nx-2 text-nx-ink-2',
-        className,
-      )}
-    >
-      <span
-        data-look={look}
-        className="size-4 shrink-0 rounded-full"
-        style={{ background: 'var(--nx-fill)' }}
-        aria-hidden="true"
-      />
-      {lookName(look)} colours
-    </p>
   );
 }
 
@@ -261,8 +235,8 @@ export function SharedSheets({
       <Sheet
         open={open === 'cost'}
         onOpenChange={change}
-        title="What misses cost"
-        description={`Each miss is a point. The first costs ${formatMoney(shared.step)}, the second ${formatMoney(2 * shared.step)}, and so on. At the end, each of you buys the other a gift worth your own points.`}
+        title="What a point costs"
+        description={`Each miss is a point. The first point costs ${formatMoney(shared.step)}, the second ${formatMoney(2 * shared.step)}, and so on. Your points set the gift you give, and your partner’s points set the gift you get.`}
         footer={startButton}
       >
         <InLook look={look}>

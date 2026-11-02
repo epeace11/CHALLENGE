@@ -157,13 +157,13 @@ function StepSheet({ flow }: { flow: InviteFlow }) {
     <Sheet
       open={flow.sheet === 'gift'}
       onOpenChange={onOpenChange(flow)}
-      title={`The ${flow.step} step`}
-      description="Each miss is a point, and each point costs one step more than the one before."
+      title="What a point costs"
+      description={`Each miss is a point. The first point costs ${flow.steps[0]}, the second ${flow.steps[1]}, and so on.`}
       footer={
         <>
           {flow.canSuggest && (
             <Button onClick={() => flow.suggest('step')}>
-              Suggest a different step
+              Suggest a different amount
             </Button>
           )}
           <Button variant="primary" onClick={flow.close}>
@@ -175,8 +175,9 @@ function StepSheet({ flow }: { flow: InviteFlow }) {
       <div className="flex flex-col gap-5">
         <StepBars step={step} count={n} />
         <p className="text-nx-body text-nx-ink">
-          So {n} misses cost {formatMoney(giftTotal(n, step, null))} in all.
-          When it ends, each of you buys the other a gift worth your own points.
+          So {n} points cost {formatMoney(giftTotal(n, step, null))} in all.
+          Your points set the gift you give {flow.inviter.name}, and{' '}
+          {flow.inviter.name}’s points set the gift you get.
         </p>
         <p className="text-nx-body text-nx-ink-2">
           A point {flow.inviter.name} forgives costs nothing.
@@ -237,15 +238,16 @@ function HowSheet({ flow }: { flow: InviteFlow }) {
           yours.
         </HowStep>
         <HowStep icon={CircleX} title="Misses are points">
-          A No, a missed target or a check-in not done in time is a point. Each
-          point costs one step more: {a}, then {b}, then {c}.
+          A No, a missed target or a check-in not done in time is a point. The
+          first point costs {a}, the second {b}, the third {c}.
         </HowStep>
         <HowStep icon={HeartHandshake} title="Forgiveness">
           Ask {name} to forgive a point when you had a good reason. A forgiven
           point costs nothing.
         </HowStep>
         <HowStep icon={Gift} title="The gifts">
-          When it ends, each of you buys the other a gift worth your own points.
+          Your points set the gift you give {name}, and {name}’s points set the
+          gift you get. You give them when the challenge ends.
         </HowStep>
       </ol>
     </Sheet>

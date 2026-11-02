@@ -30,6 +30,7 @@ import {
   MIN_DAYS,
   deadlineId,
   deadlineLine,
+  draftCap,
   draftDays,
   rangeLine,
   zoneCity,
@@ -37,7 +38,7 @@ import {
 } from './draft';
 import { RuleList } from './rule-list';
 import { SetupSheets } from './setup-sheets';
-import { StakesFields } from './stakes';
+import { StakesFields, stakesHint } from './stakes';
 import {
   deadlineZoneLine,
   detailsLine,
@@ -58,9 +59,14 @@ export default function SetupV1() {
 
   const problem = (key: Key) =>
     key === 'when' ? undefined : partProblem(draft, key);
-  const toggle = (key: Key) => setOpen(open === key ? null : key);
+  // Opening or closing a part of the checklist lets a removed rule's Undo row go.
+  const toggle = (key: Key) => {
+    setup.settleRemoved();
+    setOpen(open === key ? null : key);
+  };
   const done = (key: Key) => {
     if (key !== 'when' && !setup.check(key)) return;
+    setup.settleRemoved();
     setOpen(null);
   };
   /** Once an item has opened, brings it into view if it sits off screen or low on it. */
@@ -129,6 +135,8 @@ export default function SetupV1() {
             partner={world.partner}
             onEdit={setup.build}
             onRemove={setup.remove}
+            removed={setup.removed}
+            onUndo={setup.undoRemove}
           />
           {errors.rules && (
             <p className="nx-field-error" role="alert">
@@ -148,7 +156,7 @@ export default function SetupV1() {
     },
     {
       key: 'stakes',
-      title: 'What a miss costs',
+      title: 'What a point costs',
       value: stakesLine(draft),
       body: (
         <StakesFields
@@ -168,7 +176,7 @@ export default function SetupV1() {
               label="Miss 1 in 10 check-ins and each gift will be about"
               value={setup.stakes.gift}
               format={formatMoney}
-              hint="See how it adds up"
+              hint={stakesHint(setup.stakes, draft.step, draftCap(draft))}
               onClick={() => setup.setOpen('how')}
             />
           }

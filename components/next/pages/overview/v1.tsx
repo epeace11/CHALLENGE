@@ -1,6 +1,6 @@
 // Numbers first. Thursday's check-ins as one big number in the card with the Log button, then number buttons for review, gym and both gifts, then the week.
 'use client';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { ArrowRight, CircleCheck, Clock3 } from 'lucide-react';
 import type { DateString } from '@/lib/next/model';
 import { formatDuration, formatMoney, plural } from '@/lib/next/selectors';
@@ -83,14 +83,24 @@ function Running() {
                 {/* What is left and the button that logs it, as one: the card itself does
                     nothing, so there is one thing to tap. */}
                 <GlassCard className="flex flex-col gap-5">
+                  {/* The day is named once, on the button; the title is today. */}
                   <div className="flex flex-col gap-2">
                     <p className="flex flex-wrap items-baseline gap-x-3">
                       <span className="font-nx-serif text-nx-num-lg leading-none text-nx-accent tabular-nums">
                         <CountUp value={o.left} />
                       </span>
                       <span className="text-nx-lead text-nx-ink">
-                        left to log for {o.dayWord}
+                        left to log
                       </span>
+                    </p>
+                    {/* Which ones, as plain words (they are not buttons); a name never breaks. */}
+                    <p className="text-nx-body text-nx-ink">
+                      {o.open.map((r, i) => (
+                        <Fragment key={r.id}>
+                          {i > 0 && '\u00a0· '}
+                          <span className="inline-block">{shortTitle(r)}</span>
+                        </Fragment>
+                      ))}
                     </p>
                     <p className="flex items-center gap-1.5 text-nx-2 text-nx-ink-2">
                       <Clock3
@@ -100,16 +110,6 @@ function Running() {
                       />
                       {formatDuration(o.msLeft)} left, until {o.closes}
                     </p>
-                    <ul className="mt-1 flex flex-wrap gap-2">
-                      {o.open.map((r) => (
-                        <li
-                          key={r.id}
-                          className="rounded-full bg-nx-sunken px-3 py-1 text-nx-min text-nx-ink"
-                        >
-                          {shortTitle(r)}
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                   <Button
                     variant="primary"

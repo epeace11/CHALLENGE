@@ -82,13 +82,15 @@ export function ClosedDay({
           shown && (
             <>
               <Button onClick={ci.cancel}>Cancel</Button>
-              <Button
-                variant="primary"
-                aria-disabled={!ci.canSave(shown)}
-                onClick={() => ci.trySave(shown)}
-              >
+              <Button variant="primary" onClick={() => ci.trySave(shown)}>
                 Send late answer
               </Button>
+              {/* Next to the button, like Save's: above it on phones, to its left from 640px. */}
+              <SaveHint
+                ci={ci}
+                rule={shown}
+                className="text-center sm:order-first sm:mr-auto sm:self-center sm:text-left"
+              />
             </>
           )
         }
@@ -97,7 +99,6 @@ export function ClosedDay({
           <div className="flex flex-col gap-6">
             <QuestionHead rule={shown} />
             <QuestionFields ci={ci} rule={shown} />
-            <SaveHint ci={ci} rule={shown} />
           </div>
         )}
       </Sheet>

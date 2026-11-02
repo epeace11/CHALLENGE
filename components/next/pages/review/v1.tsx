@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Check, CheckCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
+import { HostedWorld } from '@/components/next/world';
 import {
   ActionBar,
   Avatar,
@@ -17,13 +18,17 @@ import {
 } from '@/components/next/ui';
 import { formatDayShort, formatWeekday } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
-import { Deck, OutcomeContext, STAMP } from './motion';
+import { Deck, OutcomeContext, STAMP, type Outcome } from './motion';
 import {
+  ApproveDaySheet,
   CaughtUp,
   DisputeSheet,
   ItemBody,
   ReplySheet,
+  UndoLine,
   WaitingForPartner,
+  cardHeading,
+  useFocusLater,
   useSheetFor,
 } from './parts';
 import {
@@ -31,11 +36,12 @@ import {
   approveAllLabel,
   shortTitle,
   type AnswerItem,
+  type DayGroup,
   type DisputeItem,
   type ReviewItem,
 } from './queue';
 import { PointActions } from './points';
-import { useReview, type Held } from './use-review';
+import { useReview } from './use-review';
 
 const KIND: Record<ReviewItem['kind'], string> = {
   answer: 'Answer',
@@ -46,37 +52,6 @@ const KIND: Record<ReviewItem['kind'], string> = {
 
 const dayOf = (item: ReviewItem) =>
   item.kind === 'forgiveness' ? item.point.day : item.entry.day;
-
-/**
- * The decision just made, with Undo while it waits to be sent: on the page, above the next card,
- * never a pop-up. A screen reader hears the decision.
- */
-function UndoLine({ held, onUndo }: { held: Held; onUndo: () => void }) {
-  const s = STAMP[held.outcome];
-  const Icon = s.icon;
-  return (
-    <div
-      className={cn(
-        'nx-enter flex min-h-12 items-center gap-3 rounded-nx py-1 pr-1 pl-4',
-        s.tint,
-      )}
-    >
-      <Icon
-        size={20}
-        strokeWidth={2.4}
-        className={cn('shrink-0', s.ink)}
-        aria-hidden="true"
-      />
-      <output className="min-w-0 flex-1 text-nx-body text-nx-ink">
-        <span className={cn('font-semibold', s.ink)}>{s.label}</span> ·{' '}
-        {held.about}
-      </output>
-      <Button variant="quiet" onClick={onUndo}>
-        Undo
-      </Button>
-    </div>
-  );
-}
 
 /** Two decision buttons side by side: the other choice first, the main one on the right. */
 function Choices({
@@ -161,6 +136,7 @@ export default function ReviewV2() {
   const [listOpen, setListOpen] = useState(false);
   const disputing = useSheetFor<AnswerItem>();
   const replying = useSheetFor<DisputeItem>();
+  const approving = useSheetFor<DayGroup>();
   const actions = current && actionsFor(current.kind, world.partner.name);
   // An answer's Approve and Dispute stay pinned below the card; forgiveness and disputes, whose
   // choices move money, decide in the card, so the pinned bar never turns into Forgive or Concede.
@@ -168,21 +144,35 @@ export default function ReviewV2() {
   // Taps in the moment after a decision are ignored, so a double tap can't decide the next card.
   const settle = useRef(0);
 
+  // After each decision (and Undo) focus moves to the heading of the card now on screen, or to
+  // "All caught up", instead of dropping to the page; after a sheet, once the sheet has gone.
+  const page = useRef<HTMLDivElement>(null);
+  const focusLater = useFocusLater();
+  const focusCard = () => focusLater(() => cardHeading(page.current));
+
   /** Acts on the card on screen, remembering it so the next open one follows. */
   const decide = (item: ReviewItem, main: boolean) => {
     if (performance.now() < settle.current) return;
     settle.current = performance.now() + 600;
     setPick(item.id);
-    if (item.kind === 'answer')
-      return main ? review.approve(item) : disputing.show(item);
-    if (item.kind === 'correction')
-      return main ? review.approve(item) : review.declineLate(item);
-    if (item.kind === 'forgiveness')
-      return main ? review.forgive(item) : review.decline(item);
-    return main ? replying.show(item) : review.concede(item);
+    if (item.kind === 'answer') {
+      if (!main) return disputing.show(item);
+      review.approve(item);
+    } else if (item.kind === 'correction') {
+      if (main) review.approve(item);
+      else review.declineLate(item);
+    } else if (item.kind === 'forgiveness') {
+      if (main) review.forgive(item);
+      else review.decline(item);
+    } else {
+      if (main) return replying.show(item);
+      review.concede(item);
+    }
+    focusCard();
   };
 
-  // "Approve both" on an answer card while its day has several answers waiting.
+  // "Approve both" on an answer card while its day has several answers waiting: it opens them all
+  // first, so nothing is approved unseen.
   const day =
     current?.kind === 'answer'
       ? state.days.find((g) => g.day === current.entry.day)
@@ -194,156 +184,181 @@ export default function ReviewV2() {
           variant="quiet"
           icon={CheckCheck}
           className="-ml-3"
-          onClick={() => {
-            setPick(current.id);
-            review.approveAll(day.items);
-          }}
+          onClick={() => approving.show(day)}
         >
           {approveAllLabel(day.items.length)} for {formatWeekday(day.day)}
         </Button>
       </div>
     ) : null;
+  const approveGroup = (group: DayGroup) => {
+    approving.setOpen(false);
+    if (current) setPick(current.id);
+    review.approveAll(group.items);
+    focusCard();
+  };
 
   const position = `${index + 1} of ${known.length}`;
+  // Each step of the strip: the card on screen (accent), one still to do, or one decided, coloured
+  // by how it was decided (done, missed or waiting, as in STAMP).
+  const stepColour = (id: string) => {
+    if (open.has(id)) return id === currentId ? 'bg-nx-accent' : 'bg-nx-sunken';
+    const outcome: Outcome | undefined = review.outcomes[id];
+    // Gone some other way (the partner withdrew a dispute): it costs nothing.
+    return outcome ? STAMP[outcome].bar : 'bg-nx-done-bar';
+  };
 
+  // The frame reads the world as this page shows it, so the Review badge counts a decision waiting
+  // in its Undo window as made, like the strip and the card do. It only shows: every change still
+  // goes through `review`, made above it (in the preview, useBackend() called below it can't write).
   return (
-    <AppFrame>
-      <OutcomeContext.Provider value={review.outcomes}>
-        <div className="flex flex-col gap-5">
-          <PageTitle title="Review" />
+    <HostedWorld world={world}>
+      <AppFrame>
+        <OutcomeContext.Provider value={review.outcomes}>
+          <div ref={page} className="flex flex-col gap-5">
+            <PageTitle title="Review" />
 
-          {current && (
-            <Enter index={1} className="flex items-center gap-2">
-              <IconButton
-                icon={ChevronLeft}
-                label="Previous"
-                className="disabled:cursor-not-allowed disabled:opacity-35"
-                disabled={!prev}
-                onClick={() => prev && setPick(prev)}
-              />
-              <button
-                type="button"
-                className="nx-press flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-nx-sm px-2 py-1.5 hover:bg-nx-accent-soft"
-                onClick={() => setListOpen(true)}
-              >
-                <span className="flex w-full gap-1.5" aria-hidden="true">
-                  {known.map((id) => (
-                    <span
-                      key={id}
-                      className={cn(
-                        'h-2 flex-1 rounded-full transition-colors duration-300 ease-nx',
-                        !open.has(id)
-                          ? 'bg-nx-done-bar'
-                          : id === currentId
-                            ? 'bg-nx-accent'
-                            : 'bg-nx-sunken',
-                      )}
-                    />
-                  ))}
-                </span>
-                <span className="text-nx-2 font-semibold text-nx-accent">
-                  {position} · See all
-                </span>
-              </button>
-              <IconButton
-                icon={ChevronRight}
-                label="Next"
-                className="disabled:cursor-not-allowed disabled:opacity-35"
-                disabled={!next}
-                onClick={() => next && setPick(next)}
-              />
-            </Enter>
-          )}
-
-          <Enter index={2} className="flex flex-col gap-3">
-            {review.held && (
-              <UndoLine held={review.held} onUndo={review.undo} />
-            )}
-            <Deck id={current?.id ?? null} direction={shown.direction}>
-              {current && (
-                <GlassCard pad="lg" as="article">
-                  <ItemBody world={world} item={current} size="lg" showDay />
-                  {approveDay}
-                  {!inBar && actions && (
-                    <div className="mt-6 flex items-stretch gap-2">
-                      <Choices
-                        main={actions.main}
-                        alt={actions.alt}
-                        onMain={() => decide(current, true)}
-                        onAlt={() => decide(current, false)}
+            {current && (
+              <Enter index={1} className="flex items-center gap-2">
+                <IconButton
+                  icon={ChevronLeft}
+                  label="Previous"
+                  className="disabled:cursor-not-allowed disabled:opacity-35"
+                  disabled={!prev}
+                  onClick={() => prev && setPick(prev)}
+                />
+                <button
+                  type="button"
+                  className="nx-press flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-nx-sm px-2 py-1.5 hover:bg-nx-accent-soft"
+                  onClick={() => setListOpen(true)}
+                >
+                  <span className="flex w-full gap-1.5" aria-hidden="true">
+                    {known.map((id) => (
+                      <span
+                        key={id}
+                        className={cn(
+                          'h-2 flex-1 rounded-full transition-colors duration-300 ease-nx',
+                          stepColour(id),
+                        )}
                       />
-                    </div>
-                  )}
-                </GlassCard>
+                    ))}
+                  </span>
+                  <span className="text-nx-2 font-semibold text-nx-accent">
+                    {position} · See all
+                  </span>
+                </button>
+                <IconButton
+                  icon={ChevronRight}
+                  label="Next"
+                  className="disabled:cursor-not-allowed disabled:opacity-35"
+                  disabled={!next}
+                  onClick={() => next && setPick(next)}
+                />
+              </Enter>
+            )}
+
+            <Enter index={2} className="flex flex-col gap-3">
+              {review.held && review.held.from !== 'points' && (
+                <UndoLine
+                  held={review.held}
+                  onUndo={() => {
+                    review.undo();
+                    focusCard();
+                  }}
+                />
               )}
-            </Deck>
-            {!current && <CaughtUp world={world} />}
-          </Enter>
+              <Deck id={current?.id ?? null} direction={shown.direction}>
+                {current && (
+                  <GlassCard pad="lg" as="article">
+                    <ItemBody world={world} item={current} size="lg" showDay />
+                    {approveDay}
+                    {!inBar && actions && (
+                      <div className="mt-6 flex items-stretch gap-2">
+                        <Choices
+                          main={actions.main}
+                          alt={actions.alt}
+                          onMain={() => decide(current, true)}
+                          onAlt={() => decide(current, false)}
+                        />
+                      </div>
+                    )}
+                  </GlassCard>
+                )}
+              </Deck>
+              {!current && <CaughtUp world={world} />}
+            </Enter>
 
-          {/* Right after the card, so it comes next for a keyboard and scrolls away with the card. */}
-          {current && inBar && actions && (
-            <ActionBar className="flex-row items-stretch">
-              <Choices
-                main={actions.main}
-                alt={actions.alt}
-                mainIcon={Check}
-                onMain={() => decide(current, true)}
-                onAlt={() => decide(current, false)}
-              />
-            </ActionBar>
-          )}
+            {/* Right after the card, so it comes next for a keyboard and scrolls away with the card. */}
+            {current && inBar && actions && (
+              <ActionBar className="flex-row items-stretch">
+                <Choices
+                  main={actions.main}
+                  alt={actions.alt}
+                  mainIcon={Check}
+                  onMain={() => decide(current, true)}
+                  onAlt={() => decide(current, false)}
+                />
+              </ActionBar>
+            )}
 
-          <Enter index={3}>
-            <WaitingForPartner review={review} />
-          </Enter>
+            <Enter index={3}>
+              <WaitingForPartner review={review} />
+            </Enter>
 
-          <Enter index={4}>
-            <PointActions world={world} />
-          </Enter>
-        </div>
-      </OutcomeContext.Provider>
+            <Enter index={4}>
+              <PointActions review={review} />
+            </Enter>
+          </div>
+        </OutcomeContext.Provider>
 
-      <Sheet
-        open={listOpen}
-        onOpenChange={setListOpen}
-        title="Waiting for you"
-        footer={
-          <Button variant="primary" onClick={() => setListOpen(false)}>
-            Done
-          </Button>
-        }
-      >
-        <ul className="flex flex-col gap-2.5">
-          {todo.map((item) => (
-            <li key={item.id}>
-              <RowButton
-                glass={false}
-                leading={
-                  <Avatar
-                    person={item.kind === 'dispute' ? world.me : world.partner}
-                    size="sm"
-                    decorative
-                  />
-                }
-                title={shortTitle(item.rule)}
-                detail={`${KIND[item.kind]} · ${formatDayShort(dayOf(item))}`}
-                trailing={
-                  item.id === currentId ? (
-                    <StatusPill status="open" label="On screen" />
-                  ) : undefined
-                }
-                aria-current={item.id === currentId || undefined}
-                onClick={() => {
-                  setPick(item.id);
-                  setListOpen(false);
-                }}
-              />
-            </li>
-          ))}
-        </ul>
-      </Sheet>
-      <DisputeSheet sheet={disputing} review={review} />
-      <ReplySheet sheet={replying} review={review} />
-    </AppFrame>
+        <Sheet
+          open={listOpen}
+          onOpenChange={setListOpen}
+          title="Waiting for you"
+          footer={
+            <Button variant="primary" onClick={() => setListOpen(false)}>
+              Done
+            </Button>
+          }
+        >
+          <ul className="flex flex-col gap-2.5">
+            {todo.map((item) => (
+              <li key={item.id}>
+                <RowButton
+                  glass={false}
+                  leading={
+                    <Avatar
+                      person={
+                        item.kind === 'dispute' ? world.me : world.partner
+                      }
+                      size="sm"
+                      decorative
+                    />
+                  }
+                  title={shortTitle(item.rule)}
+                  detail={`${KIND[item.kind]} · ${formatDayShort(dayOf(item))}`}
+                  trailing={
+                    item.id === currentId ? (
+                      <StatusPill status="open" label="On screen" />
+                    ) : undefined
+                  }
+                  aria-current={item.id === currentId || undefined}
+                  onClick={() => {
+                    setPick(item.id);
+                    setListOpen(false);
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+        <DisputeSheet sheet={disputing} review={review} onDone={focusCard} />
+        <ReplySheet sheet={replying} review={review} onDone={focusCard} />
+        <ApproveDaySheet
+          sheet={approving}
+          partner={world.partner}
+          onApprove={approveGroup}
+        />
+      </AppFrame>
+    </HostedWorld>
   );
 }

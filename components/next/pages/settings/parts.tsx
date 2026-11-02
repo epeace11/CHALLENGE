@@ -1,5 +1,5 @@
 'use client';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, Clock3, LogOut, Trash2 } from 'lucide-react';
 import type { World } from '@/lib/next/model';
 import {
@@ -9,9 +9,16 @@ import {
   TextField,
   Toggle,
 } from '@/components/next/ui';
-import { formatMoney } from '@/lib/next/selectors';
+import { formatMoney, plural } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
-import { capLine, formatClock, giftsUnder, stepLine, type Terms } from './data';
+import {
+  capLine,
+  formatClock,
+  giftsUnder,
+  ifEndedNow,
+  thenLine,
+  type Terms,
+} from './data';
 import styles from './settings.module.css';
 
 /* ── Reminder times ────────────────────────────────────────────────────── */
@@ -93,7 +100,7 @@ export function TermsFields({
         error={error?.field === 'name' ? error.text : undefined}
       />
       <NumberField
-        label="First miss costs"
+        label="First point costs"
         value={terms.step}
         onChange={(step) => onChange({ ...terms, step: step ?? 0 })}
         unit="dollars"
@@ -104,7 +111,7 @@ export function TermsFields({
         error={error?.field === 'step' ? error.text : undefined}
         hint={
           terms.step > 0
-            ? `${stepLine(terms.step)}.${moved ? ` Today you would get ${formatMoney(gifts.me)} and ${partner} ${formatMoney(gifts.partner)}.` : ''}`
+            ? `${thenLine(terms.step)}${moved ? ` Today you would get ${formatMoney(gifts.me)} and ${partner} ${formatMoney(gifts.partner)}.` : ''}`
             : undefined
         }
       />
@@ -133,6 +140,63 @@ export function TermsFields({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Runs `fn` once no sheet is open: a closing sheet hands focus back to what opened it, which would
+ * undo a focus made while it is still on screen. Checks each frame for about 1.5 s.
+ */
+function afterSheets(fn: () => void) {
+  let frames = 90,
+    frame = 0;
+  const step = () => {
+    if (document.querySelector('.nx-sheet') && frames-- > 0) {
+      frame = requestAnimationFrame(step);
+      return;
+    }
+    fn();
+  };
+  frame = requestAnimationFrame(step);
+  return () => cancelAnimationFrame(frame);
+}
+
+/**
+ * The viewer asked to end the challenge and the partner hasn't answered: a plain sentence and
+ * Withdraw. With `focus` (it has just been asked), its heading takes focus once the sheet has gone.
+ */
+export function EndWaitCard({
+  world,
+  focus,
+  onWithdraw,
+}: {
+  world: World;
+  focus?: boolean;
+  onWithdraw: () => void;
+}) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (focus) return afterSheets(() => heading.current?.focus());
+  }, [focus]);
+  const partner = world.partner.name;
+  return (
+    <div className="nx-enter flex flex-col gap-3 rounded-nx border border-nx-line bg-nx-wait-soft p-4">
+      <h3
+        ref={heading}
+        tabIndex={-1}
+        className="flex items-center gap-2 font-nx-sans text-nx-body font-semibold text-nx-wait outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-nx-accent"
+      >
+        <Clock3 size={18} aria-hidden="true" />
+        Waiting for {partner}
+      </h3>
+      <p className="text-nx-body text-nx-ink">
+        You asked to end {world.challenge.name} now. It ends once {partner}{' '}
+        agrees.
+      </p>
+      <Button className="self-start" onClick={onWithdraw}>
+        Withdraw
+      </Button>
     </div>
   );
 }
@@ -190,6 +254,8 @@ export function AskEndSheet({
   const c = world.challenge;
   const partner = world.partner.name;
   const early = world.today <= c.start;
+  const now = ifEndedNow(world);
+  const id = useId();
   return (
     <Sheet
       open={open}
@@ -215,7 +281,41 @@ export function AskEndSheet({
           </Button>
         </>
       }
-    />
+    >
+      {!early && (
+        <section
+          aria-labelledby={`${id}-now`}
+          className="flex flex-col gap-2 rounded-nx bg-nx-sunken px-5 py-4"
+        >
+          <h3 id={`${id}-now`} className="font-nx-sans text-nx-2 text-nx-ink-2">
+            If it ended now
+          </h3>
+          <dl className="flex flex-col gap-1 text-nx-body text-nx-ink">
+            <div className="flex items-baseline justify-between gap-4">
+              <dt>The gift you get</dt>
+              <dd className="font-semibold tabular-nums">
+                {formatMoney(now.get)}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt>The gift you give {partner}</dt>
+              <dd className="font-semibold tabular-nums">
+                {formatMoney(now.give)}
+              </dd>
+            </div>
+          </dl>
+          {now.open.length > 0 && (
+            <p className="text-nx-2 text-nx-ink-2">
+              {now.open.join(' and ')} wouldn’t count:{' '}
+              {now.open.length === 1 ? 'it’s' : 'they’re'} still open
+              {now.left > 0
+                ? `, with ${plural(now.left, 'check-in')} of yours left to log.`
+                : '.'}
+            </p>
+          )}
+        </section>
+      )}
+    </Sheet>
   );
 }
 

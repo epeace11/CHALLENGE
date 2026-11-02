@@ -20,7 +20,7 @@ export const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
   {
     icon: CircleCheckBig,
     title: 'You each check in every day',
-    text: 'Answer each rule for yesterday.',
+    text: 'Each day, answer for the day before.',
   },
   {
     icon: UserCheck,
@@ -29,8 +29,8 @@ export const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
   },
   {
     icon: Gift,
-    title: 'Misses add to the gift you give',
-    text: 'The first costs $1, the next $2.',
+    title: 'Points set the gift you give',
+    text: 'Each miss is a point. The first costs $1, the second $2.',
   },
 ];
 

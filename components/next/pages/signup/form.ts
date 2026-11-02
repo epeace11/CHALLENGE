@@ -31,7 +31,9 @@ export function validate(
   if (method === 'password') {
     if (!draft.password)
       errors.password =
-        mode === 'signup' ? 'Choose a password.' : 'Enter your password.';
+        mode === 'signup'
+          ? `Choose a password of at least ${MIN_PASSWORD} characters.`
+          : 'Enter your password.';
     else if (mode === 'signup' && draft.password.length < MIN_PASSWORD)
       errors.password = `Use at least ${MIN_PASSWORD} characters.`;
   }

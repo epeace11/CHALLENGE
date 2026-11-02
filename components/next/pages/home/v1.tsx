@@ -72,25 +72,29 @@ export default function HomeV2() {
       <AppFrame>{children}</AppFrame>
     );
 
+  // In the live app a new challenge starts once this one has finished. It is the main action only
+  // then; while one runs or is being set up, that challenge's own button is, and this one follows it.
+  const finishedNow = status === 'finished';
+  const startNew = (!host || finishedNow) && (
+    <Enter index={finishedNow ? 1 : 3}>
+      <Button
+        variant={finishedNow ? 'primary' : 'secondary'}
+        size={finishedNow ? 'lg' : 'md'}
+        icon={Plus}
+        className="w-full sm:w-auto"
+        onClick={() => navigate('start')}
+      >
+        Start a new challenge
+      </Button>
+    </Enter>
+  );
+
   return frame(
     <>
       <div className="grid gap-6">
         <div className="flex flex-col gap-6">
           <PageTitle title="Your challenges" />
-          {/* In the live app a new challenge starts once this one has finished. */}
-          {(!host || world.challenge.status === 'finished') && (
-            <Enter index={1}>
-              <Button
-                variant="primary"
-                size="lg"
-                icon={Plus}
-                className="w-full sm:w-auto"
-                onClick={() => navigate('start')}
-              >
-                Start a new challenge
-              </Button>
-            </Enter>
-          )}
+          {finishedNow && startNew}
 
           {settingUp && (
             <Enter index={2}>
@@ -150,9 +154,19 @@ export default function HomeV2() {
                     onClick={() => navigate('review')}
                   />
                 </Rows>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  iconEnd={ArrowRight}
+                  className="w-full sm:w-auto sm:self-start"
+                  onClick={() => navigate('overview')}
+                >
+                  Open {run.name}
+                </Button>
               </ChallengeCard>
             </Enter>
           )}
+          {!finishedNow && startNew}
         </div>
 
         <div className="flex flex-col gap-6">

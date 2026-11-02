@@ -40,7 +40,7 @@ export function ShareLink({ saved }: { saved: SavedChallenge }) {
           )
         }
         label="Share link"
-        description="Lets other couples start their own copy."
+        description="Other couples can start a copy with its name, rules and stakes, never your answers."
       />
       <Presence initial={false}>
         {saved.linkOn && (

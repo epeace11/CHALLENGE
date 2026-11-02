@@ -81,17 +81,6 @@ export default function SayV1() {
                   <Sentence text={say.text} rules={draft.rules} lit={say.lit} />
                 </div>
               )}
-              {/* The example goes once it is in the box. */}
-              {stage === 'write' && say.text !== draft.sentence && (
-                <Example
-                  sentence={draft.sentence}
-                  onUse={() => {
-                    say.fillExample();
-                    // The example card goes away, so focus moves on to the next step.
-                    draftButton.current?.focus();
-                  }}
-                />
-              )}
               <div className="flex flex-col gap-2 sm:flex-row-reverse sm:items-center">
                 <Button
                   ref={draftButton}
@@ -110,6 +99,18 @@ export default function SayV1() {
                 )}
               </div>
             </GlassCard>
+            {/* Under the box and its button, so Draft my rules is in view on a phone; it goes once it is in the box. */}
+            {stage === 'write' && say.text !== draft.sentence && (
+              <Example
+                className="nx-enter"
+                sentence={draft.sentence}
+                onUse={() => {
+                  say.fillExample();
+                  // The example card goes away, so focus moves on to the next step.
+                  draftButton.current?.focus();
+                }}
+              />
+            )}
             {stage === 'drafting' && (
               <DraftingCards count={Math.max(1, say.lit)} />
             )}

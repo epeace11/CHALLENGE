@@ -132,42 +132,46 @@ export function CheckinPage({
             />
           </div>
 
-          <button
-            type="button"
-            className={cn(styles.cardButton, 'nx-enter nx-press')}
-            aria-haspopup="dialog"
-            onClick={showAnswers}
-          >
-            <span className="flex items-center gap-3">
-              <span className="min-w-0 flex-1 text-nx-body text-nx-ink">
-                {ci.left > 0 ? (
-                  <>
-                    <span className="font-semibold">
-                      <CountUp value={ci.left} /> left
-                    </span>
-                    <span className="text-nx-ink-2">
-                      {' '}
-                      · {ci.timeLeftLabel} to go
-                    </span>
-                  </>
-                ) : (
-                  <span className="font-semibold">All answered</span>
-                )}
+          {/* What is left, while there is a question on screen. At the end of the day the squares
+              below show every answer (each opens it), so this card would only repeat them. */}
+          {rule && (
+            <button
+              type="button"
+              className={cn(styles.cardButton, 'nx-enter nx-press')}
+              aria-haspopup="dialog"
+              onClick={showAnswers}
+            >
+              <span className="flex items-center gap-3">
+                <span className="min-w-0 flex-1 text-nx-body text-nx-ink">
+                  {ci.left > 0 ? (
+                    <>
+                      <span className="font-semibold">
+                        <CountUp value={ci.left} /> left
+                      </span>
+                      <span className="text-nx-ink-2">
+                        {' '}
+                        · {ci.timeLeftLabel} to go
+                      </span>
+                    </>
+                  ) : (
+                    <span className="font-semibold">All answered</span>
+                  )}
+                </span>
+                <ChevronRight
+                  size={20}
+                  aria-hidden="true"
+                  className="shrink-0 text-nx-accent"
+                />
               </span>
-              <ChevronRight
-                size={20}
-                aria-hidden="true"
-                className="shrink-0 text-nx-accent"
+              <Bar
+                value={ci.answered}
+                max={ci.due}
+                segments
+                size="sm"
+                tone={ci.left > 0 ? 'accent' : 'done'}
               />
-            </span>
-            <Bar
-              value={ci.answered}
-              max={ci.due}
-              segments
-              size="sm"
-              tone={ci.left > 0 ? 'accent' : 'done'}
-            />
-          </button>
+            </button>
+          )}
 
           <div ref={top} className={cn(styles.anchor, styles.clipX)}>
             <Glide
@@ -202,7 +206,6 @@ export function CheckinPage({
                     full
                     icon={Check}
                     className="min-w-0 flex-1 sm:w-auto sm:min-w-56 sm:flex-none"
-                    aria-disabled={!ci.canSave(rule)}
                     onClick={() => ci.trySave(rule)}
                   >
                     Save

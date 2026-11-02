@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { createElement, useEffect, useRef, type ReactNode } from 'react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { DateString, World } from '@/lib/next/model';
+import type { DateString, Rule, World } from '@/lib/next/model';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
@@ -31,6 +31,8 @@ import {
   ruleById,
   rulesFor,
   streaks,
+  weekOf,
+  weekProgress,
   weekTarget,
   weeksOf,
   countsForWeek,
@@ -47,12 +49,15 @@ import {
   habitDays,
   habitIcon,
   habitStats,
+  habitTally,
   lockWords,
   notesOn,
+  pointsLine,
   runLength,
   sheetAction,
   type MainAction,
 } from './data';
+import { HabitCard, worstFirst } from './parts';
 
 function titleOf(w: World, view: DetailView) {
   switch (view.kind) {
@@ -71,10 +76,13 @@ function titleOf(w: World, view: DetailView) {
       return view.personId === w.me.id
         ? 'Your badges'
         : `${nameOf(w, view.personId)}’s badges`;
+    case 'habits':
+      return `All ${worstFirst(w).length} habits`;
   }
 }
 
 function describe(w: World, view: DetailView) {
+  if (view.kind === 'habits') return 'Worst first.';
   const whose =
     view.personId === w.me.id ? null : nameOf(w, view.personId) || null;
   switch (view.kind) {
@@ -227,7 +235,34 @@ function ViewBody({
       return <BadgeBody world={world} view={view} push={push} />;
     case 'badges':
       return <BadgesBody world={world} view={view} push={push} />;
+    case 'habits':
+      return <HabitsBody world={world} push={push} />;
   }
+}
+
+/** Every habit, worst first, as the page shows its first three; a card opens that habit. */
+function HabitsBody({
+  world,
+  push,
+}: {
+  world: World;
+  push: (v: DetailView) => void;
+}) {
+  return (
+    <ul className="flex flex-col gap-2.5">
+      {worstFirst(world).map((row) => (
+        <li key={row.rule.id} className="flex">
+          <HabitCard
+            row={row}
+            glass={false}
+            onOpen={(personId) =>
+              push({ kind: 'habit', personId, ruleId: row.rule.id })
+            }
+          />
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function Whose({ world, personId }: { world: World; personId: string }) {
@@ -255,6 +290,7 @@ function HabitBody({
     (s) => s.rule.id === view.ruleId,
   );
   if (!rule || !stat) return null;
+  const tally = habitTally(world, view.personId, rule);
   const days = habitDays(world, view.personId, rule);
   const squares = days.map((d) => ({
     day: d.day,
@@ -341,16 +377,22 @@ function HabitBody({
           </ul>
         </div>
       ) : (
-        <p className="text-nx-body">
-          {stat.rate === null
-            ? 'Nothing settled yet.'
-            : `Done on ${stat.done} of ${stat.done + stat.missed} days.`}{' '}
-          {stat.current > 0
-            ? `${runLength(stat.current, 'day')} in a row now${stat.best > stat.current ? `; best ${stat.best}.` : ', the longest yet.'}`
-            : stat.best > 0
-              ? `Best run: ${runLength(stat.best, 'day')}.`
-              : ''}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-nx-body">
+            {tally.of === 0
+              ? 'Nothing settled yet.'
+              : `Done on ${tally.done} of ${runLength(tally.of, 'day')}.`}{' '}
+            {stat.current > 0
+              ? `${runLength(stat.current, 'day')} in a row now${stat.best > stat.current ? `; best ${stat.best}.` : ', the longest yet.'}`
+              : stat.best > 0
+                ? `Best run: ${runLength(stat.best, 'day')}.`
+                : ''}
+          </p>
+          {/* The same points as Overview and Gifts: one asked about is still a point. */}
+          {(tally.points > 0 || tally.forgiven > 0) && (
+            <p className="text-nx-2 text-nx-ink-2">{pointsLine(tally)}</p>
+          )}
+        </div>
       )}
       <div className={`flex flex-col gap-4 ${styles.palette}`}>
         <SimpleMonth
@@ -377,11 +419,16 @@ function DayBody({
   push: (v: DetailView) => void;
 }) {
   const rows = dayCheckins(world, view.personId, view.day);
+  // Daily check-ins first, which the missed count counts; weekly ones after, by the week.
+  const daily = rows.filter((r) => r.rule.kind !== 'weekly');
+  const weekly = rows.filter((r) => r.rule.kind === 'weekly');
   const notes = notesOn(world, view.day);
   const misses =
     dayColor(world, view.personId, view.day) === 'missed'
       ? dayMisses(world, view.personId, view.day)
       : null;
+  const open = (ruleId: string) =>
+    push({ kind: 'checkin', personId: view.personId, ruleId, day: view.day });
   return (
     <div className="flex flex-col gap-5">
       <Whose world={world} personId={view.personId} />
@@ -391,8 +438,7 @@ function DayBody({
         </p>
       )}
       <ul className="flex flex-col gap-2">
-        {rows.map(({ rule, entry, pill }) => {
-          const Icon = habitIcon(rule);
+        {daily.map(({ rule, entry, pill }) => {
           // An open or unlogged check-in has no answer; its pill says so.
           const answer =
             pill.status === 'open' || !entry ? null : formatAnswer(rule, entry);
@@ -401,11 +447,7 @@ function DayBody({
             <li key={rule.id}>
               <RowButton
                 glass={false}
-                leading={
-                  <span className="grid size-10 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
-                    <Icon size={20} aria-hidden="true" />
-                  </span>
-                }
+                leading={<HabitMark rule={rule} />}
                 title={rule.title}
                 detail={
                   <>
@@ -420,19 +462,21 @@ function DayBody({
                     ) : null}
                   </>
                 }
-                onClick={() =>
-                  push({
-                    kind: 'checkin',
-                    personId: view.personId,
-                    ruleId: rule.id,
-                    day: view.day,
-                  })
-                }
+                onClick={() => open(rule.id)}
               />
             </li>
           );
         })}
       </ul>
+      {weekly.length > 0 && (
+        <WeeklyGroup
+          world={world}
+          personId={view.personId}
+          day={view.day}
+          rows={weekly}
+          onOpen={open}
+        />
+      )}
       {notes.length > 0 && (
         <section className="flex flex-col gap-2" aria-label="Notes">
           <h3 className="font-nx-serif text-nx-h3">Notes</h3>
@@ -448,6 +492,79 @@ function DayBody({
         </section>
       )}
     </div>
+  );
+}
+
+/** A habit's icon in a soft circle, at the start of a check-in row. */
+function HabitMark({ rule }: { rule: Rule }) {
+  return (
+    <span className="grid size-10 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
+      {createElement(habitIcon(rule), { size: 20, 'aria-hidden': true })}
+    </span>
+  );
+}
+
+/** "This week", or the week's dates when it is an earlier one: "Nov 9 – 15". */
+function weekName(world: World, day: DateString) {
+  const week = weekOf(world.challenge, day);
+  if (!week) return 'That week';
+  return world.today >= week.start && world.today <= week.end
+    ? 'This week'
+    : formatRange(week.start, week.end);
+}
+
+/**
+ * Weekly check-ins on a day, in their own small group under the daily ones: the week's count
+ * ("2 of 4") and that day's answer (Went, No visit). A row opens that check-in.
+ */
+function WeeklyGroup({
+  world,
+  personId,
+  day,
+  rows,
+  onOpen,
+}: {
+  world: World;
+  personId: string;
+  day: DateString;
+  rows: ReturnType<typeof dayCheckins>;
+  onOpen: (ruleId: string) => void;
+}) {
+  const name = weekName(world, day);
+  return (
+    <section className="flex flex-col gap-2" aria-label={name}>
+      <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
+        {name}
+      </h3>
+      <ul className="flex flex-col gap-2">
+        {rows.map(({ rule, pill }) => {
+          const week = weekProgress(world, personId, rule.id, day);
+          const label =
+            pill.status === 'done'
+              ? 'Went'
+              : pill.status === 'none'
+                ? 'No visit'
+                : pill.label;
+          return (
+            <li key={rule.id}>
+              <RowButton
+                glass={false}
+                leading={<HabitMark rule={rule} />}
+                title={rule.title}
+                detail={
+                  <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                    {week && `${week.have} of ${week.need}`}
+                    <StatusPill status={pill.status} label={label} />
+                  </span>
+                }
+                aria-label={`${rule.title}: ${week ? `${week.have} of ${week.need} ${name === 'This week' ? 'this week' : `the week of ${name}`}` : ''}, ${formatDay(day)}: ${label}`}
+                onClick={() => onOpen(rule.id)}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

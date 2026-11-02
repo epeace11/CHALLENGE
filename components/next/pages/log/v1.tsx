@@ -17,13 +17,14 @@ function AtAGlance({ ci, headingRef }: EndProps) {
   const { navigate } = useNav();
   const day = ci.day ?? '';
   const streak = streakAfter(ci.world, ci.me, day);
+  // Compact on phones, so the streak shows above the pinned bar at 375×812 without scrolling.
   return (
-    <section className="flex flex-col gap-5 pt-4 pb-4">
+    <section className="flex flex-col gap-4 pt-2 pb-4 sm:gap-5 sm:pt-4">
       <Enter>
         <h2
           ref={headingRef}
           tabIndex={-1}
-          className="font-nx-serif text-nx-h1 text-balance outline-none"
+          className="font-nx-serif text-nx-h2 text-balance outline-none sm:text-nx-h1"
         >
           {formatWeekday(day)} is logged
         </h2>

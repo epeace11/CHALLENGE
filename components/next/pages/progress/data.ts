@@ -31,6 +31,9 @@ import {
   lockTime,
   openCheckins,
   openDay,
+  pendingRequestFor,
+  plural,
+  pointOfEntry,
   reviewQueue,
   rulesFor,
   rulesOn,
@@ -101,11 +104,6 @@ export const BADGE_ICON: Record<string, LucideIcon> = {
 export type HabitStat = {
   rule: Rule;
   weekly: boolean;
-  /** Settled days done and missed (weeks, for a weekly rule). */
-  done: number;
-  missed: number;
-  /** done / (done + missed); null before anything settles. */
-  rate: number | null;
   current: number;
   best: number;
   unit: 'day' | 'week';
@@ -113,47 +111,14 @@ export type HabitStat = {
   week: ReturnType<typeof weekProgress>;
 };
 
-/** Every habit `personId` has, with its hit rate and streak, in the challenge's rule order. */
+/** Every habit `personId` has, with its streak (and this week, for a weekly one), in rule order. */
 export function habitStats(w: World, personId: string): HabitStat[] {
-  const c = w.challenge,
-    yesterday = shift(w.today, -1),
-    runs = streaks(w, personId);
-  return rulesFor(c, personId).map((rule) => {
+  const runs = streaks(w, personId);
+  return rulesFor(w.challenge, personId).map((rule) => {
     const run = runs.find((s) => s.rule.id === rule.id);
-    let done = 0,
-      missed = 0;
-    if (rule.kind === 'weekly') {
-      // Closed weeks that met their target, against closed weeks that fell short.
-      for (const week of weeksOf(c)) {
-        const need = weekTarget(rule, week, c);
-        if (!need || !isClosed(c, week.end, w.now)) continue;
-        const have = w.entries.filter(
-          (e) =>
-            e.personId === personId &&
-            e.ruleId === rule.id &&
-            e.day >= week.start &&
-            e.day <= week.end &&
-            countsForWeek(e),
-        ).length;
-        if (have >= need) done++;
-        else missed++;
-      }
-    } else {
-      const { from, to } = ruleSpan(rule, c);
-      const end = to < yesterday ? to : yesterday;
-      for (let d = from; d <= end; d = shift(d, 1)) {
-        if (!appliesOn(rule, d, c)) continue;
-        const s = entryPill(w, rule, entryFor(w, personId, rule.id, d), d);
-        if (s.status === 'done') done++;
-        else if (s.status === 'missed') missed++;
-      }
-    }
     return {
       rule,
       weekly: rule.kind === 'weekly',
-      done,
-      missed,
-      rate: done + missed ? done / (done + missed) : null,
       current: run?.current ?? 0,
       best: run?.best ?? 0,
       unit: run?.unit ?? 'day',
@@ -161,9 +126,6 @@ export function habitStats(w: World, personId: string): HabitStat[] {
     };
   });
 }
-
-/** "92%" */
-export const percent = (rate: number) => `${Math.round(rate * 100)}%`;
 
 /** "6 days" or "2 weeks". */
 export const runLength = (n: number, unit: 'day' | 'week') =>
@@ -269,93 +231,196 @@ export function sheetAction(
   return null;
 }
 
-/** Check-ins by how they stand: the parts of a whole-challenge or a habit bar. */
-export type Counts = {
-  done: number;
-  excused: number;
-  missed: number;
-  review: number;
-  open: number;
-  ahead: number;
-};
-
-const ZERO: Counts = {
-  done: 0,
-  excused: 0,
-  missed: 0,
-  review: 0,
-  open: 0,
-  ahead: 0,
-};
-
 /**
- * One habit's check-ins for one person, every day of the challenge: a daily habit counts its days,
- * a weekly habit (gym) its weeks (met, short, this week, still ahead).
+ * One person's record so far, on one habit or the whole challenge. Points and forgiven points come
+ * straight from the points (so they match Overview and Gifts; a point asked about is still a
+ * point); done and waiting count only days whose logging has closed, and only weeks that are over,
+ * so nothing still ahead is in the count. `of` is the sum of the parts.
  */
-export function habitCounts(w: World, personId: string, rule: Rule): Counts {
-  const out = { ...ZERO };
+export type Tally = {
+  /** Check-ins done (a weekly habit: weeks met). */
+  done: number;
+  /** Points: misses not forgiven, the ones asked about included. */
+  points: number;
+  forgiven: number;
+  /** Points with a forgiveness request still waiting. */
+  asked: number;
+  /** Answers still waiting for a review or a dispute. */
+  waiting: number;
+  of: number;
+  /** For a weekly habit's own count: weeks short, and weeks short with every point forgiven. */
+  short?: number;
+  excusedWeeks?: number;
+  unit: 'check-in' | 'day' | 'week';
+};
+
+/** The points one person has (on one habit, if given): active, forgiven, and asked about. */
+function pointsOf(w: World, personId: string, ruleId?: string) {
+  const all = w.points.filter(
+    (p) =>
+      p.personId === personId &&
+      !p.voided &&
+      (ruleId === undefined || p.ruleId === ruleId),
+  );
+  const active = all.filter((p) => !p.forgiven);
+  return {
+    points: active.length,
+    forgiven: all.length - active.length,
+    asked: active.filter((p) => pendingRequestFor(w, p.id)).length,
+  };
+}
+
+/** Done and waiting answers of a daily habit, on days whose logging has closed. Misses are points. */
+function dailyDone(w: World, personId: string, rule: Rule) {
+  const c = w.challenge,
+    { from, to } = ruleSpan(rule, c);
+  let done = 0,
+    waiting = 0;
+  for (let d = from; d <= to && d < w.today; d = shift(d, 1)) {
+    if (!appliesOn(rule, d, c) || !isClosed(c, d, w.now)) continue;
+    const entry = entryFor(w, personId, rule.id, d);
+    // A miss with a point (asked about or not) is counted with the points.
+    if (entry && pointOfEntry(w, entry.id)) continue;
+    const s = entryPill(w, rule, entry, d).status;
+    if (s === 'done') done++;
+    else if (s === 'review' || s === 'disputed') waiting++;
+  }
+  return { done, waiting };
+}
+
+/** A weekly habit's weeks that are over: visits that counted (up to the target), and how each week went. */
+function weeklyDone(w: World, personId: string, rule: Rule) {
   const c = w.challenge;
-  if (rule.kind === 'weekly') {
-    for (const week of weeksOf(c)) {
-      const need = weekTarget(rule, week, c);
-      if (!need) continue;
-      if (week.start > w.today) {
-        out.ahead++;
-        continue;
-      }
-      const have = w.entries.filter(
-        (e) =>
-          e.personId === personId &&
-          e.ruleId === rule.id &&
-          e.day >= week.start &&
-          e.day <= week.end &&
-          countsForWeek(e),
-      ).length;
-      if (have >= need) out.done++;
-      else if (isClosed(c, week.end, w.now)) out.missed++;
-      else out.open++;
+  let visits = 0,
+    met = 0,
+    short = 0,
+    excused = 0;
+  for (const week of weeksOf(c)) {
+    const need = weekTarget(rule, week, c);
+    if (!need || week.end >= w.today || !isClosed(c, week.end, w.now)) continue;
+    const have = w.entries.filter(
+      (e) =>
+        e.personId === personId &&
+        e.ruleId === rule.id &&
+        e.day >= week.start &&
+        e.day <= week.end &&
+        countsForWeek(e),
+    ).length;
+    visits += Math.min(have, need);
+    if (have >= need) {
+      met++;
+      continue;
     }
-    return out;
+    const pts = w.points.filter(
+      (p) =>
+        p.personId === personId &&
+        p.ruleId === rule.id &&
+        !p.voided &&
+        p.day >= week.start &&
+        p.day <= week.end,
+    );
+    if (pts.length > 0 && pts.every((p) => p.forgiven)) excused++;
+    else short++;
   }
-  for (const d of habitDays(w, personId, rule)) {
-    if (d.tone === null || d.tone === 'none') continue;
-    if (d.tone === 'disputed') out.review++;
-    else out[d.tone]++;
-  }
-  return out;
+  return { visits, met, short, excused };
 }
 
-/** Every habit of one person, added up: the whole challenge. */
-export function wholeCounts(w: World, personId: string): Counts {
-  const out = { ...ZERO };
+/** One habit for one person: days for a daily habit, weeks for a weekly one. */
+export function habitTally(w: World, personId: string, rule: Rule): Tally {
+  const p = pointsOf(w, personId, rule.id);
+  if (rule.kind === 'weekly') {
+    const wk = weeklyDone(w, personId, rule);
+    return {
+      ...p,
+      done: wk.met,
+      waiting: 0,
+      short: wk.short,
+      excusedWeeks: wk.excused,
+      of: wk.met + wk.short + wk.excused,
+      unit: 'week',
+    };
+  }
+  const d = dailyDone(w, personId, rule);
+  return {
+    ...p,
+    ...d,
+    of: d.done + d.waiting + p.points + p.forgiven,
+    unit: 'day',
+  };
+}
+
+/** Every habit of one person, as check-ins: each daily answer, and each weekly visit needed. */
+export function wholeTally(w: World, personId: string): Tally {
+  const p = pointsOf(w, personId);
+  let done = 0,
+    waiting = 0;
   for (const rule of rulesFor(w.challenge, personId)) {
-    const c = habitCounts(w, personId, rule);
-    for (const k of Object.keys(out) as (keyof Counts)[]) out[k] += c[k];
+    if (rule.kind === 'weekly') done += weeklyDone(w, personId, rule).visits;
+    else {
+      const d = dailyDone(w, personId, rule);
+      done += d.done;
+      waiting += d.waiting;
+    }
   }
-  return out;
+  return {
+    ...p,
+    done,
+    waiting,
+    of: done + waiting + p.points + p.forgiven,
+    unit: 'check-in',
+  };
 }
 
-export const totalOf = (c: Counts) =>
-  c.done + c.excused + c.missed + c.review + c.open + c.ahead;
+/** Joins facts so a wrapped line ends with the dot instead of starting with it. */
+const DOT = '\u00a0· ';
 
-/** "128 of 255 done · 38 missed · 12 forgiven · 7 waiting" (parts at 0 left out, but missed). */
-export function countsLine(c: Counts) {
+/** "9 points · 1 forgiven · 1 asked to forgive" (parts at 0 left out, but points). */
+export function pointsLine(t: Tally) {
   return [
-    `${c.done} of ${totalOf(c)} done`,
-    `${c.missed} missed`,
-    c.excused > 0 ? `${c.excused} forgiven` : '',
-    c.review > 0 ? `${c.review} waiting` : '',
+    plural(t.points, 'point'),
+    t.forgiven > 0 ? `${t.forgiven} forgiven` : '',
+    t.asked > 0 ? `${t.asked} asked to forgive` : '',
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(DOT);
 }
 
-/** The parts of a StackedBar, in the legend's order. */
-export const barParts = (c: Counts) => [
-  { tone: 'done' as const, value: c.done },
-  { tone: 'excused' as const, value: c.excused },
-  { tone: 'missed' as const, value: c.missed },
-  { tone: 'wait' as const, value: c.review },
-  { tone: 'accent' as const, value: c.open },
-  { tone: 'ahead' as const, value: c.ahead },
-];
+/**
+ * "92 of 99 done · 6 points · 1 waiting", "15 of 17 days done · 2 points · 1 asked to forgive",
+ * "1 of 2 weeks met · 1 point". Nothing still ahead is counted.
+ */
+export function tallyLine(t: Tally) {
+  const head =
+    t.unit === 'week'
+      ? `${t.done} of ${plural(t.of, 'week')} met`
+      : t.unit === 'day'
+        ? `${t.done} of ${plural(t.of, 'day')} done`
+        : `${t.done} of ${t.of} done`;
+  // A habit with no points says nothing about them; the whole challenge always says how many.
+  const quiet = t.unit !== 'check-in' && t.points === 0 && t.forgiven === 0;
+  return [
+    head,
+    quiet ? '' : pointsLine(t),
+    t.waiting > 0 ? `${t.waiting} waiting` : '',
+  ]
+    .filter(Boolean)
+    .join(DOT);
+}
+
+/**
+ * The parts of a StackedBar, in the legend's order: done, forgiven, points, waiting. A weekly habit
+ * counts weeks (met, all forgiven, short).
+ */
+export const barParts = (t: Tally) =>
+  t.unit === 'week'
+    ? [
+        { tone: 'done' as const, value: t.done },
+        { tone: 'excused' as const, value: t.excusedWeeks ?? 0 },
+        { tone: 'missed' as const, value: t.short ?? 0 },
+      ]
+    : [
+        { tone: 'done' as const, value: t.done },
+        { tone: 'excused' as const, value: t.forgiven },
+        { tone: 'missed' as const, value: t.points },
+        { tone: 'wait' as const, value: t.waiting },
+      ];

@@ -88,7 +88,7 @@ export function DaySquares({
     squares.some((s) => s.kind === k),
   );
   return (
-    <div className={cn('flex flex-col gap-4', className)}>
+    <div className={cn('flex flex-col gap-3 sm:gap-4', className)}>
       <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-7">
         {squares.map(({ rule, entry, kind, status }, i) => {
           const tone = TONE[kind];

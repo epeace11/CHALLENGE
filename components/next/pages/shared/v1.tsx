@@ -15,13 +15,7 @@ import {
   StatButton,
 } from '@/components/next/ui';
 import { plural } from '@/lib/next/selectors';
-import {
-  LookLabel,
-  RuleIcon,
-  SaveButton,
-  SharedBy,
-  SharedSheets,
-} from './details';
+import { RuleIcon, SaveButton, SharedBy, SharedSheets } from './details';
 import { costExample, costSequence, ruleFacts, sharedChallenge } from './facts';
 import { useSaveForLater } from './use-save-for-later';
 
@@ -47,7 +41,6 @@ export default function SharedV1() {
         <header className="nx-enter flex flex-col gap-3">
           <SharedBy by={shared.sharedBy} />
           <h1 className="nx-page-title">{shared.name}</h1>
-          <LookLabel look={shared.look} />
         </header>
 
         <Section index={1}>
@@ -60,7 +53,7 @@ export default function SharedV1() {
               onClick={() => setSheet('length')}
             />
             <StatButton
-              label="What misses cost"
+              label="What a point costs"
               value={costSequence(shared.step)}
               tone="accent"
               hint={costExample(shared)}

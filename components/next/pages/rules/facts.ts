@@ -51,6 +51,12 @@ export const whoLabel = (world: World, who: string) =>
 /** "Every day", "Sun–Thu", "4 days a week". */
 export const whenLabel = (rule: Rule) => formatWhen(rule);
 
+/** When it is asked, for a row under the rule's title; null when the title already says it ("Gym, 4 days a week"). */
+export function whenUnlessTitled(rule: Rule) {
+  const when = whenLabel(rule);
+  return rule.title.toLowerCase().includes(when.toLowerCase()) ? null : when;
+}
+
 /** How it is answered: "Yes or No", "A number: 60 min or less". */
 export function answerLabel(rule: Rule) {
   if (rule.kind === 'number' && rule.target)

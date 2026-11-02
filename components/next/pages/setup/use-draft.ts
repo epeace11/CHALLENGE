@@ -38,6 +38,15 @@ export function useDraft() {
   const removeRule = (id: string) =>
     setDraft((d) => ({ ...d, rules: d.rules.filter((r) => r.id !== id) }));
 
+  /** Puts a removed rule back at `index` (its old place), unless it is already there. */
+  const putBackRule = (rule: Rule, index: number) =>
+    setDraft((d) => {
+      if (d.rules.some((r) => r.id === rule.id)) return d;
+      const rules = [...d.rules];
+      rules.splice(Math.min(index, rules.length), 0, rule);
+      return { ...d, rules };
+    });
+
   return {
     draft,
     patch,
@@ -45,5 +54,6 @@ export function useDraft() {
     people,
     saveRule,
     removeRule,
+    putBackRule,
   };
 }

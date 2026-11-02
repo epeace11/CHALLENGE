@@ -85,6 +85,7 @@ export function RuleLine({
   tag?: string;
   onOpen?: (ruleId: string) => void;
 }) {
+  const detail = ruleDetail(rule);
   const inside = (
     <>
       <RuleIcon rule={rule} />
@@ -99,7 +100,7 @@ export function RuleLine({
             </span>
           )}
         </span>
-        <span className="text-nx-2 text-nx-ink-2">{ruleDetail(rule)}</span>
+        {detail && <span className="text-nx-2 text-nx-ink-2">{detail}</span>}
       </span>
     </>
   );
@@ -123,23 +124,40 @@ export function RuleLine({
 
 /* ── Facts and terms ───────────────────────────────────────────────────── */
 
-/** What signing means, one plain sentence each. */
+/** What signing means, one plain sentence each. `compact` sets them in 15px, closer together. */
 export function Terms({
   terms,
+  compact,
   className,
 }: {
   terms: readonly string[];
+  compact?: boolean;
   className?: string;
 }) {
   return (
-    <ul className={cn('flex flex-col gap-3.5', className)}>
+    <ul
+      className={cn('flex flex-col', compact ? 'gap-2' : 'gap-3.5', className)}
+    >
       {terms.map((term) => (
-        <li key={term} className="flex items-start gap-3.5">
+        <li
+          key={term}
+          className={cn('flex items-start', compact ? 'gap-2.5' : 'gap-3.5')}
+        >
           <span
             aria-hidden="true"
-            className="mt-[9px] size-2 shrink-0 rounded-full bg-nx-accent"
+            className={cn(
+              'shrink-0 rounded-full bg-nx-accent',
+              compact ? 'mt-2 size-1.5' : 'mt-[9px] size-2',
+            )}
           />
-          <p className="text-nx-body text-nx-ink">{term}</p>
+          <p
+            className={cn(
+              'text-nx-ink',
+              compact ? 'text-nx-2 text-pretty' : 'text-nx-body',
+            )}
+          >
+            {term}
+          </p>
         </li>
       ))}
     </ul>

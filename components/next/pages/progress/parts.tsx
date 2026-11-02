@@ -1,7 +1,7 @@
 'use client';
 import { useId, useState, type ReactNode } from 'react';
-import { ArrowRight, Flame } from 'lucide-react';
-import type { Badge, Person, Rule, World } from '@/lib/next/model';
+import { ArrowRight, ChevronRight, Flame } from 'lucide-react';
+import type { Person, Rule, World } from '@/lib/next/model';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
@@ -12,31 +12,29 @@ import {
   SegmentedControl,
   StackedBar,
   Stagger,
-  TapCard,
   useReducedMotion,
 } from '@/components/next/ui';
 import {
   badges,
   calendar,
-  formatDate,
   formatWeekday,
   keepNumbersWithWords,
+  nextBadge,
   openDay,
-  rulesFor,
-  shift,
 } from '@/lib/next/selectors';
-import { InlineBar } from './bar';
-import { Medal } from './medal';
+import { cn } from '@/lib/utils';
 import type { Detail } from './detail';
 import {
   barParts,
-  countsLine,
-  habitCounts,
   habitStats,
+  habitTally,
   lockWords,
   mainAction,
-  wholeCounts,
+  runLength,
+  tallyLine,
+  wholeTally,
   type HabitStat,
+  type Tally,
 } from './data';
 import { SimpleLegend, SimpleMonth } from './simple-month';
 import styles from './progress.module.css';
@@ -161,14 +159,14 @@ export function CalendarCard({
   );
 }
 
-/** One row per person: the counts and a bar of every check-in; a row shows that person's calendar. */
+/** One row per person: the counts and a bar of every check-in so far; a row shows that person's calendar. */
 export function WholeChallenge({ cal }: { cal: CalendarState }) {
   const world = useWorld();
   return (
     <Stagger className="flex flex-col gap-2.5">
       {[world.me, world.partner].map((p) => {
-        const counts = wholeCounts(world, p.id);
-        const line = countsLine(counts);
+        const tally = wholeTally(world, p.id);
+        const line = tallyLine(tally);
         return (
           <RowButton
             key={p.id}
@@ -180,7 +178,7 @@ export function WholeChallenge({ cal }: { cal: CalendarState }) {
                 <span className="block">{keepNumbersWithWords(line)}</span>
                 <StackedBar
                   className="mt-2.5"
-                  parts={barParts(counts)}
+                  parts={barParts(tally)}
                   label={line}
                 />
               </>
@@ -193,8 +191,20 @@ export function WholeChallenge({ cal }: { cal: CalendarState }) {
   );
 }
 
-/** Lowest hit rate first (either person's), ties to more misses; habits with nothing settled last. */
-function worstFirst(world: World) {
+/** A habit's rows for each person who has it, with their tallies. */
+type HabitRow = {
+  rule: Rule;
+  of: { person: Person; tally: Tally; stat: HabitStat }[];
+};
+
+/** How often it was done, over what has settled (points against it; forgiven and waiting aside). */
+const rateOf = (t: Tally) => {
+  const misses = t.unit === 'week' ? (t.short ?? 0) : t.points;
+  return t.done + misses ? t.done / (t.done + misses) : 2;
+};
+
+/** Lowest rate first (either person's), ties to more points; habits with nothing settled last. */
+export function worstFirst(world: World): HabitRow[] {
   const c = world.challenge;
   const people = [world.me, world.partner];
   const stats = new Map(
@@ -203,18 +213,21 @@ function worstFirst(world: World) {
       new Map(habitStats(world, p.id).map((s) => [s.rule.id, s])),
     ]),
   );
-  const rules = c.rules.filter((r) =>
-    people.some((p) => rulesFor(c, p.id).some((x) => x.id === r.id)),
-  );
-  const rows = rules.map((rule) => {
-    const of = people
-      .map((p) => ({ person: p, stat: stats.get(p.id)?.get(rule.id) }))
-      .filter((x): x is { person: Person; stat: HabitStat } => !!x.stat);
-    const rate = Math.min(...of.map((x) => x.stat.rate ?? 2));
-    const missed = of.reduce((n, x) => n + x.stat.missed, 0);
-    return { rule, of, rate, missed };
+  const rows = c.rules.flatMap((rule) => {
+    const of = people.flatMap((person) => {
+      const stat = stats.get(person.id)?.get(rule.id);
+      return stat
+        ? [{ person, stat, tally: habitTally(world, person.id, rule) }]
+        : [];
+    });
+    if (!of.length) return [];
+    const rate = Math.min(...of.map((x) => rateOf(x.tally)));
+    const points = of.reduce((n, x) => n + x.tally.points, 0);
+    return [{ rule, of, rate, points }];
   });
-  return rows.sort((a, b) => a.rate - b.rate || b.missed - a.missed);
+  return rows
+    .sort((a, b) => a.rate - b.rate || b.points - a.points)
+    .map(({ rule, of }) => ({ rule, of }));
 }
 
 /** Whose habit it is when only one person has it: "Only you", "Jordan only". */
@@ -224,65 +237,98 @@ function onlyWho(world: World, rule: Rule) {
 }
 
 /**
- * Every habit, worst first: one card per habit with a thin bar per person and the streak going
- * now. The card opens the habit, with a chip to switch between the two of you.
+ * One habit as a card that is one button: its name, a thin bar per person and the streak going now.
+ * Glass on the page, plain in a sheet.
+ */
+export function HabitCard({
+  row,
+  onOpen,
+  glass = true,
+}: {
+  row: HabitRow;
+  onOpen: (personId: string) => void;
+  glass?: boolean;
+}) {
+  const world = useWorld();
+  const { rule, of } = row;
+  const only = onlyWho(world, rule);
+  return (
+    <button
+      type="button"
+      className={cn(
+        glass ? 'nx-glass' : 'nx-card',
+        'nx-tappable nx-pad-sm relative items-start gap-4 sm:p-5',
+      )}
+      onClick={() => onOpen(of[0].person.id)}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-baseline gap-x-3">
+          <span className="text-nx-body font-semibold text-nx-ink">
+            {rule.title}
+          </span>
+          {only && <span className="text-nx-2 text-nx-ink-2">{only}</span>}
+        </span>
+        <span className="mt-3 flex flex-col gap-2.5">
+          {of.map(({ person, tally, stat }) => (
+            <HabitLine
+              key={person.id}
+              person={person}
+              tally={tally}
+              stat={stat}
+            />
+          ))}
+        </span>
+      </span>
+      <ChevronRight
+        className="nx-row-chevron mt-0.5"
+        size={22}
+        aria-hidden="true"
+      />
+    </button>
+  );
+}
+
+/** How many habit cards the page shows before "All 8 habits". */
+const SHOWN = 3;
+
+/**
+ * The three weakest habits, worst first, then a row that opens every habit in the sheet. A card
+ * opens its habit, with a chip to switch between the two of you.
  */
 export function ByHabit({ detail }: { detail: Detail }) {
   const world = useWorld();
+  const rows = worstFirst(world);
   return (
     <Stagger className="flex flex-col gap-2.5">
-      {worstFirst(world).map(({ rule, of }) => {
-        const only = onlyWho(world, rule);
-        return (
-          <TapCard
-            key={rule.id}
-            pad="sm"
-            className="sm:p-5"
-            onClick={() =>
-              detail.show({
-                kind: 'habit',
-                personId: of[0].person.id,
-                ruleId: rule.id,
-              })
-            }
-          >
-            <span className="flex flex-wrap items-baseline gap-x-3">
-              <span className="text-nx-body font-semibold text-nx-ink">
-                {rule.title}
-              </span>
-              {only && <span className="text-nx-2 text-nx-ink-2">{only}</span>}
-            </span>
-            <span className="mt-3 flex flex-col gap-2.5">
-              {of.map(({ person, stat }) => (
-                <HabitLine
-                  key={person.id}
-                  world={world}
-                  person={person}
-                  rule={rule}
-                  stat={stat}
-                />
-              ))}
-            </span>
-          </TapCard>
-        );
-      })}
+      {rows.slice(0, SHOWN).map((row) => (
+        <HabitCard
+          key={row.rule.id}
+          row={row}
+          onOpen={(personId) =>
+            detail.show({ kind: 'habit', personId, ruleId: row.rule.id })
+          }
+        />
+      ))}
+      {rows.length > SHOWN && (
+        <RowButton
+          title={`All ${rows.length} habits`}
+          onClick={() => detail.show({ kind: 'habits' })}
+        />
+      )}
     </Stagger>
   );
 }
 
 function HabitLine({
-  world,
   person,
-  rule,
+  tally,
   stat,
 }: {
-  world: World;
   person: Person;
-  rule: Rule;
+  tally: Tally;
   stat: HabitStat;
 }) {
-  const counts = habitCounts(world, person.id, rule);
-  const unit = stat.unit === 'week' ? 'week' : 'day';
+  const weekly = stat.unit === 'week';
   return (
     <span className="flex w-full items-center gap-2">
       <span
@@ -294,17 +340,30 @@ function HabitLine({
       <StackedBar
         size="sm"
         className="min-w-0 flex-1"
-        parts={barParts(counts)}
-        label={`${person.name}: ${countsLine(counts)}`}
+        parts={barParts(tally)}
+        label={`${person.name}: ${tallyLine(tally)}`}
       />
-      <span className="inline-flex w-11 shrink-0 items-center justify-end gap-1 text-nx-2 text-nx-ink-2 tabular-nums">
+      {/* A weekly streak says "weeks", so it never reads as days. */}
+      <span
+        className={cn(
+          'inline-flex shrink-0 items-center justify-end gap-1 text-nx-2 whitespace-nowrap text-nx-ink-2 tabular-nums',
+          weekly ? 'w-20' : 'w-11',
+        )}
+      >
         {stat.current > 0 && (
           <>
             <Flame size={16} className="text-nx-accent" aria-hidden="true" />
-            {stat.current}
-            <span className="sr-only">
-              {` ${stat.current === 1 ? unit : `${unit}s`} in a row`}
-            </span>
+            {weekly ? (
+              runLength(stat.current, 'week')
+            ) : (
+              <>
+                {stat.current}
+                <span className="sr-only">
+                  {` ${stat.current === 1 ? 'day' : 'days'}`}
+                </span>
+              </>
+            )}
+            <span className="sr-only"> in a row</span>
           </>
         )}
       </span>
@@ -312,112 +371,37 @@ function HabitLine({
   );
 }
 
-/** Earned in the last week: marked New. */
-const isNew = (world: World, b: Badge) =>
-  !!b.earnedOn && b.earnedOn >= shift(world.today, -7);
-
 /**
- * Both people's badges: a row with how many are earned (it opens the full list), the earned ones as
- * a grid, and the ones still to earn with how close each is. Every badge opens what it is for.
+ * One row per person: how many badges are earned and the next one with how close it is. A row
+ * opens that person's badges.
  */
 export function BadgesBoth({ detail }: { detail: Detail }) {
   const world = useWorld();
   return (
-    <div className="flex flex-col gap-8">
+    <Stagger className="flex flex-col gap-2.5">
       {[world.me, world.partner].map((p) => {
         const all = badges(world, p.id);
-        const earned = all.filter((b) => b.earned);
-        const rest = all.filter((b) => !b.earned);
-        const open = (badgeId: string) =>
-          detail.show({ kind: 'badge', personId: p.id, badgeId });
+        const earned = all.filter((b) => b.earned).length;
+        const next = nextBadge(world, p.id);
+        const line = [
+          `${earned} of ${all.length} earned`,
+          next?.progress
+            ? `next:\u00a0${next.title}, ${next.progress.have} of ${next.progress.need}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' · ');
         return (
-          <section
+          <RowButton
             key={p.id}
-            className="flex flex-col gap-3"
-            aria-label={`${youOr(world, p)}: badges`}
-          >
-            <RowButton
-              leading={<Avatar person={p} decorative />}
-              title={youOr(world, p)}
-              detail={
-                <>
-                  <span className="block">
-                    {earned.length} of {all.length} earned
-                  </span>
-                  <InlineBar
-                    className="mt-2"
-                    value={earned.length}
-                    max={all.length}
-                  />
-                </>
-              }
-              onClick={() => detail.show({ kind: 'badges', personId: p.id })}
-            />
-            {earned.length > 0 && (
-              <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                {earned.map((b) => (
-                  <li key={b.id} className="flex">
-                    <button
-                      type="button"
-                      className="nx-card nx-press flex min-h-11 flex-1 flex-col items-center gap-2 px-3 py-4 text-center"
-                      onClick={() => open(b.id)}
-                    >
-                      <Medal id={b.id} earned size={52} />
-                      <span className="text-nx-body font-semibold text-nx-ink">
-                        {b.title}
-                      </span>
-                      <span className="text-nx-2 text-nx-ink-2">
-                        {b.earnedOn ? formatDate(b.earnedOn) : ''}
-                      </span>
-                      {isNew(world, b) && (
-                        <span className="rounded-full bg-nx-accent-soft px-2.5 py-0.5 text-nx-min font-semibold text-nx-accent">
-                          New
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {rest.length > 0 && (
-              <>
-                <h3 className="mt-2 text-nx-2 font-semibold text-nx-ink-2">
-                  Still to earn
-                </h3>
-                <ul className="flex flex-col gap-2">
-                  {rest.map((b) => (
-                    <li key={b.id}>
-                      <RowButton
-                        glass={false}
-                        leading={<Medal id={b.id} earned={false} size={44} />}
-                        title={b.title}
-                        detail={
-                          b.progress ? (
-                            <>
-                              <span className="block">
-                                {b.progress.have} of {b.progress.need}{' '}
-                                {b.progress.unit}
-                              </span>
-                              <InlineBar
-                                className="mt-2"
-                                value={b.progress.have}
-                                max={b.progress.need}
-                              />
-                            </>
-                          ) : (
-                            b.how
-                          )
-                        }
-                        onClick={() => open(b.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </section>
+            leading={<Avatar person={p} decorative />}
+            title={youOr(world, p)}
+            detail={line}
+            aria-label={`${youOr(world, p)}: badges, ${line}`}
+            onClick={() => detail.show({ kind: 'badges', personId: p.id })}
+          />
         );
       })}
-    </div>
+    </Stagger>
   );
 }

@@ -25,7 +25,6 @@ import {
 } from '@/components/next/ui';
 import { formatMoney, plural } from '@/lib/next/selectors';
 import {
-  headline,
   notification,
   recapAction,
   recapOf,
@@ -80,7 +79,7 @@ export default function RecapV2() {
     <AppFrame>
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-5">
-          <PageTitle kicker={v.range} title="Monday recap" />
+          <PageTitle title="Monday recap" detail={v.range} />
           {!live && (
             <NotificationCard
               title={note.title}
@@ -91,7 +90,8 @@ export default function RecapV2() {
           )}
         </div>
 
-        <Section title={headline(world, v)} index={1}>
+        {/* Who won is the notification's title and the trophy below, so the heading names the numbers. */}
+        <Section title="Points and gifts" index={1}>
           <div className="grid grid-cols-2 gap-3">
             <StatButton
               label="You added"
@@ -109,18 +109,19 @@ export default function RecapV2() {
               hint={v.winner === world.partner.id ? wonHint : undefined}
               onClick={() => navigate('gifts')}
             />
+            {/* The gifts as they are now (what Gifts shows), and what last week added to them. */}
             <StatButton
               label="You get"
               value={v.gifts.me}
               format={formatMoney}
-              hint={`Up ${formatMoney(v.theirs.dollars)} last week`}
+              hint={`Now, up ${formatMoney(v.theirs.dollars)} last week`}
               onClick={() => navigate('gifts')}
             />
             <StatButton
               label={`${partner} gets`}
               value={v.gifts.partner}
               format={formatMoney}
-              hint={`Up ${formatMoney(v.mine.dollars)} last week`}
+              hint={`Now, up ${formatMoney(v.mine.dollars)} last week`}
               onClick={() => navigate('gifts')}
             />
           </div>

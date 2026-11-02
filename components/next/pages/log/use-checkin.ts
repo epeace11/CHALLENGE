@@ -81,12 +81,15 @@ export function outcomeOf(rule: Rule, d: Draft): Outcome {
   return rule.kind === 'weekly' ? 'rest' : 'miss';
 }
 
-/** Why Save is off, and whether to say so (an empty answer speaks for itself). */
+/** The part of a check-in that Save is waiting for: the answer, the screenshot, or the reason. */
+export type Field = 'answer' | 'proof' | 'reason';
+
+/** Why Save can't save yet, whether to say so (an empty answer speaks for itself), and where. */
 export function problemOf(
   rule: Rule,
   d: Draft,
   late: boolean,
-): { text: string; show: boolean } | null {
+): { text: string; show: boolean; field: Field } | null {
   const o = outcomeOf(rule, d);
   if (o === null)
     return {
@@ -95,15 +98,38 @@ export function problemOf(
           ? 'Enter a number to save.'
           : 'Choose Yes or No.',
       show: false,
+      field: 'answer',
     };
   if (o === 'yes' && rule.proof === 'required' && d.proofs.length === 0)
-    return { text: 'Add the screenshot to save.', show: true };
+    return { text: 'Add the screenshot to save.', show: true, field: 'proof' };
   if (o === 'miss' && !late && d.forgive && !d.reason.trim())
     return {
       text: 'Say why, or turn off the forgiveness request.',
       show: true,
+      field: 'reason',
     };
   return null;
+}
+
+/**
+ * Brings one part of a check-in's form into view, clear of the pinned Save bar, and focuses it:
+ * the number or Yes, the add-screenshot button, or the reason box. The form marks each part with
+ * `data-field` and the rule's id.
+ */
+function revealField(ruleId: string, field: Field) {
+  const box = document.querySelector<HTMLElement>(
+    `[data-field="${field}"][data-rule="${CSS.escape(ruleId)}"]`,
+  );
+  if (!box) return;
+  const target =
+    field === 'proof'
+      ? [...box.querySelectorAll<HTMLElement>('button')].pop()
+      : (box.querySelector<HTMLElement>(
+          'input:not([type="hidden"]), textarea',
+        ) ?? box.querySelector<HTMLElement>('button'));
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  box.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+  target?.focus({ preventScroll: true });
 }
 
 /** "Minutes", "Pages", "Steps": the number field's label. */
@@ -227,10 +253,18 @@ export function useCheckin({ top, heading }: Anchors) {
     if (problem) return problem.show || pressed ? problem.text : null;
     return pressed && unchanged(rule) ? 'Change the answer to save.' : null;
   };
-  /** Saves, or says why it can't. */
+  /** Saves, or says why it can't and brings what is missing into view, focused. */
   const trySave = (rule: Rule) => {
-    if (canSave(rule)) save(rule);
-    else setTried(key(rule));
+    if (canSave(rule)) {
+      save(rule);
+      return;
+    }
+    setTried(key(rule));
+    // An answer saved as it was: the answer is what to change.
+    revealField(
+      rule.id,
+      problemOf(rule, draftOf(rule), late)?.field ?? 'answer',
+    );
   };
   const drop = (rule: Rule) => {
     const k = key(rule);

@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { CheckCheck, ChevronRight, Expand, Undo2, X } from 'lucide-react';
 import type { Person, Proof, Rule, World } from '@/lib/next/model';
@@ -31,20 +31,23 @@ import {
   TextField,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
+import { STAMP } from './motion';
 import {
+  approveAllLabel,
   concedeEffect,
   forgiveEffect,
   missWhy,
   shownAnswer,
   waitingSummary,
   type AnswerItem,
+  type DayGroup,
   type DisputeItem,
   type ForgiveItem,
   type LateItem,
   type ReviewItem,
   type Shown,
 } from './queue';
-import type { Review } from './use-review';
+import type { Held, Review } from './use-review';
 
 /* ── Hooks ─────────────────────────────────────────────────────────────── */
 
@@ -72,6 +75,35 @@ export function useSheetFor<T>(): SheetFor<T> {
     },
   };
 }
+
+/**
+ * Moves focus after a decision, once no sheet is left on screen (a closing sheet hands focus back
+ * to whatever opened it as it goes, so this waits for that first). `focusLater(find)` focuses what
+ * `find` returns then; returning nothing leaves focus where it is.
+ */
+export function useFocusLater() {
+  const frame = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  return (find: () => HTMLElement | null | undefined) => {
+    cancelAnimationFrame(frame.current);
+    // About 1.5 s at most: far longer than a sheet takes to close.
+    let frames = 90;
+    const step = () => {
+      if (document.querySelector('.nx-sheet') && frames-- > 0) {
+        frame.current = requestAnimationFrame(step);
+        return;
+      }
+      find()?.focus();
+    };
+    frame.current = requestAnimationFrame(step);
+  };
+}
+
+/** The heading of the card on screen (or "All caught up") inside `root`, never one leaving. */
+export const cardHeading = (root: HTMLElement | null) =>
+  [...(root?.querySelectorAll<HTMLElement>('[data-card-heading]') ?? [])].find(
+    (h) => !h.closest('[inert]'),
+  );
 
 /* ── Small pieces ──────────────────────────────────────────────────────── */
 
@@ -169,10 +201,27 @@ type Size = 'md' | 'lg';
 const titleClass = (size: Size) =>
   cn('mt-1 font-nx-serif', size === 'lg' ? 'text-nx-h2' : 'text-nx-h3');
 
-/** An item's rule as its heading: the page's card is under the page title (h2), a sheet's body under the sheet's (h3). */
+/**
+ * An item's rule as its heading: the page's card is under the page title (h2), a sheet's body under
+ * the sheet's (h3). The card's heading takes focus after each decision, so it's focusable by script.
+ */
 function Title({ size, children }: { size: Size; children: ReactNode }) {
-  const Tag = size === 'lg' ? 'h2' : 'h3';
-  return <Tag className={titleClass(size)}>{children}</Tag>;
+  if (size === 'lg')
+    return (
+      <h2
+        tabIndex={-1}
+        data-card-heading
+        // Focus scrolls it into view with the card's top (its kicker) showing, below the sticky
+        // header from 1024px and the preview's bar (--nx-top-inset).
+        className={cn(
+          titleClass(size),
+          'scroll-mt-[calc(var(--nx-top-inset)_+_4rem)] lg:scroll-mt-[calc(var(--nx-top-inset)_+_8.25rem)]',
+        )}
+      >
+        {children}
+      </h2>
+    );
+  return <h3 className={titleClass(size)}>{children}</h3>;
 }
 
 /** The answer itself: "11,240 steps", "Yes", "Not logged". */
@@ -437,7 +486,122 @@ export function AnswerSummary({ item }: { item: AnswerItem | LateItem }) {
   );
 }
 
+/**
+ * The decision just made, with Undo while it waits to be sent: on the page where it was made, never
+ * a pop-up. A screen reader hears the decision.
+ */
+export function UndoLine({
+  held,
+  onUndo,
+  ref,
+  className,
+}: {
+  held: Held;
+  onUndo: () => void;
+  ref?: Ref<HTMLDivElement>;
+  className?: string;
+}) {
+  const s = STAMP[held.outcome];
+  const Icon = s.icon;
+  return (
+    <div
+      ref={ref}
+      tabIndex={-1}
+      className={cn(
+        'nx-enter flex min-h-12 items-center gap-3 rounded-nx py-1 pr-1 pl-4',
+        s.tint,
+        className,
+      )}
+    >
+      <Icon
+        size={20}
+        strokeWidth={2.4}
+        className={cn('shrink-0', s.ink)}
+        aria-hidden="true"
+      />
+      <output className="min-w-0 flex-1 text-nx-body text-nx-ink">
+        <span className={cn('font-semibold', s.ink)}>{s.label}</span> ·{' '}
+        {held.about}
+      </output>
+      <Button variant="quiet" onClick={onUndo}>
+        Undo
+      </Button>
+    </div>
+  );
+}
+
 /* ── Sheets ────────────────────────────────────────────────────────────── */
+
+/**
+ * "Approve both for Thursday": every answer of that day, each with its rule, the answer and its
+ * screenshot (which opens full screen), so nothing is approved unseen. The main button approves
+ * them together.
+ */
+export function ApproveDaySheet({
+  sheet,
+  partner,
+  onApprove,
+}: {
+  sheet: SheetFor<DayGroup>;
+  partner: Person;
+  onApprove: (group: DayGroup) => void;
+}) {
+  const group = sheet.target;
+  return (
+    <Sheet
+      open={sheet.open}
+      onOpenChange={sheet.setOpen}
+      title={
+        group
+          ? `${partner.name}’s answers for ${formatWeekday(group.day)}`
+          : `${partner.name}’s answers`
+      }
+      footer={
+        <>
+          <Button onClick={() => sheet.setOpen(false)}>Cancel</Button>
+          <Button
+            variant="primary"
+            icon={CheckCheck}
+            onClick={() => group && onApprove(group)}
+          >
+            {approveAllLabel(group?.items.length ?? 2)}
+          </Button>
+        </>
+      }
+    >
+      {group && (
+        <ul className="flex flex-col gap-2.5">
+          {group.items.map((item) => {
+            const shown = shownAnswer(item);
+            return (
+              <li
+                key={item.id}
+                className="flex items-center gap-4 rounded-nx bg-nx-sunken py-3 pr-3 pl-4"
+              >
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <p className="text-nx-body font-semibold">
+                    {item.rule.title}
+                  </p>
+                  <p className="font-nx-serif text-nx-h3 leading-tight tabular-nums">
+                    {formatAnswer(item.rule, shown)}
+                  </p>
+                  <TargetLine rule={item.rule} shown={shown} />
+                  {shown.note && (
+                    <p className="line-clamp-2 text-nx-2 text-nx-ink-2">
+                      <span className="sr-only">{partner.name}’s note: </span>“
+                      {shown.note}”
+                    </p>
+                  )}
+                </div>
+                <Shot proofs={shown.proofs} size="sm" />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Sheet>
+  );
+}
 
 /**
  * A sheet that asks for a few words before acting: a reason to dispute, a reply that keeps a
@@ -528,13 +692,15 @@ export function ReasonSheet({
   );
 }
 
-/** Dispute one of the partner's answers: a reason is required. */
+/** Dispute one of the partner's answers: a reason is required. `onDone` runs once it's sent. */
 export function DisputeSheet({
   sheet,
   review,
+  onDone,
 }: {
   sheet: SheetFor<AnswerItem>;
   review: Review;
+  onDone?: () => void;
 }) {
   const partner = review.world.partner.name;
   return (
@@ -543,15 +709,16 @@ export function DisputeSheet({
       open={sheet.open}
       onOpenChange={sheet.setOpen}
       title={`Dispute ${partner}’s answer`}
-      description={`No point while it’s open. It becomes a point only if ${partner} concedes, and you can withdraw it any time.`}
+      description={`No point while it’s open. It becomes a point only if ${partner} concedes; if it’s still open when the challenge ends, it isn’t one. You can withdraw it any time.`}
       label="Your reason"
       hint={`${partner} reads exactly what you write.`}
       placeholder="What looks off to you?"
       submit="Dispute"
-      missing="Write a reason so they know what to look at."
+      missing={`Write a reason so ${partner} knows what to look at.`}
       onSubmit={(reason) => {
         if (sheet.target) review.dispute(sheet.target, reason);
         sheet.setOpen(false);
+        onDone?.();
       }}
     >
       {sheet.target && <AnswerSummary item={sheet.target} />}
@@ -563,9 +730,11 @@ export function DisputeSheet({
 export function ReplySheet({
   sheet,
   review,
+  onDone,
 }: {
   sheet: SheetFor<DisputeItem>;
   review: Review;
+  onDone?: () => void;
 }) {
   const partner = review.world.partner;
   return (
@@ -582,6 +751,7 @@ export function ReplySheet({
       onSubmit={(text) => {
         if (sheet.target) review.reply(sheet.target, text);
         sheet.setOpen(false);
+        onDone?.();
       }}
     >
       {sheet.target && (
@@ -605,10 +775,28 @@ export function WaitingForPartner({
   review: Review;
   className?: string;
 }) {
-  const { world, state } = review;
+  const { world, state, held } = review;
   const [open, setOpen] = useState(false);
   const partner = world.partner;
   const { theirs, replied } = state;
+  // Conceding here shows its Undo line here (the sheet stays open); focus goes to it, and back to
+  // that Concede button after Undo. The sheet moves focus to itself on the next frame when the
+  // focused button goes, so this waits one frame more.
+  const line = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const focusSoon = (find: () => HTMLElement | null | undefined) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => find()?.focus()));
+  const concede = (item: DisputeItem) => {
+    review.concede(item, 'waiting');
+    focusSoon(() => line.current);
+  };
+  const undo = () => {
+    const id = held?.ids[0];
+    review.undo();
+    focusSoon(() =>
+      list.current?.querySelector<HTMLElement>(`[data-concede="${id}"]`),
+    );
+  };
   const answer = (rule: Rule, text: string) => (
     <>
       <p className="text-nx-body font-semibold">{rule.title}</p>
@@ -641,8 +829,16 @@ export function WaitingForPartner({
           </Button>
         }
       >
+        {held?.from === 'waiting' && (
+          <UndoLine
+            ref={line}
+            held={held}
+            onUndo={undo}
+            className={state.waiting > 0 ? 'mb-3' : undefined}
+          />
+        )}
         {state.waiting > 0 && (
-          <ul className="flex flex-col gap-3">
+          <ul ref={list} className="flex flex-col gap-3">
             {[...theirs.answers, ...theirs.corrections].map((i) => (
               <Card as="li" pad="sm" key={i.id} className="flex flex-col gap-2">
                 {answer(
@@ -701,8 +897,9 @@ export function WaitingForPartner({
               <Card as="li" pad="sm" key={i.id} className="flex flex-col gap-3">
                 <DisputeBody world={world} item={i} />
                 <Button
+                  data-concede={i.id}
                   className="self-start"
-                  onClick={() => review.concede(i)}
+                  onClick={() => concede(i)}
                 >
                   Concede
                 </Button>
@@ -745,7 +942,14 @@ export function CaughtUp({ world }: { world: World }) {
         >
           <CheckCheck size={30} strokeWidth={2.2} aria-hidden="true" />
         </motion.span>
-        <h2 className="font-nx-serif text-nx-h2">All caught up</h2>
+        <h2
+          tabIndex={-1}
+          data-card-heading
+          // Focus brings the whole card, its check included, into view (see Title).
+          className="scroll-mt-[calc(var(--nx-top-inset)_+_8.5rem)] font-nx-serif text-nx-h2 lg:scroll-mt-[calc(var(--nx-top-inset)_+_12.5rem)]"
+        >
+          All caught up
+        </h2>
         <p className="max-w-sm text-nx-body text-nx-ink-2">
           {world.partner.name}’s next answers show up here.
         </p>

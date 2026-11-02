@@ -1,6 +1,6 @@
 // The end of a day: the main action, the streak, short rule names.
 'use client';
-import { ArrowRight, ListChecks } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { DateString, Rule, World } from '@/lib/next/model';
 import { reviewQueue, streaks } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
@@ -21,25 +21,23 @@ export function streakAfter(w: World, personId: string, day: DateString) {
   return top && top.current >= 3 ? top : null;
 }
 
-/** Review the partner's answers when something waits for you, else Overview; the day's answers second. */
-export function NextActions({ ci, showAnswers }: EndActionsProps) {
+/**
+ * Review the partner's answers when something waits for you, else Overview. The day's answers are
+ * the squares above (each opens its answer), so there is no second button for them.
+ */
+export function NextActions({ ci }: EndActionsProps) {
   const { navigate } = useNav();
   const review = reviewQueue(ci.world, ci.me).count > 0;
   return (
-    <>
-      <Button
-        variant="primary"
-        size="lg"
-        full
-        iconEnd={ArrowRight}
-        className="sm:w-auto sm:min-w-56"
-        onClick={() => navigate(review ? 'review' : 'overview')}
-      >
-        {review ? `Review ${ci.partner}’s answers` : 'Go to Overview'}
-      </Button>
-      <Button icon={ListChecks} onClick={showAnswers}>
-        See answers
-      </Button>
-    </>
+    <Button
+      variant="primary"
+      size="lg"
+      full
+      iconEnd={ArrowRight}
+      className="sm:w-auto sm:min-w-56"
+      onClick={() => navigate(review ? 'review' : 'overview')}
+    >
+      {review ? `Review ${ci.partner}’s answers` : 'Go to Overview'}
+    </Button>
   );
 }

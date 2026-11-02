@@ -141,24 +141,32 @@ export function QuestionFields({
     : 0;
   const more = week ? Math.max(0, week.need - have) : 0;
 
+  // Save brings a missing part into view and focuses it (see revealField in use-checkin.ts).
+  const field = (name: 'answer' | 'proof' | 'reason') => ({
+    'data-field': name,
+    'data-rule': rule.id,
+  });
+
   return (
     <div className={cn('flex flex-col gap-6', className)}>
-      {rule.kind === 'number' ? (
-        <NumberField
-          label={unitLabel(rule)}
-          value={draft.value}
-          onChange={(value) => ci.change(rule, { value })}
-          target={rule.target}
-          step={stepFor(rule)}
-          decimals={stepFor(rule) < 1}
-        />
-      ) : (
-        <YesNo
-          label={rule.question}
-          value={draft.done}
-          onChange={(done) => ci.change(rule, { done })}
-        />
-      )}
+      <div {...field('answer')}>
+        {rule.kind === 'number' ? (
+          <NumberField
+            label={unitLabel(rule)}
+            value={draft.value}
+            onChange={(value) => ci.change(rule, { value })}
+            target={rule.target}
+            step={stepFor(rule)}
+            decimals={stepFor(rule) < 1}
+          />
+        ) : (
+          <YesNo
+            label={rule.question}
+            value={draft.done}
+            onChange={(done) => ci.change(rule, { done })}
+          />
+        )}
+      </div>
 
       {week && (
         <button
@@ -188,7 +196,7 @@ export function QuestionFields({
       )}
 
       {rule.proof !== 'none' && (
-        <div className="flex flex-col gap-2.5">
+        <div {...field('proof')} className="flex flex-col gap-2.5">
           <p className="flex items-baseline justify-between gap-3">
             <span className="text-nx-2 font-semibold text-nx-ink">
               Screenshot
@@ -240,7 +248,7 @@ export function QuestionFields({
             label={`Ask ${partner} to forgive this`}
             description={`If ${partner} agrees, the point costs nothing.`}
           />
-          <div ref={reasonBox} className="empty:hidden">
+          <div ref={reasonBox} {...field('reason')} className="empty:hidden">
             {draft.forgive && (
               <TextField
                 className="nx-enter pb-2"

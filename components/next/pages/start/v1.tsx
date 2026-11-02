@@ -5,7 +5,7 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
-  Mic,
+  MessageSquareText,
   Plus,
   type LucideIcon,
 } from 'lucide-react';
@@ -83,8 +83,8 @@ export default function Start() {
               {!host && (
                 <StartRow
                   title="Say your rules"
-                  detail="Say them in one sentence"
-                  icon={Mic}
+                  detail="Type or dictate them in a sentence"
+                  icon={MessageSquareText}
                   onClick={() => navigate('say')}
                 />
               )}

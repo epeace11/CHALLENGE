@@ -34,7 +34,7 @@ export type PointRow = {
   /** What it adds to the gift now: its place times the step; 0 once forgiven. */
   cost: number;
   forgiven: boolean;
-  /** Why it is a point, in a few words: "Answered No", "95 min", "Not logged". */
+  /** Why it is a point, in a few words: "Missed", "95 min", "Not logged". */
   why: string;
   /** The note its owner wrote with the answer. */
   note: string;
@@ -62,7 +62,7 @@ function whyText(w: World, point: Point, rule: Rule, entry?: Entry) {
   }
   return rule.kind === 'number' && entry?.value !== undefined
     ? formatValue(rule, entry.value)
-    : 'Answered No';
+    : 'Missed';
 }
 
 /** A person's points, oldest first (the order that sets their price), forgiven ones included. */

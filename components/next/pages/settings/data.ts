@@ -1,5 +1,12 @@
 import type { Challenge, Person, World } from '@/lib/next/model';
-import { activePoints, formatMoney, giftTotal } from '@/lib/next/selectors';
+import {
+  activePoints,
+  formatMoney,
+  formatWeekday,
+  giftTotal,
+  openCheckins,
+  openDays,
+} from '@/lib/next/selectors';
 
 /**
  * Settings on the sample world: renaming yourself, reminder times, the challenge change you propose
@@ -61,20 +68,20 @@ export const termsOf = (c: Challenge): Terms => ({
   cap: c.cap,
 });
 
-/** "The first point costs $1, the second $2". */
-export const stepLine = (step: number) =>
-  `The first point costs ${formatMoney(step)}, the second ${formatMoney(2 * step)}`;
+/** "Then $2, $3, and so on.": how the points after the first grow, under "First point: $1". */
+export const thenLine = (step: number) =>
+  `Then ${formatMoney(2 * step)}, ${formatMoney(3 * step)}, and so on.`;
 
 export const capLine = (cap: number | null) =>
   cap === null ? 'No cap' : `No gift goes over ${formatMoney(cap)}`;
 
-/** What would change, in plain words: "First miss: $1 → $2". Empty when nothing would. */
+/** What would change, in plain words: "First point: $1 → $2". Empty when nothing would. */
 export function changesOf(now: Terms, next: Terms) {
   const out: string[] = [];
   if (next.name.trim() !== now.name) out.push(`Name: ${next.name.trim()}`);
   if (next.step !== now.step)
     out.push(
-      `First miss: ${formatMoney(now.step)} → ${formatMoney(next.step)}`,
+      `First point: ${formatMoney(now.step)} → ${formatMoney(next.step)}`,
     );
   if (next.cap !== now.cap)
     out.push(
@@ -102,6 +109,25 @@ export function giftsUnder(w: World, t: Pick<Terms, 'step' | 'cap'>) {
   return {
     me: giftTotal(activePoints(w, w.partner.id).length, t.step, t.cap),
     partner: giftTotal(activePoints(w, w.me.id).length, t.step, t.cap),
+  };
+}
+
+/**
+ * Where things would stand if the running challenge ended now: the days still open don't count
+ * (their answers and points go), so each gift is set by the points on days already closed.
+ * `left` is the viewer's check-ins still open on those days.
+ */
+export function ifEndedNow(w: World) {
+  const open = openDays(w);
+  const counted = (personId: string) =>
+    activePoints(w, personId).filter((p) => !open.includes(p.day)).length;
+  const { step, cap } = w.challenge;
+  return {
+    get: giftTotal(counted(w.partner.id), step, cap),
+    give: giftTotal(counted(w.me.id), step, cap),
+    /** The open days' names: "Thursday". */
+    open: open.map(formatWeekday),
+    left: open.reduce((n, day) => n + openCheckins(w, w.me.id, day).length, 0),
   };
 }
 

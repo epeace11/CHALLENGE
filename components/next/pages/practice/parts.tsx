@@ -65,7 +65,6 @@ export function Question({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
-        <p className="nx-kicker">{shortTitle(rule)}</p>
         <h2
           id={headingId}
           tabIndex={headingId ? -1 : undefined}
@@ -202,8 +201,8 @@ export function PartnerReview({ p }: { p: Practice }) {
                     </p>
                   )}
                   <p className="text-nx-2 text-nx-ink-2">
-                    It costs nothing while it is disputed. Accept it and it
-                    becomes a point, or reply so {partner} can take it back.
+                    It costs nothing while it is disputed. Concede it and it
+                    becomes a point, or reply so {partner} can withdraw it.
                   </p>
                 </div>
               )}
@@ -250,7 +249,7 @@ export function MissLine({
 }) {
   const r = p.result,
     partner = p.world.partner.name;
-  const sets = `Points set the gift you buy ${partner}.`;
+  const sets = `Your points set the gift you give ${partner}.`;
   const [title, line] =
     r.misses.length === 1
       ? [
@@ -260,7 +259,7 @@ export function MissLine({
       : r.misses.length > 1
         ? [
             'Your misses are points',
-            `${sets} Each one costs a step more than the last.`,
+            `${sets} Each point costs ${formatMoney(r.step)} more than the one before.`,
           ]
         : [
             'No misses, no points',
@@ -304,7 +303,9 @@ export function GiftSteps({
       onClick={onHow}
     >
       <span className="flex flex-col gap-1.5">
-        <span className="text-nx-2 text-nx-ink-2">Gift you buy {partner}</span>
+        <span className="text-nx-2 text-nx-ink-2">
+          The gift you give {partner}
+        </span>
         <span className="font-nx-serif text-nx-num-lg leading-none text-nx-accent">
           <CountUp value={r.total} format={formatMoney} />
         </span>
@@ -368,7 +369,7 @@ export function HowPointsSheet({
     'A disputed answer costs nothing until it is settled.',
     `${partner} can forgive a point. A forgiven point costs nothing.`,
     c.cap !== null ? `A gift never goes over ${formatMoney(c.cap)}.` : null,
-    'When the challenge ends, each of you buys the other a gift worth your own points.',
+    `Your points set the gift you give ${partner}, and ${partner}’s points set the gift you get. You give them when the challenge ends.`,
   ].filter(Boolean) as string[];
   return (
     <Sheet

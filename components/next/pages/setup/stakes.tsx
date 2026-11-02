@@ -4,7 +4,7 @@ import type { Person } from '@/lib/next/model';
 import { formatMoney, giftTotal, plural } from '@/lib/next/selectors';
 import { Button, NumberField, Sheet, Toggle } from '@/components/next/ui';
 import { StepPicker } from './fields';
-import { DEFAULT_CAP, STEPS, stepLine } from './draft';
+import { DEFAULT_CAP, STEPS, pointsToCap, stepLine } from './draft';
 
 type Stakes = {
   gift: number;
@@ -69,12 +69,35 @@ export function StakesFields({
             step={10}
             min={1}
             max={100000}
+            hint={cap ? capLine(step, cap) : undefined}
             error={capError}
           />
         )}
       </div>
     </div>
   );
+}
+
+/** "Gifts stop growing after 14 points.": where the cap stops each gift. */
+const capLine = (step: number, cap: number) =>
+  `Gifts stop growing after ${plural(pointsToCap(step, cap), 'point')}.`;
+
+/**
+ * What the stakes preview stands for, under the number, so a big one reads plainly: "About 17
+ * misses each · 10 would cost $275". With the cap reached, it says so instead.
+ */
+export function stakesHint(stakes: Stakes, step: number, cap: number | null) {
+  const people = stakes.perPerson;
+  const misses = Math.round(
+    people.reduce((sum, p) => sum + p.misses, 0) / Math.max(1, people.length),
+  );
+  if (misses === 0) return 'See how it adds up';
+  const each = `About ${plural(misses, 'miss', 'misses')} each`;
+  if (cap !== null && misses >= pointsToCap(step, cap))
+    return `${each}, so each gift reaches the cap`;
+  if (misses > 10)
+    return `${each} · 10 would cost ${formatMoney(giftTotal(10, step, cap))}`;
+  return each;
 }
 
 /** How the stakes preview is worked out, in plain sentences. */
@@ -93,6 +116,7 @@ function StakesExplained({
 }) {
   const nameOf = (id: string) => people.find((p) => p.id === id)?.name ?? id;
   const [a, b] = stakes.perPerson;
+  const partner = people[1]?.name ?? 'your partner';
   return (
     <div className="flex flex-col gap-4 text-nx-body">
       <p>
@@ -100,8 +124,8 @@ function StakesExplained({
         {formatMoney(giftTotal(6, step, cap))}.
       </p>
       <p>
-        When the challenge ends, each of you buys the other a gift worth your
-        own points.
+        When the challenge ends, your points set the gift you give {partner},
+        and {partner}’s points set the gift you get.
       </p>
       {a && b && (
         <p className="text-nx-ink-2">
@@ -114,7 +138,9 @@ function StakesExplained({
         </p>
       )}
       {cap !== null && (
-        <p className="text-nx-ink-2">No gift goes over {formatMoney(cap)}.</p>
+        <p className="text-nx-ink-2">
+          No gift goes over {formatMoney(cap)}. {capLine(step, cap)}
+        </p>
       )}
     </div>
   );

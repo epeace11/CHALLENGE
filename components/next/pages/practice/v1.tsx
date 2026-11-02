@@ -94,9 +94,8 @@ function Step({
             )}
           >
             {title}
-            <span className="sr-only">
-              {state === 'done' ? ', done' : state === 'now' ? ', now' : ''}
-            </span>
+            {/* The current part is announced by aria-current on the item, so only a finished one says so here. */}
+            {state === 'done' && <span className="sr-only">, done</span>}
           </h2>
           {state === 'next' && preview && (
             <p className="text-nx-2 text-nx-ink-2">{preview}</p>
@@ -242,7 +241,7 @@ export default function PracticeV2() {
           <Step
             state={state('review')}
             title={`${partner} reviews them`}
-            preview={`${partner} approves or disputes each Yes.`}
+            preview={`${partner} approves or disputes each answer. A miss needs no review.`}
             anchor={review}
             headingId="practice-review"
           >
@@ -255,8 +254,8 @@ export default function PracticeV2() {
 
           <Step
             state={state('gift')}
-            title="What a miss costs"
-            preview="Each miss is a point, and points set the gift you buy."
+            title="What a point costs"
+            preview={`Each miss is a point, and your points set the gift you give ${partner}.`}
             anchor={gift}
             headingId="practice-gift"
             last

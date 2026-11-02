@@ -637,7 +637,7 @@ export function pactTerms(c: Challenge) {
     `We answer every check-in honestly, ${by}.`,
     'We review each other’s answers fairly, and say why when we dispute one.',
     `Each miss is a point. The first point costs ${money(1)}, the second ${money(2)}, and so on.`,
-    'When it ends, each of us buys the other a gift worth our own points.',
+    'When it ends, each of us gives the other a gift set by our own points.',
   ];
 }
 

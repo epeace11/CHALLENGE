@@ -1,12 +1,15 @@
 'use client';
 import { useState, type CSSProperties } from 'react';
-import type { DateString, DayColor } from '@/lib/next/model';
+import type { DateString, DayColor, World } from '@/lib/next/model';
 import {
   dayColor,
   dayMisses,
   formatDay,
+  formatRange,
   formatWeekday,
   missesLine,
+  weekOf,
+  weekProgress,
 } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -18,7 +21,13 @@ import {
   StatusPill,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
-import { COLOR_WORDS, dayActions, dayRows, type WeekDay } from './data';
+import {
+  COLOR_WORDS,
+  dayActions,
+  dayRows,
+  type DayRow,
+  type WeekDay,
+} from './data';
 
 /**
  * This week as a strip: a column per day (Monday to Sunday), with a day square for each person
@@ -236,6 +245,9 @@ export function DaySheet({
         <div className="flex flex-col gap-6">
           {people.map((p) => {
             const rows = dayRows(world, p.id, d);
+            // Daily check-ins first (the missed count counts these), then weekly ones by the week.
+            const daily = rows.filter((r) => r.rule.kind !== 'weekly');
+            const weekly = rows.filter((r) => r.rule.kind === 'weekly');
             const mine = p.id === world.me.id;
             const misses =
               dayColor(world, p.id, d) === 'missed'
@@ -253,7 +265,7 @@ export function DaySheet({
                   )}
                 </h3>
                 <ul className="mt-1 divide-y divide-nx-line">
-                  {rows.map((r) => (
+                  {daily.map((r) => (
                     <li key={r.rule.id} className="flex flex-col gap-2 py-3">
                       <div className="flex items-start gap-3">
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -284,11 +296,82 @@ export function DaySheet({
                     </li>
                   ))}
                 </ul>
+                {weekly.length > 0 && (
+                  <WeeklyRows personId={p.id} day={d} rows={weekly} />
+                )}
               </section>
             );
           })}
         </div>
       )}
     </Sheet>
+  );
+}
+
+/** "This week", or the week's dates when the day is in an earlier one: "Nov 9 – 15". */
+function weekName(world: World, day: DateString) {
+  const week = weekOf(world.challenge, day);
+  if (!week) return 'That week';
+  return world.today >= week.start && world.today <= week.end
+    ? 'This week'
+    : formatRange(week.start, week.end);
+}
+
+/**
+ * A day's weekly check-ins (gym), in their own small group under the daily ones: the week's count
+ * ("2 of 4") and that day's answer (Went, No visit).
+ */
+function WeeklyRows({
+  personId,
+  day,
+  rows,
+}: {
+  personId: string;
+  day: DateString;
+  rows: DayRow[];
+}) {
+  const world = useWorld();
+  const name = weekName(world, day);
+  return (
+    <div className="mt-2 flex flex-col">
+      <h4 className="pt-2 font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
+        {name}
+      </h4>
+      <ul className="divide-y divide-nx-line">
+        {rows.map((r) => {
+          const week = weekProgress(world, personId, r.rule.id, day);
+          const label =
+            r.pill.status === 'done'
+              ? 'Went'
+              : r.pill.status === 'none'
+                ? 'No visit'
+                : r.pill.label;
+          return (
+            <li key={r.rule.id} className="flex flex-col gap-2 py-3">
+              <div className="flex items-start gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <p className="text-nx-body text-nx-ink">{r.title}</p>
+                  {week && (
+                    <p className="text-nx-2 text-nx-ink-2">
+                      {week.have} of {week.need}
+                    </p>
+                  )}
+                </div>
+                <StatusPill
+                  status={r.pill.status}
+                  label={label}
+                  className="mt-0.5"
+                />
+              </div>
+              {r.said && (
+                <p className="rounded-nx-sm bg-nx-sunken px-3 py-2 text-nx-2 text-nx-ink">
+                  {r.said.by}: “{r.said.text}”
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

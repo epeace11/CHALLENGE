@@ -282,8 +282,8 @@ export function StakesRows({ glass = true }: { glass?: boolean }) {
       <RowButton
         glass={glass}
         leading={lead(Gift)}
-        title="Each point"
-        detail={`${formatMoney(c.step)} more than the one before${c.cap !== null ? `, up to ${formatMoney(c.cap)} a gift` : ''}`}
+        title="What a point costs"
+        detail={`The first costs ${formatMoney(c.step)}, the second ${formatMoney(2 * c.step)}, and so on${c.cap !== null ? `, up to ${formatMoney(c.cap)} a gift` : ''}`}
         onClick={() => navigate('gifts')}
       />
     </div>
@@ -345,7 +345,7 @@ export function HowItWorks({ className }: { className?: string }) {
     {
       id: 'review',
       q: 'How does reviewing work?',
-      a: 'You review each other’s Yes answers: approve one, or dispute it and say why. The owner concedes it, which makes it a point, or replies. Whoever raised it can withdraw it.',
+      a: 'You review each other’s answers, except misses, which are points straight away. Approve an answer, or dispute it and say why. The owner concedes it, which makes it a point, or replies. Whoever raised it can withdraw it.',
       more: (
         <AnswerLink icon={Inbox} onClick={() => navigate('review')}>
           Go to Review
@@ -365,12 +365,12 @@ export function HowItWorks({ className }: { className?: string }) {
     {
       id: 'forgive',
       q: 'How does forgiveness work?',
-      a: `With a No you can ask ${partner} to forgive it and say why. If ${partner} agrees, the point costs nothing. Either of you can also forgive a point without being asked.`,
+      a: `With a miss, you can ask ${partner} to forgive it and say why. If ${partner} agrees, the point costs nothing. Either of you can also forgive a point without being asked.`,
     },
     {
       id: 'cost',
       q: 'What does a point cost?',
-      a: 'Each point costs more than the one before, so misses add up faster as they pile up.',
+      a: `The first point costs ${formatMoney(c.step)}, the second ${formatMoney(2 * c.step)}, and so on, so misses add up faster as they pile up.${c.cap !== null ? ` No gift goes over ${formatMoney(c.cap)}.` : ''}`,
       more:
         mine > 0 ? (
           <AnswerLink icon={Gift} onClick={() => navigate('gifts')}>
@@ -382,7 +382,7 @@ export function HowItWorks({ className }: { className?: string }) {
     {
       id: 'gift',
       q: 'How does the gift work?',
-      a: 'When the challenge ends, each of you buys the other a gift worth your own points. Fewer points wins.',
+      a: `Your points set the gift you give ${partner}, and ${partner}’s points set the gift you get. You give them when the challenge ends. Fewer points wins.`,
       more: (
         <AnswerLink icon={Gift} onClick={() => navigate('gifts')}>
           See the gifts

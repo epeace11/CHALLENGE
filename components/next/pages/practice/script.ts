@@ -40,11 +40,12 @@ export function sampleShot(w: World): Proof {
   };
 }
 
+/** The sample answers, with the screenshot a required one needs, so every sample can be saved as it is. */
 const firstAnswers = (w: World): Answer[] =>
   w.practice.questions.map((q) => ({
     done: q.sample.done ?? null,
     value: q.sample.value ?? null,
-    proofs: [],
+    proofs: q.rule.proof === 'required' ? [sampleShot(w)] : [],
   }));
 
 /** A Yes, or a number that meets its target. */
@@ -110,13 +111,13 @@ export function outcomes(w: World, answers: Answer[]) {
   };
 }
 
-/** "See what the miss costs", worded for how many misses there are. */
+/** "See what the point costs", worded for how many misses (points) there are. */
 export const costButton = (misses: number) =>
   misses === 0
-    ? 'See what a miss costs'
+    ? 'See what a point costs'
     : misses === 1
-      ? 'See what the miss costs'
-      : 'See what the misses cost';
+      ? 'See what the point costs'
+      : 'See what the points cost';
 
 /** "The first point costs $1, the second $2, and so on." */
 export const ladderLine = (step: number) =>

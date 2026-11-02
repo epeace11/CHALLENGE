@@ -10,6 +10,7 @@ import {
   formatMoney,
   formatTarget,
   formatWhen,
+  giftTotal,
   lastDay,
   plural,
   stakesPreview,
@@ -91,6 +92,14 @@ export const stepLine = (step: number) =>
 
 /** The cap suggested when the cap is switched on, until it is changed. */
 export const DEFAULT_CAP = 100;
+
+/** How many points take a gift to `cap`: points after that cost nothing. */
+export function pointsToCap(step: number, cap: number) {
+  if (!(step > 0) || !(cap > 0)) return 1;
+  let n = 1;
+  while (giftTotal(n, step) < cap) n++;
+  return n;
+}
 
 /* ── Deadline ──────────────────────────────────────────────────────────── */
 

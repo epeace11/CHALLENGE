@@ -84,7 +84,7 @@ export const FALL_RULES: Rule[] = [
     'Sleep',
     'In bed by 11 pm, then read',
     'Were you in bed by 11 pm, reading until you fell asleep?',
-    'In bed with the lights low by 11 pm, reading until you fall asleep.',
+    'Lights low, and a book or e-reader instead of a phone.',
     { days: SUN_THU },
   ),
   yesNo(
@@ -720,7 +720,7 @@ const PACT: Pact = {
     'We answer every check-in honestly, by 11:59 pm the next day.',
     'We review each other’s answers fairly, and say why when we dispute one.',
     'Each miss is a point. The first point costs $1, the second $2, and so on.',
-    'When it ends, each of us buys the other a gift worth our own points.',
+    'When it ends, each of us gives the other a gift set by our own points.',
   ],
   signatures: [
     { personId: MAYA.id, signedAt: at('2026-10-31', '21:14') },

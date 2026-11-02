@@ -154,7 +154,7 @@ export function KitGallery() {
             onClick={() => navigate('review')}
           />
           <StatButton
-            label="Your gift"
+            label="The gift you get"
             value={gets(world, me)}
             format={formatMoney}
             hint="From Jordan’s 9 points"
@@ -371,7 +371,8 @@ export function KitGallery() {
           }
         >
           <p className="text-nx-body">
-            Jordan has 9 points, so your gift is at $45. His next miss adds $10.
+            Jordan has 9 points, so the gift you get is at $45. Jordan’s next
+            miss adds $10.
           </p>
         </Sheet>
       </Section>

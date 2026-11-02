@@ -88,7 +88,7 @@ export const shownAnswer = (item: AnswerItem | LateItem): Shown =>
     ? item.entry.correction
     : item.entry;
 
-/** Why a point is a point, in a few words: "Answered No", "95 min", "Not logged", "3 of 4 that week". */
+/** Why a point is a point, in a few words: "Missed", "95 min", "Not logged", "3 of 4 that week". */
 export function missWhy(w: World, point: Point, rule: Rule, entry?: Entry) {
   if (point.reason === 'unlogged') return 'Not logged';
   if (point.reason === 'conceded') return 'Conceded after a dispute';
@@ -107,7 +107,7 @@ export function missWhy(w: World, point: Point, rule: Rule, entry?: Entry) {
   }
   return rule.kind === 'number' && entry?.value !== undefined
     ? formatValue(rule, entry.value)
-    : 'Answered No';
+    : 'Missed';
 }
 
 /** The viewer's gift now, and after forgiving the point a request is about. */
