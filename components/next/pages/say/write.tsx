@@ -10,7 +10,7 @@ export function RulesBox({
   value,
   onChange,
   error,
-  rows = 5,
+  rows = 4,
 }: {
   /** The wrapper, so the page can put the cursor back in the box. */
   ref?: Ref<HTMLDivElement>;
@@ -56,12 +56,17 @@ export function Example({
 }) {
   return (
     <Card pad="sm" className={className}>
-      <div className="flex flex-col gap-3">
-        <p className="text-nx-2 font-semibold text-nx-ink-2">Example to try</p>
-        <Sentence text={sentence} rules={[]} />
-        <div>
-          <Button onClick={onUse}>Use this example</Button>
+      {/* From 640px the button sits beside the sentence instead of under it. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <p className="text-nx-2 font-semibold text-nx-ink-2">
+            Example to try
+          </p>
+          <Sentence text={sentence} rules={[]} />
         </div>
+        <Button className="self-start sm:shrink-0" onClick={onUse}>
+          Use this example
+        </Button>
       </div>
     </Card>
   );

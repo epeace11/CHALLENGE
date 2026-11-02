@@ -13,7 +13,7 @@ import {
 } from '@/components/next/ui';
 import { DayAnswers, leftText } from './days';
 import { DayJournal } from './journal';
-import { QuestionFields, QuestionHead, SaveHint } from './question';
+import { QuestionFields, SaveHint } from './question';
 import type { Checkin } from './use-checkin';
 
 /**
@@ -76,7 +76,8 @@ export function ClosedDay({
         onOpenChange={(open) => {
           if (!open) ci.cancel();
         }}
-        title={shown?.title ?? 'Late answer'}
+        // The question is the title, so the body doesn't ask it again under the rule's name.
+        title={shown?.question ?? 'Late answer'}
         description={`${formatDay(day)}. It counts once ${partner} approves it.`}
         footer={
           shown && (
@@ -96,8 +97,8 @@ export function ClosedDay({
         }
       >
         {shown && (
-          <div className="flex flex-col gap-6">
-            <QuestionHead rule={shown} />
+          <div className="flex flex-col gap-5">
+            <p className="text-nx-body text-nx-ink-2">{shown.description}</p>
             <QuestionFields ci={ci} rule={shown} />
           </div>
         )}

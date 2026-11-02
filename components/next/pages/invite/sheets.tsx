@@ -208,7 +208,7 @@ function HowStep({
       </span>
       <div className="min-w-0 flex-1 pt-1.5">
         <h3 className="font-nx-sans text-nx-body font-semibold">{title}</h3>
-        <p className="mt-0.5 text-nx-body text-nx-ink-2">{children}</p>
+        <p className="mt-0.5 text-nx-2 text-nx-ink-2">{children}</p>
       </div>
     </li>
   );
@@ -228,7 +228,8 @@ function HowSheet({ flow }: { flow: InviteFlow }) {
         </Button>
       }
     >
-      <ol className="flex flex-col gap-5">
+      {/* Two to a row from 640px, so the five steps fit without scrolling. */}
+      <ol className="grid gap-5 sm:grid-cols-2 sm:gap-x-6">
         <HowStep icon={CircleCheckBig} title="Check in every day">
           Answer each rule for the day before, by {flow.deadline}. Some rules
           need a screenshot.

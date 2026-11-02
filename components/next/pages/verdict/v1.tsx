@@ -78,8 +78,8 @@ export default function VerdictV1() {
       back={{ to: 'home', label: 'Your challenges' }}
       aside={<SaveAsButton onClick={() => setSheet('save')} />}
     >
-      <div className="flex flex-col gap-6 sm:gap-8">
-        <header className="nx-enter flex flex-col gap-3 pt-2">
+      <div className="flex flex-col gap-4 sm:gap-8">
+        <header className="nx-enter flex flex-col gap-2 sm:gap-3 sm:pt-2">
           <h1 className={styles.result}>{resultTitle(v)}</h1>
           <p className="text-nx-lead text-nx-ink-2">
             <ResultLine v={v} onOpen={openGifts} />
@@ -119,7 +119,7 @@ export default function VerdictV1() {
 
         <GlassCard
           pad="none"
-          className="nx-enter grid divide-y divide-nx-line overflow-hidden sm:grid-cols-2 sm:divide-x sm:divide-y-0"
+          className="nx-enter grid grid-cols-2 divide-x divide-nx-line overflow-hidden"
           style={{ ['--nx-i' as string]: 3 } as CSSProperties}
         >
           <MiniRow
@@ -266,12 +266,12 @@ function GiftCard({
     >
       <button
         type="button"
-        className="nx-press relative flex flex-1 flex-col items-start rounded-t-nx-lg px-5 pt-5 pb-3 text-left transition-colors hover:bg-nx-accent-soft sm:px-6 sm:pt-6"
+        className="nx-press relative flex flex-1 flex-col items-start rounded-t-nx-lg px-5 pt-4 pb-2 text-left transition-colors hover:bg-nx-accent-soft sm:px-6 sm:pt-6 sm:pb-3"
         aria-haspopup="dialog"
         onClick={onOpen}
       >
         <ChevronRight
-          className="nx-row-chevron absolute top-5 right-4 sm:top-6 sm:right-5"
+          className="nx-row-chevron absolute top-4 right-4 sm:top-6 sm:right-5"
           size={22}
           aria-hidden="true"
         />
@@ -297,7 +297,7 @@ function GiftCard({
           </span>
         </span>
       </button>
-      <div className="flex min-h-[108px] flex-col justify-end gap-2.5 px-5 pt-2 pb-5 sm:min-h-[112px] sm:px-6 sm:pb-6">
+      <div className="flex flex-col justify-end px-5 pt-2 pb-4 sm:px-6 sm:pb-6">
         {done ? (
           <div
             className={cn(
@@ -330,22 +330,18 @@ function GiftCard({
             </Button>
           </div>
         ) : (
-          <>
-            <p className="text-nx-2 text-nx-ink-2">
-              {giving ? 'Not given yet' : 'Not received yet'}
-            </p>
-            <Button
-              ref={buttonRef}
-              variant={main ? 'primary' : 'secondary'}
-              size="lg"
-              full
-              icon={Check}
-              className="scroll-mb-6"
-              onClick={onMark}
-            >
-              {giving ? 'Mark as given' : 'Mark as received'}
-            </Button>
-          </>
+          // The button says it isn't given (or received) yet, so no line above it says so too.
+          <Button
+            ref={buttonRef}
+            variant={main ? 'primary' : 'secondary'}
+            size="lg"
+            full
+            icon={Check}
+            className="scroll-mb-6"
+            onClick={onMark}
+          >
+            {giving ? 'Mark as given' : 'Mark as received'}
+          </Button>
         )}
       </div>
     </GlassCard>
@@ -371,7 +367,8 @@ function MiniRow({
       aria-haspopup="dialog"
       onClick={onClick}
     >
-      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
+      {/* Side by side on phones too: the icon only where there's room for it. */}
+      <span className="hidden size-10 shrink-0 place-items-center rounded-full bg-nx-accent-soft text-nx-accent sm:grid">
         <Icon size={20} aria-hidden="true" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">

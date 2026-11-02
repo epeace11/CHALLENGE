@@ -119,22 +119,20 @@ export function BadgesSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="Badges earned">
-      <div className="flex flex-col gap-6">
+      {/* Side by side from 640px, so both lists fit without scrolling. */}
+      <div className="grid gap-4 sm:grid-cols-2">
         {[v.me, v.partner].map((s) => (
-          <section key={s.person.id} className="flex flex-col gap-2">
-            <h3 className="font-nx-serif text-nx-h3">
+          <section key={s.person.id} className="flex flex-col gap-1">
+            <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
               {s.isMe ? 'You' : s.person.name}
             </h3>
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col divide-y divide-nx-line">
               {s.badges.map((b) => {
                 const Icon = BADGE_ICON[b.id] ?? Sparkles;
                 return (
-                  <li
-                    key={b.id}
-                    className="flex min-h-14 items-center gap-3 rounded-nx border border-nx-line bg-nx-surface-2 px-4 py-2.5"
-                  >
-                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
-                      <Icon size={20} aria-hidden="true" />
+                  <li key={b.id} className="flex items-center gap-3 py-1.5">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
+                      <Icon size={18} aria-hidden="true" />
                     </span>
                     <span className="flex min-w-0 flex-col">
                       <span className="text-nx-body font-semibold">

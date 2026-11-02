@@ -2,6 +2,24 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 2, 2026 (nothing scrolls a little)
+
+Erin, on a habit's calendar sheet: "find everything that scrolls only a little and adjust it so it is not scrollable. Things are stacked way too much on top of each other … There needs to be more to the right." Every sheet and page was measured at 390×844 (a phone) and in a 700×668 window. Each one that was a little too tall was made shorter, not given a scrollbar. It's rule 11 in `README.md`'s checklist.
+
+- **A sheet's Back is an arrow before its title,** not a row of its own repeating the title above the content (the kit's `Sheet` takes `back`). Sheets may use 32px more of a short window, and keep less space above their buttons.
+- **A habit's calendar** (Progress) puts "16 of 17 days done" and "1 point · 13 days in a row" to the right of the You and Jordan chips. The days are 44px squares, and a weekly habit's weeks are one row of squares beside "Weeks" (met, short by 1, this week) instead of a list. Whose days these are is said once: by the chips, or the line under the title, never also by a chip of its own.
+- **A day's check-ins** (Progress, and a closed day on Check in) are one line each, the name with the status at the right. "Yes" beside Done and "No" beside Missed are gone; "33 min" stays under the name. Notes are a line, not a card.
+- **Overview's day sheet shows one person at a time:** You and Jordan chips at the top, each with that person's day square, so both are still seen at a glance. From 640px "39 min" follows the habit's name on its line.
+- **Badges** are two to a row on Progress. On the verdict, You and Jordan sit side by side from 640px in plain lists.
+- **Check in's "Choose a day"** shows the closed days as one row of day squares (Thu 12 to Wed 18), not seven rows.
+- **Check in** puts "3 left ›" beside the date ("Thu, Nov 19" on phones), with the progress bar and "4h 29m to go" on one line under it: no card of its own. "Add screenshot" is a low strip with the icon beside the label (it keeps the label). From 640px the answer and its screenshot sit side by side, and the question is its largest only on laptops. A late answer's sheet uses the question as its title instead of asking it twice.
+- **How it works** (Landing and Invite) and a theme's rules on Start are two to a row from 640px. Landing's four points are too.
+- **The verdict on a phone:** "Not given yet" is gone, since the button says it. Best streaks and Badges sit side by side, and the spacing is a little tighter.
+- **Practice's** title is for screen readers only. The sticky "Practice. Nothing here counts." banner already says what the page is.
+- **Shared and Say your rules** are a little tighter: the rules box is four lines, and the example's button sits beside it from 640px.
+
+Still scrolling, on purpose: long lists and forms (All 8 habits, the rule library, Edit rule, Propose a change), pages with much more than a screen (Overview, Progress, Gifts, Rules and help, Review, Recap, Settings, a closed day with its journal), and Practice in a window under about 750px tall (its last step's one-line preview sits under Save).
+
 ## Decisions, November 2, 2026 (fourth design critique)
 
 A fourth critique scored the app 27/40 (26, 28, 26, 27). It found no P0s and four P1s: money words that drift, two actions with no Undo, numbers that disagree between pages, and a Progress page 4,351px tall on a phone. Erin asked for everything to be fixed overnight without questions, so the calls below were made without her; each is small to reverse.

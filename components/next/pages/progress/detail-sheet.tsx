@@ -1,12 +1,13 @@
 'use client';
 import { createElement, useEffect, useRef, type ReactNode } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronRight } from 'lucide-react';
 import type { DateString, Rule, World } from '@/lib/next/model';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
   Button,
   Card,
+  DayIcon,
   Glide,
   PersonChip,
   ProgressBar,
@@ -14,7 +15,9 @@ import {
   RowButton,
   Sheet,
   StatusPill,
+  type DayTone,
 } from '@/components/next/ui';
+import { cn } from '@/lib/utils';
 import {
   badges,
   dateIn,
@@ -27,7 +30,6 @@ import {
   isClosed,
   nameOf,
   openDay,
-  personById,
   ruleById,
   rulesFor,
   streaks,
@@ -45,6 +47,7 @@ import { SimpleLegend, SimpleMonth, type SquareTone } from './simple-month';
 import styles from './progress.module.css';
 import type { Detail, DetailView } from './detail';
 import {
+  DOT,
   dayCheckins,
   habitDays,
   habitIcon,
@@ -81,28 +84,45 @@ function titleOf(w: World, view: DetailView) {
   }
 }
 
-function describe(w: World, view: DetailView) {
+/** What the Back arrow names: a check-in by its day too, since its title is the habit's. */
+function backLabel(w: World, view: DetailView) {
+  const title = titleOf(w, view);
+  return view.kind === 'checkin' ? `${title}, ${formatDay(view.day)}` : title;
+}
+
+/** Whether both people have a habit, so its sheet can switch between their days. */
+const bothHave = (w: World, ruleId: string) =>
+  [w.me, w.partner].every((p) =>
+    rulesFor(w.challenge, p.id).some((r) => r.id === ruleId),
+  );
+
+/** The line under the title. It says whose it is (the partner's), once, and nothing else repeats it. */
+function describe(w: World, view: DetailView, bothPeople?: boolean) {
   if (view.kind === 'habits') return 'Worst first.';
   const whose =
     view.personId === w.me.id ? null : nameOf(w, view.personId) || null;
+  const line = (...parts: (string | null | undefined)[]) =>
+    parts.filter(Boolean).join(' · ') || undefined;
   switch (view.kind) {
     case 'habit': {
       const rule = ruleById(w.challenge, view.ruleId);
       if (!rule) return undefined;
-      // A weekly habit's title already says how often, so it gets what counts instead.
-      return [
-        whose,
+      // The chips say whose days these are when both have the habit. A weekly habit's title
+      // already says how often, so it gets what counts instead.
+      return line(
+        bothPeople && bothHave(w, rule.id) ? null : whose,
         rule.kind === 'weekly' ? rule.description : formatWhen(rule),
-      ]
-        .filter(Boolean)
-        .join(' · ');
+      );
     }
     case 'day':
-      if (openDay(w) === view.day) return `Open ${lockWords(w, view.day)}`;
-      return whose ? `${whose}’s check-ins` : undefined;
+      return line(
+        whose && `${whose}’s check-ins`,
+        openDay(w) === view.day ? `Open ${lockWords(w, view.day)}` : null,
+      );
     case 'checkin':
-      // The Back button above names the day it came from.
-      return whose ? `${whose}’s check-in` : undefined;
+      return line(whose, formatDay(view.day));
+    case 'badge':
+      return line(whose);
     default:
       return undefined;
   }
@@ -160,7 +180,12 @@ export function DetailSheet({
         if (!open) detail.close();
       }}
       title={titleOf(world, top)}
-      description={describe(world, top)}
+      description={describe(world, top, bothPeople)}
+      back={
+        prev
+          ? { label: backLabel(world, prev), onClick: detail.back }
+          : undefined
+      }
       footer={
         action ? (
           <Button
@@ -174,16 +199,6 @@ export function DetailSheet({
       }
     >
       <div ref={body} tabIndex={-1} className="outline-none">
-        {prev && (
-          <Button
-            variant="quiet"
-            icon={ChevronLeft}
-            className="-mt-2 mb-2 -ml-3"
-            onClick={detail.back}
-          >
-            {titleOf(world, prev)}
-          </Button>
-        )}
         <Glide id={`${depth}-${JSON.stringify(top)}`} direction={detail.dir}>
           <ViewBody
             world={world}
@@ -265,12 +280,6 @@ function HabitsBody({
   );
 }
 
-function Whose({ world, personId }: { world: World; personId: string }) {
-  const person = personById(world, personId);
-  if (!person || personId === world.me.id) return null;
-  return <PersonChip person={person} className="self-start" />;
-}
-
 function HabitBody({
   world,
   view,
@@ -298,113 +307,136 @@ function HabitBody({
   }));
   const tones = new Set(squares.map((d) => d.color));
   const c = world.challenge;
-  const shared =
-    swap &&
-    [world.me, world.partner].every((p) =>
-      rulesFor(c, p.id).some((r) => r.id === rule.id),
-    );
+  const shared = swap && bothHave(world, rule.id);
+  const week = stat.weekly ? stat.week : null;
+  // How it stands, to the right of the chips: the count, then points and the run.
+  const head = week
+    ? `${week.have} of ${week.need} this week`
+    : tally.of === 0
+      ? 'Nothing settled yet'
+      : `${tally.done} of ${runLength(tally.of, 'day')} done`;
+  const sub = week
+    ? week.met
+      ? 'Done for the week'
+      : `${week.left} more, ${runLength(week.daysLeft, 'day')} left`
+    : [
+        // The same points as Overview and Gifts: one asked about is still a point.
+        tally.points > 0 || tally.forgiven > 0 ? pointsLine(tally) : '',
+        stat.current > 0
+          ? `${runLength(stat.current, 'day')} in a row${stat.best > stat.current ? `, best ${stat.best}` : ''}`
+          : stat.best > 0
+            ? `Best run ${runLength(stat.best, 'day')}`
+            : '',
+      ]
+        .filter(Boolean)
+        .join(DOT);
   return (
-    <div className="flex flex-col gap-5">
-      {shared ? (
-        <fieldset className="flex flex-wrap gap-2">
-          <legend className="sr-only">Whose days</legend>
-          {[world.me, world.partner].map((p) => (
-            <PersonChip
-              key={p.id}
-              person={p}
-              pressed={p.id === view.personId}
-              onClick={() => swap({ ...view, personId: p.id })}
-            >
-              {p.id === world.me.id ? 'You' : p.name}
-            </PersonChip>
-          ))}
-        </fieldset>
-      ) : (
-        <Whose world={world} personId={view.personId} />
-      )}
-      {stat.weekly && stat.week ? (
-        <div className="flex flex-col gap-3">
-          <p className="text-nx-body">
-            This week: {stat.week.have} of {stat.week.need}.{' '}
-            {stat.week.met
-              ? 'Done for the week.'
-              : `${stat.week.left} more to go, ${runLength(stat.week.daysLeft, 'day')} left.`}
-          </p>
-          <ProgressBar
-            value={stat.week.have}
-            max={stat.week.need}
-            segments
-            tone={stat.week.met ? 'done' : 'accent'}
-            label={`This week: ${stat.week.have} of ${stat.week.need}`}
-          />
-          <ul className="mt-1 flex flex-col divide-y divide-nx-line rounded-nx border border-nx-line">
-            {weeksOf(c).map((week) => {
-              const need = weekTarget(rule, week, c);
-              const have = world.entries.filter(
-                (e) =>
-                  e.personId === view.personId &&
-                  e.ruleId === rule.id &&
-                  e.day >= week.start &&
-                  e.day <= week.end &&
-                  countsForWeek(e),
-              ).length;
-              const closed = isClosed(c, week.end, world.now);
-              const started = week.start <= world.today;
-              const pill = !need
-                ? { status: 'none' as const, label: 'Nothing needed' }
-                : !started
-                  ? { status: 'none' as const, label: `Needs ${need}` }
-                  : have >= need
-                    ? { status: 'done' as const, label: 'Met' }
-                    : closed
-                      ? {
-                          status: 'missed' as const,
-                          label: `Short by ${need - have}`,
-                        }
-                      : { status: 'open' as const, label: 'This week' };
-              return (
-                <li
-                  key={week.start}
-                  className="flex min-h-14 items-center gap-3 px-4 py-2"
-                >
-                  <span className="flex-1 text-nx-body">
-                    {formatRange(week.start, week.end)}
-                  </span>
-                  <StatusPill status={pill.status} label={pill.label} />
-                </li>
-              );
-            })}
-          </ul>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        {shared && (
+          <fieldset className="flex gap-2">
+            <legend className="sr-only">Whose days</legend>
+            {[world.me, world.partner].map((p) => (
+              <PersonChip
+                key={p.id}
+                person={p}
+                pressed={p.id === view.personId}
+                onClick={() => swap({ ...view, personId: p.id })}
+              >
+                {p.id === world.me.id ? 'You' : p.name}
+              </PersonChip>
+            ))}
+          </fieldset>
+        )}
+        <div className={cn('min-w-0', shared && 'sm:ml-auto sm:text-right')}>
+          <p className="text-nx-body font-semibold">{head}</p>
+          {sub && <p className="text-nx-2 text-nx-ink-2">{sub}</p>}
         </div>
-      ) : (
-        <div className="flex flex-col gap-1">
-          <p className="text-nx-body">
-            {tally.of === 0
-              ? 'Nothing settled yet.'
-              : `Done on ${tally.done} of ${runLength(tally.of, 'day')}.`}{' '}
-            {stat.current > 0
-              ? `${runLength(stat.current, 'day')} in a row now${stat.best > stat.current ? `; best ${stat.best}.` : ', the longest yet.'}`
-              : stat.best > 0
-                ? `Best run: ${runLength(stat.best, 'day')}.`
-                : ''}
-          </p>
-          {/* The same points as Overview and Gifts: one asked about is still a point. */}
-          {(tally.points > 0 || tally.forgiven > 0) && (
-            <p className="text-nx-2 text-nx-ink-2">{pointsLine(tally)}</p>
-          )}
-        </div>
-      )}
-      <div className={`flex flex-col gap-4 ${styles.palette}`}>
+      </div>
+      <div className={`flex flex-col gap-3 ${styles.palette}`}>
+        {week && (
+          <WeekSquares world={world} personId={view.personId} rule={rule} />
+        )}
         <SimpleMonth
           days={squares}
           weekStart={c.weekStart}
           today={world.today}
           marked={from}
+          compact
           label={`${rule.title}, day by day`}
           onOpen={(day) => push({ kind: 'day', personId: view.personId, day })}
         />
         <SimpleLegend tones={tones} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * A weekly habit's weeks in one row of squares, drawn like the calendar's days: met, short (with
+ * how many it was short by), this week, or still ahead.
+ */
+function WeekSquares({
+  world,
+  personId,
+  rule,
+}: {
+  world: World;
+  personId: string;
+  rule: Rule;
+}) {
+  const c = world.challenge;
+  const weeks = weeksOf(c).map((week) => {
+    const need = weekTarget(rule, week, c);
+    const have = world.entries.filter(
+      (e) =>
+        e.personId === personId &&
+        e.ruleId === rule.id &&
+        e.day >= week.start &&
+        e.day <= week.end &&
+        countsForWeek(e),
+    ).length;
+    const short =
+      need > 0 && have < need && isClosed(c, week.end, world.now)
+        ? need - have
+        : 0;
+    const [tone, words]: [DayTone, string] = !need
+      ? ['none', 'nothing needed']
+      : week.start > world.today
+        ? ['ahead', `needs ${need}`]
+        : have >= need
+          ? ['done', 'met']
+          : short
+            ? ['missed', `short by ${short}`]
+            : ['open', `${have} of ${need} so far`];
+    return { week, tone, words, short };
+  });
+  return (
+    <div className="flex items-center gap-3">
+      <p className="text-nx-2 font-semibold text-nx-ink-2">Weeks</p>
+      <ul
+        className={cn(styles.weeks, 'min-w-0 flex-1')}
+        style={{ ['--weeks' as string]: weeks.length }}
+      >
+        {weeks.map(({ week, tone, words, short }) => (
+          <li
+            key={week.start}
+            className={cn('nx-day', styles.week)}
+            data-tone={tone}
+          >
+            <span aria-hidden="true">{formatDate(week.start)}</span>
+            <span className="flex items-center gap-0.5" aria-hidden="true">
+              <DayIcon tone={tone} size={14} />
+              {short > 0 && (
+                <span className="text-nx-min leading-none font-semibold">
+                  {short}
+                </span>
+              )}
+            </span>
+            <span className="sr-only">{`${formatRange(week.start, week.end)}: ${words}`}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -430,41 +462,37 @@ function DayBody({
   const open = (ruleId: string) =>
     push({ kind: 'checkin', personId: view.personId, ruleId, day: view.day });
   return (
-    <div className="flex flex-col gap-5">
-      <Whose world={world} personId={view.personId} />
+    <div className="flex flex-col gap-4">
       {misses && (
         <p className="text-nx-body font-semibold text-nx-missed">
           {missesLine(misses)}
         </p>
       )}
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col divide-y divide-nx-line">
         {daily.map(({ rule, entry, pill }) => {
-          // An open or unlogged check-in has no answer; its pill says so.
+          // An open or unlogged check-in has no answer; its pill says so. A Yes beside Done (or a
+          // No beside Missed) would say the same thing twice.
           const answer =
             pill.status === 'open' || !entry ? null : formatAnswer(rule, entry);
-          const shown = answer && answer !== pill.label ? answer : null;
+          const plain =
+            rule.kind === 'yesno' &&
+            (pill.status === 'done' || pill.status === 'missed');
+          const shown =
+            answer && answer !== pill.label && !plain ? answer : null;
           return (
-            <li key={rule.id}>
-              <RowButton
-                glass={false}
-                leading={<HabitMark rule={rule} />}
-                title={rule.title}
-                detail={
-                  <>
-                    <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                      {shown}
-                      {(pill.status !== 'none' || !shown) && (
-                        <StatusPill status={pill.status} label={pill.label} />
-                      )}
-                    </span>
-                    {entry?.note ? (
-                      <span className="mt-1.5 block">“{entry.note}”</span>
-                    ) : null}
-                  </>
-                }
-                onClick={() => open(rule.id)}
-              />
-            </li>
+            <CheckinRow
+              key={rule.id}
+              rule={rule}
+              sub={[shown, entry?.note ? `“${entry.note}”` : null]
+                .filter(Boolean)
+                .join(DOT)}
+              pill={
+                (pill.status !== 'none' || !shown) && (
+                  <StatusPill status={pill.status} label={pill.label} />
+                )
+              }
+              onClick={() => open(rule.id)}
+            />
           );
         })}
       </ul>
@@ -478,16 +506,19 @@ function DayBody({
         />
       )}
       {notes.length > 0 && (
-        <section className="flex flex-col gap-2" aria-label="Notes">
-          <h3 className="font-nx-serif text-nx-h3">Notes</h3>
+        <section className="flex flex-col gap-1.5" aria-label="Notes">
+          <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
+            Notes
+          </h3>
           {notes.map((n) => (
-            <Card key={n.id} pad="sm">
-              <p className="text-nx-body">{n.text}</p>
-              <p className="mt-1 text-nx-2 text-nx-ink-2">
-                {n.personId === world.me.id ? 'You' : nameOf(world, n.personId)}{' '}
-                · {formatTime(n.createdAt, world.challenge.timeZone)}
-              </p>
-            </Card>
+            <p key={n.id} className="text-pretty text-nx-body">
+              {n.text}{' '}
+              <span className="text-nx-2 text-nx-ink-2">
+                {n.personId === world.me.id ? 'You' : nameOf(world, n.personId)}
+                {DOT}
+                {formatTime(n.createdAt, world.challenge.timeZone)}
+              </span>
+            </p>
           ))}
         </section>
       )}
@@ -495,12 +526,50 @@ function DayBody({
   );
 }
 
-/** A habit's icon in a soft circle, at the start of a check-in row. */
-function HabitMark({ rule }: { rule: Rule }) {
+/**
+ * One check-in in a day's list, a single line where it fits: the habit's icon and name (a number
+ * answer or the note under it), how it stands, and a chevron. The rows share one divided list.
+ */
+function CheckinRow({
+  rule,
+  sub,
+  pill,
+  label,
+  onClick,
+}: {
+  rule: Rule;
+  sub?: ReactNode;
+  pill: ReactNode;
+  label?: string;
+  onClick: () => void;
+}) {
   return (
-    <span className="grid size-10 place-items-center rounded-full bg-nx-accent-soft text-nx-accent">
-      {createElement(habitIcon(rule), { size: 20, 'aria-hidden': true })}
-    </span>
+    <li>
+      <button
+        type="button"
+        className="nx-press flex min-h-14 w-full items-center gap-3 py-2 text-left"
+        aria-label={label}
+        onClick={onClick}
+      >
+        <span className="shrink-0 text-nx-accent">
+          {createElement(habitIcon(rule), { size: 20, 'aria-hidden': true })}
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-pretty text-nx-body font-semibold text-nx-ink">
+            {rule.title}
+          </span>
+          {sub && (
+            <span className="text-pretty text-nx-2 text-nx-ink-2">{sub}</span>
+          )}
+        </span>
+        {pill}
+        <ChevronRight
+          size={20}
+          aria-hidden="true"
+          className="shrink-0 text-nx-accent"
+        />
+      </button>
+    </li>
   );
 }
 
@@ -532,11 +601,11 @@ function WeeklyGroup({
 }) {
   const name = weekName(world, day);
   return (
-    <section className="flex flex-col gap-2" aria-label={name}>
+    <section className="flex flex-col" aria-label={name}>
       <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
         {name}
       </h3>
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col divide-y divide-nx-line">
         {rows.map(({ rule, pill }) => {
           const week = weekProgress(world, personId, rule.id, day);
           const label =
@@ -546,21 +615,14 @@ function WeeklyGroup({
                 ? 'No visit'
                 : pill.label;
           return (
-            <li key={rule.id}>
-              <RowButton
-                glass={false}
-                leading={<HabitMark rule={rule} />}
-                title={rule.title}
-                detail={
-                  <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                    {week && `${week.have} of ${week.need}`}
-                    <StatusPill status={pill.status} label={label} />
-                  </span>
-                }
-                aria-label={`${rule.title}: ${week ? `${week.have} of ${week.need} ${name === 'This week' ? 'this week' : `the week of ${name}`}` : ''}, ${formatDay(day)}: ${label}`}
-                onClick={() => onOpen(rule.id)}
-              />
-            </li>
+            <CheckinRow
+              key={rule.id}
+              rule={rule}
+              sub={week ? `${week.have} of ${week.need}` : undefined}
+              pill={<StatusPill status={pill.status} label={label} />}
+              label={`${rule.title}: ${week ? `${week.have} of ${week.need} ${name === 'This week' ? 'this week' : `the week of ${name}`}` : ''}, ${formatDay(day)}: ${label}`}
+              onClick={() => onOpen(rule.id)}
+            />
           );
         })}
       </ul>
@@ -596,7 +658,6 @@ function CheckinBody({
   const who = (id: string) => (id === world.me.id ? 'You' : nameOf(world, id));
   return (
     <div className="flex flex-col gap-5">
-      <Whose world={world} personId={view.personId} />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {shown && <span className="text-nx-lead font-semibold">{shown}</span>}
         <StatusPill status={pill.status} label={pill.label} />
@@ -676,7 +737,6 @@ function BadgeBody({
     : undefined;
   return (
     <div className="flex flex-col gap-5">
-      <Whose world={world} personId={view.personId} />
       <div className="flex items-center gap-4">
         <Medal id={badge.id} earned={badge.earned} size={72} />
         <div className="min-w-0">
@@ -731,18 +791,21 @@ function BadgesBody({
   const all = badges(world, view.personId);
   const earned = all.filter((b) => b.earned);
   const rest = all.filter((b) => !b.earned);
+  // Two to a row, so nine badges fit without scrolling. How to earn one is a tap away.
   const row = (b: (typeof all)[number]): ReactNode => (
-    <li key={b.id}>
+    <li key={b.id} className="flex">
       <RowButton
         glass={false}
-        leading={<Medal id={b.id} earned={b.earned} size={44} />}
+        chevron={false}
+        className="w-full gap-2.5 px-3 py-2.5"
+        leading={<Medal id={b.id} earned={b.earned} size={36} />}
         title={b.title}
         detail={
           b.earned && b.earnedOn
             ? `Earned ${formatDate(b.earnedOn)}`
             : b.progress && b.progress.have > 0
               ? `${b.progress.have} of ${b.progress.need} ${b.progress.unit}`
-              : b.how
+              : undefined
         }
         onClick={() =>
           push({ kind: 'badge', personId: view.personId, badgeId: b.id })
@@ -750,21 +813,19 @@ function BadgesBody({
       />
     </li>
   );
+  const group = (name: string, list: typeof all) =>
+    list.length > 0 && (
+      <section className="flex flex-col gap-2" aria-label={name}>
+        <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
+          {name}
+        </h3>
+        <ul className="grid grid-cols-2 gap-2">{list.map(row)}</ul>
+      </section>
+    );
   return (
-    <div className="flex flex-col gap-5">
-      <Whose world={world} personId={view.personId} />
-      {earned.length > 0 && (
-        <section className="flex flex-col gap-2" aria-label="Earned">
-          <h3 className="font-nx-serif text-nx-h3">Earned</h3>
-          <ul className="flex flex-col gap-2">{earned.map(row)}</ul>
-        </section>
-      )}
-      {rest.length > 0 && (
-        <section className="flex flex-col gap-2" aria-label="Not yet">
-          <h3 className="font-nx-serif text-nx-h3">Not yet</h3>
-          <ul className="flex flex-col gap-2">{rest.map(row)}</ul>
-        </section>
-      )}
+    <div className="flex flex-col gap-4">
+      {group('Earned', earned)}
+      {group('Not yet', rest)}
     </div>
   );
 }

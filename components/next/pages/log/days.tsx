@@ -1,5 +1,5 @@
 'use client';
-import { CalendarDays, Check } from 'lucide-react';
+import { CalendarDays, Check, ChevronRight } from 'lucide-react';
 import type { DateString, DayColor, Rule, World } from '@/lib/next/model';
 import {
   dayColor,
@@ -14,9 +14,10 @@ import {
   type PillStatus,
 } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
-import { RowButton, Sheet, StatusPill } from '@/components/next/ui';
+import { DayIcon, RowButton, Sheet, StatusPill } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import type { Checkin } from './use-checkin';
+import styles from './log.module.css';
 
 /** Closed days before today, most recent first: days a late answer can still change. */
 export function recentClosedDays(world: World, count = 7): DateString[] {
@@ -82,7 +83,7 @@ export function DaySheet({
   };
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="Choose a day">
-      <div className="flex flex-col gap-7">
+      <div className="flex flex-col gap-5">
         {ci.loggable.length > 0 && (
           <section className="flex flex-col gap-2.5">
             <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
@@ -112,22 +113,36 @@ export function DaySheet({
                 it.
               </p>
             </div>
-            {closed.map((d) => {
-              const pill = DAY_PILL[dayColor(world, me, d)];
-              return (
-                <RowButton
-                  key={d}
-                  glass={false}
-                  leading={<DayMark on={d === ci.day} />}
-                  title={formatDay(d)}
-                  trailing={
-                    <StatusPill status={pill.status} label={pill.label} />
-                  }
-                  aria-current={d === ci.day ? 'true' : undefined}
-                  onClick={() => pick(d)}
-                />
-              );
-            })}
+            {/* One row of day squares, oldest first, drawn like the calendar's days. */}
+            <ul
+              className={styles.strip}
+              style={{ ['--days' as string]: closed.length }}
+            >
+              {[...closed].reverse().map((d) => {
+                const tone = dayColor(world, me, d);
+                return (
+                  <li key={d} className="flex">
+                    <button
+                      type="button"
+                      className={cn('nx-day nx-press', styles.tile)}
+                      data-tone={tone}
+                      data-today={d === ci.day || undefined}
+                      aria-current={d === ci.day ? 'true' : undefined}
+                      aria-label={`${formatDay(d)}: ${DAY_PILL[tone].label}`}
+                      onClick={() => pick(d)}
+                    >
+                      <span aria-hidden="true">
+                        {formatWeekday(d).slice(0, 3)}
+                      </span>
+                      <span aria-hidden="true" className="font-semibold">
+                        {Number(d.slice(8))}
+                      </span>
+                      <DayIcon tone={tone} size={14} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         )}
       </div>
@@ -158,37 +173,55 @@ export function DayAnswers({
   const { world, day } = ci;
   if (!day) return null;
   const answered = ci.rules.filter((r) => !ci.open.some((o) => o.id === r.id));
+  // One divided list, a line per answer: the name (the answer under it), how it stands, a chevron.
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <ul className={cn('flex flex-col divide-y divide-nx-line', className)}>
       {answered.map((r) => {
         const e = ci.entryOf(r),
           pill = entryPill(world, r, e, day);
+        // A Yes beside Done (or a No beside Missed) would say the same thing twice.
+        const plain =
+          r.kind !== 'number' &&
+          !e?.correction &&
+          (pill.status === 'done' || pill.status === 'missed');
         return (
-          <RowButton
-            key={r.id}
-            glass={false}
-            title={r.title}
-            detail={
-              <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-                <span>{answerText(r, ci)}</span>
-                {/* A weekly No costs nothing: the answer says it, no pill needed. */}
-                {pill.status !== 'none' && (
-                  <StatusPill status={pill.status} label={pill.label} />
+          <li key={r.id}>
+            <button
+              type="button"
+              className="nx-press flex min-h-14 w-full items-center gap-3 py-2 text-left"
+              onClick={() => {
+                if (e?.status === 'disputed') {
+                  navigate('review');
+                  return;
+                }
+                ci.openRule(r.id);
+                onPick?.();
+              }}
+            >
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-pretty text-nx-body font-semibold text-nx-ink">
+                  {r.title}
+                </span>
+                {!plain && (
+                  <span className="text-pretty text-nx-2 text-nx-ink-2">
+                    {answerText(r, ci)}
+                  </span>
                 )}
               </span>
-            }
-            onClick={() => {
-              if (e?.status === 'disputed') {
-                navigate('review');
-                return;
-              }
-              ci.openRule(r.id);
-              onPick?.();
-            }}
-          />
+              {/* A weekly No costs nothing: the answer says it, no pill needed. */}
+              {pill.status !== 'none' && (
+                <StatusPill status={pill.status} label={pill.label} />
+              )}
+              <ChevronRight
+                size={20}
+                aria-hidden="true"
+                className="shrink-0 text-nx-accent"
+              />
+            </button>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }
 

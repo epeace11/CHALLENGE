@@ -4,6 +4,23 @@
 @layer properties, theme, base, components, utilities;
 
 @layer components {
+  /* The day switcher's closed days: one row of day squares (`nx-day`), each a 44px target. */
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(var(--days, 7), minmax(0, 1fr));
+    gap: 3px;
+  }
+  .tile {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 64px;
+    font: 500 14px/1 var(--nx-font-sans);
+  }
+
   /* A line of text that is one button (it wraps, unlike a kit Button). */
   .link {
     display: flex;
@@ -35,9 +52,8 @@
     background: var(--nx-done-soft);
   }
 
-  /* A card that is one button: a weekly rule's week so far, or the day's progress. */
-  .week,
-  .cardButton {
+  /* A card that is one button: a weekly rule's week so far. */
+  .week {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -50,13 +66,8 @@
     color: inherit;
     text-align: left;
   }
-  .week:hover,
-  .cardButton:hover {
+  .week:hover {
     border-color: var(--nx-accent-line);
-  }
-  .cardButton {
-    gap: 10px;
-    padding: 12px 16px 14px;
   }
 
   /* Where the page scrolls back to after a Save far down a long card. */
@@ -104,6 +115,24 @@
     flex-direction: row;
     align-items: center;
     gap: 8px;
+  }
+
+  /* "3 left" beside the day: a text button with a chevron that opens the answers so far. */
+  .left {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 0 4px 0 8px;
+    border-radius: 12px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--nx-ink);
+    white-space: nowrap;
+  }
+  .left:hover {
+    background: var(--nx-accent-soft);
   }
 
   /* Around a Glide: the slide never widens the page. Reaches into the gutters so shadows stay. */

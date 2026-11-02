@@ -56,14 +56,18 @@ export function ChoiceSheet({
         </>
       }
     >
-      <ul data-look={choice.look} className="flex flex-col">
+      {/* Two rules to a row from 640px, so a theme fits without scrolling. */}
+      <ul
+        data-look={choice.look}
+        className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-6"
+      >
         {choice.rules.map((rule, i) => {
           const Icon = GROUP_ICON[rule.group];
           const optional = choice.optionalIds.includes(rule.id);
           return (
             <li
               key={rule.id}
-              className="nx-enter flex items-start gap-3.5 border-t border-nx-line py-3.5 first:border-t-0 first:pt-1 last:pb-0"
+              className="nx-enter flex items-start gap-3.5 border-t border-nx-line py-3.5 first:border-t-0 first:pt-1 last:pb-0 sm:[&:nth-child(2)]:border-t-0 sm:[&:nth-child(2)]:pt-1"
               style={{ ['--nx-i' as string]: i + 2 }}
             >
               <span className={styles.dot} aria-hidden="true">

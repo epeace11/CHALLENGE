@@ -28,7 +28,7 @@ import {
   IconButton,
 } from '@/components/next/ui';
 import type { Rule } from '@/lib/next/model';
-import { formatDay, formatWeekday } from '@/lib/next/selectors';
+import { formatDate, formatDay, formatWeekday } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import { Bar } from './bar';
 import { ClosedDay } from './closed-day';
@@ -103,75 +103,86 @@ export function CheckinPage({
         <div className="flex flex-col gap-5">
           {/* The date lives in the day switcher; the page still has a title for screen readers. */}
           <h1 className="sr-only">Check in for {formatDay(day)}</h1>
-          <div className="nx-enter flex items-center justify-between gap-3 pt-2">
-            <button
-              type="button"
-              className={cn(styles.chip, styles.chipRow, 'nx-press min-w-0')}
-              aria-haspopup="dialog"
-              onClick={() => setDays(true)}
-            >
-              <CalendarDays
-                size={20}
-                aria-hidden="true"
-                className="shrink-0 text-nx-accent"
-              />
-              <span className={cn(styles.chipTitle, 'truncate')}>
-                {formatDay(day)}
-              </span>
-              <ChevronDown
-                size={18}
-                aria-hidden="true"
-                className="shrink-0 text-nx-accent"
-              />
-            </button>
-            <IconButton
-              icon={NotebookPen}
-              label={`${formatWeekday(day)}’s journal`}
-              aria-haspopup="dialog"
-              onClick={() => setJournal(true)}
-            />
-          </div>
-
-          {/* What is left, while there is a question on screen. At the end of the day the squares
-              below show every answer (each opens it), so this card would only repeat them. */}
-          {rule && (
-            <button
-              type="button"
-              className={cn(styles.cardButton, 'nx-enter nx-press')}
-              aria-haspopup="dialog"
-              onClick={showAnswers}
-            >
-              <span className="flex items-center gap-3">
-                <span className="min-w-0 flex-1 text-nx-body text-nx-ink">
-                  {ci.left > 0 ? (
-                    <>
-                      <span className="font-semibold">
-                        <CountUp value={ci.left} /> left
-                      </span>
-                      <span className="text-nx-ink-2">
-                        {' '}
-                        · {ci.timeLeftLabel} to go
-                      </span>
-                    </>
-                  ) : (
-                    <span className="font-semibold">All answered</span>
-                  )}
-                </span>
-                <ChevronRight
+          {/* The day, what's left of it (opens the answers so far) and its journal on one row, with
+              the progress bar and the time left under it: no card of their own above the question. */}
+          <div className="nx-enter flex flex-col gap-2 pt-1 sm:pt-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className={cn(styles.chip, styles.chipRow, 'nx-press min-w-0')}
+                aria-haspopup="dialog"
+                onClick={() => setDays(true)}
+              >
+                <CalendarDays
                   size={20}
                   aria-hidden="true"
                   className="shrink-0 text-nx-accent"
                 />
-              </span>
-              <Bar
-                value={ci.answered}
-                max={ci.due}
-                segments
-                size="sm"
-                tone={ci.left > 0 ? 'accent' : 'done'}
+                <span className={cn(styles.chipTitle, 'truncate')}>
+                  <span className="sm:hidden">
+                    {formatWeekday(day).slice(0, 3)}, {formatDate(day)}
+                  </span>
+                  <span className="hidden sm:inline">{formatDay(day)}</span>
+                </span>
+                <ChevronDown
+                  size={18}
+                  aria-hidden="true"
+                  className="shrink-0 text-nx-accent"
+                />
+              </button>
+              {rule && (
+                <button
+                  type="button"
+                  className={cn(styles.left, 'nx-press ml-auto')}
+                  aria-haspopup="dialog"
+                  aria-label={
+                    ci.left > 0
+                      ? `${ci.left} left, ${ci.timeLeftLabel} to go: see your answers`
+                      : 'All answered: see your answers'
+                  }
+                  onClick={showAnswers}
+                >
+                  {ci.left > 0 ? (
+                    <>
+                      <CountUp value={ci.left} /> left
+                    </>
+                  ) : (
+                    'All answered'
+                  )}
+                  <ChevronRight
+                    size={20}
+                    aria-hidden="true"
+                    className="shrink-0 text-nx-accent"
+                  />
+                </button>
+              )}
+              <IconButton
+                icon={NotebookPen}
+                label={`${formatWeekday(day)}’s journal`}
+                aria-haspopup="dialog"
+                className={rule ? undefined : 'ml-auto'}
+                onClick={() => setJournal(true)}
               />
-            </button>
-          )}
+            </div>
+            {/* At the end of the day the squares below show every answer, so the bar would repeat them. */}
+            {rule && (
+              <div className="flex items-center gap-3">
+                <Bar
+                  value={ci.answered}
+                  max={ci.due}
+                  segments
+                  size="sm"
+                  tone={ci.left > 0 ? 'accent' : 'done'}
+                  className="min-w-0 flex-1"
+                />
+                {ci.left > 0 && (
+                  <span className="shrink-0 text-nx-2 text-nx-ink-2">
+                    {ci.timeLeftLabel} to go
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
 
           <div ref={top} className={cn(styles.anchor, styles.clipX)}>
             <Glide
@@ -190,7 +201,8 @@ export function CheckinPage({
             </Glide>
           </div>
 
-          <ActionBar>
+          {/* The page's gap is space enough above the bar, so a check-in fits on a phone. */}
+          <ActionBar className="mt-0">
             {rule ? (
               <>
                 <SaveHint
@@ -243,7 +255,10 @@ function Focus({
 }) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-6 pt-3 sm:gap-8">
+    <section
+      aria-labelledby={id}
+      className="flex flex-col gap-5 pt-1 sm:gap-6 sm:pt-2 lg:gap-8"
+    >
       <div className="flex flex-col gap-3">
         {ci.changing && (
           <p className="text-nx-2 font-semibold text-nx-ink-2">

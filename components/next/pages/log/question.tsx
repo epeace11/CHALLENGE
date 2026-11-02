@@ -63,7 +63,7 @@ export function Eyebrow({ rule }: { rule: Rule }) {
   );
 }
 
-/** The question as asked, in Georgia, and what counts. `size="lg"` for a full-screen card. */
+/** The question as asked, in Georgia, and what counts. `size="lg"` for a full-screen card (larger on laptops). */
 export function QuestionHead({
   rule,
   headingRef,
@@ -87,7 +87,7 @@ export function QuestionHead({
         tabIndex={-1}
         className={cn(
           'font-nx-serif text-nx-ink outline-none',
-          size === 'lg' ? 'text-nx-h2 sm:text-nx-h1' : 'text-nx-h2',
+          size === 'lg' ? 'text-nx-h2 lg:text-nx-h1' : 'text-nx-h2',
         )}
       >
         {rule.question}
@@ -95,7 +95,7 @@ export function QuestionHead({
       <p
         className={cn(
           'text-nx-ink-2',
-          size === 'lg' ? 'text-nx-body sm:text-nx-lead' : 'text-nx-body',
+          size === 'lg' ? 'text-nx-body lg:text-nx-lead' : 'text-nx-body',
         )}
       >
         {rule.description}
@@ -148,23 +148,62 @@ export function QuestionFields({
   });
 
   return (
-    <div className={cn('flex flex-col gap-6', className)}>
-      <div {...field('answer')}>
-        {rule.kind === 'number' ? (
-          <NumberField
-            label={unitLabel(rule)}
-            value={draft.value}
-            onChange={(value) => ci.change(rule, { value })}
-            target={rule.target}
-            step={stepFor(rule)}
-            decimals={stepFor(rule) < 1}
-          />
-        ) : (
-          <YesNo
-            label={rule.question}
-            value={draft.done}
-            onChange={(done) => ci.change(rule, { done })}
-          />
+    <div className={cn('flex flex-col gap-5', className)}>
+      {/* From 640px the answer and its screenshot sit side by side, so the form is shorter. */}
+      <div
+        className={cn(
+          'flex flex-col gap-5 sm:gap-6',
+          rule.proof !== 'none' && 'sm:grid sm:grid-cols-2 sm:items-start',
+        )}
+      >
+        <div {...field('answer')}>
+          {rule.kind === 'number' ? (
+            <NumberField
+              label={unitLabel(rule)}
+              value={draft.value}
+              onChange={(value) => ci.change(rule, { value })}
+              target={rule.target}
+              step={stepFor(rule)}
+              decimals={stepFor(rule) < 1}
+            />
+          ) : (
+            <YesNo
+              label={rule.question}
+              value={draft.done}
+              onChange={(done) => ci.change(rule, { done })}
+            />
+          )}
+        </div>
+
+        {rule.proof !== 'none' && (
+          <div {...field('proof')} className="flex flex-col gap-2.5">
+            <p className="flex items-baseline justify-between gap-3">
+              <span className="text-nx-2 font-semibold text-nx-ink">
+                Screenshot
+              </span>
+              <span
+                className={cn(
+                  'text-nx-2',
+                  rule.proof === 'required' &&
+                    outcome !== 'miss' &&
+                    draft.proofs.length === 0
+                    ? 'font-semibold text-nx-wait'
+                    : 'text-nx-ink-2',
+                )}
+              >
+                {rule.proof === 'required' && outcome !== 'miss'
+                  ? draft.proofs.length
+                    ? 'Added'
+                    : 'Required'
+                  : 'Optional'}
+              </span>
+            </p>
+            <ProofStrip
+              proofs={draft.proofs}
+              onAdd={() => ci.addProof(rule)}
+              onRemove={(id) => ci.removeProof(rule, id)}
+            />
+          </div>
         )}
       </div>
 
@@ -193,37 +232,6 @@ export function QuestionFields({
           </span>
           <Bar value={have} max={week.need} segments tone="done" />
         </button>
-      )}
-
-      {rule.proof !== 'none' && (
-        <div {...field('proof')} className="flex flex-col gap-2.5">
-          <p className="flex items-baseline justify-between gap-3">
-            <span className="text-nx-2 font-semibold text-nx-ink">
-              Screenshot
-            </span>
-            <span
-              className={cn(
-                'text-nx-2',
-                rule.proof === 'required' &&
-                  outcome !== 'miss' &&
-                  draft.proofs.length === 0
-                  ? 'font-semibold text-nx-wait'
-                  : 'text-nx-ink-2',
-              )}
-            >
-              {rule.proof === 'required' && outcome !== 'miss'
-                ? draft.proofs.length
-                  ? 'Added'
-                  : 'Required'
-                : 'Optional'}
-            </span>
-          </p>
-          <ProofStrip
-            proofs={draft.proofs}
-            onAdd={() => ci.addProof(rule)}
-            onRemove={(id) => ci.removeProof(rule, id)}
-          />
-        </div>
       )}
 
       {outcome === 'miss' && !late && (

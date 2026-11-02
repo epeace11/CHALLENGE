@@ -10,7 +10,6 @@ import {
   Button,
   GlassCard,
   Item,
-  PageTitle,
   Presence,
   useReducedMotion,
 } from '@/components/next/ui';
@@ -191,8 +190,9 @@ export default function PracticeV2() {
   return (
     <PlainFrame back={{ to: 'setup' }}>
       <div className="flex flex-col gap-6">
+        {/* The banner says what this is; the title is for screen readers, so the first question fits. */}
+        <h1 className="sr-only">Practice day</h1>
         <PracticeBanner className={styles.sticky} />
-        <PageTitle title="Practice day" />
 
         <ol className="flex flex-col gap-6" key={p.run}>
           <Step state={state('answer')} title="Answer three check-ins">

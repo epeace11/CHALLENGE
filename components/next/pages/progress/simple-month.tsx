@@ -38,7 +38,7 @@ const WORDS: Record<SquareTone, string> = {
 
 /**
  * The challenge's days in week rows, each a day square with its date and the status icon under it.
- * Settled and open days are buttons (48px tall, 56px from 640px) that open the day; days still
+ * Settled and open days are buttons (48px tall, 56px from 640px, 44px when `compact`) that open the day; days still
  * ahead and today are not. Rows fade in one after another.
  */
 export function SimpleMonth({
@@ -47,6 +47,7 @@ export function SimpleMonth({
   today,
   label,
   marked,
+  compact,
   onOpen,
 }: {
   /** `misses` on a missed day of the whole calendar: how many of its check-ins were missed. */
@@ -61,13 +62,15 @@ export function SimpleMonth({
   marked?: DateString;
   /** Names the calendar for screen readers ("Your calendar"). */
   label: string;
+  /** In a sheet: 44px days with less space between, so the sheet fits without scrolling. */
+  compact?: boolean;
   onOpen: (day: DateString) => void;
 }) {
   if (days.length === 0) return null;
   const lead = (weekday(days[0].day) - weekStart + 7) % 7;
   const order = Array.from({ length: 7 }, (_, i) => (weekStart + i) % 7);
   return (
-    <fieldset className="min-w-0">
+    <fieldset className={cn('min-w-0', compact && styles.compact)}>
       <legend className="sr-only">{label}</legend>
       <div className={styles.grid} aria-hidden="true">
         {order.map((d, i) => (

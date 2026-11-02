@@ -84,7 +84,8 @@ export function HowItWorksSheet({
       }
     >
       <div className="flex flex-col gap-4 sm:gap-5">
-        <ol className="flex flex-col gap-3 sm:gap-4">
+        {/* Two to a row from 640px, so the steps and the example fit without scrolling. */}
+        <ol className="grid gap-3 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-4">
           {STEPS.map(({ icon: Icon, title, text }) => (
             <li key={title} className="flex gap-3.5 sm:gap-4">
               <span

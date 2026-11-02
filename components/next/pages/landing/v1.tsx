@@ -34,7 +34,7 @@ export default function LandingV2() {
           <div className="flex flex-col gap-1">
             <Stagger
               as="ul"
-              className="flex flex-col gap-2 sm:gap-[clamp(10px,1.6vh,20px)]"
+              className="grid gap-2 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-[clamp(10px,1.6vh,20px)]"
               start={1}
             >
               {STEPS.map(({ icon: Icon, title }) => (

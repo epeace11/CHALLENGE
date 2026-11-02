@@ -37,8 +37,8 @@ export default function SharedV1() {
 
   return (
     <PlainFrame>
-      <div data-look={shared.look} className="flex flex-col gap-8 pt-3 sm:pt-8">
-        <header className="nx-enter flex flex-col gap-3">
+      <div data-look={shared.look} className="flex flex-col gap-6 pt-2 sm:pt-3">
+        <header className="nx-enter flex flex-col gap-2">
           <SharedBy by={shared.sharedBy} />
           <h1 className="nx-page-title">{shared.name}</h1>
         </header>

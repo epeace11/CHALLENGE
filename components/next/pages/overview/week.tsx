@@ -17,6 +17,7 @@ import {
   Avatar,
   Button,
   DayIcon,
+  PersonChip,
   Sheet,
   StatusPill,
 } from '@/components/next/ui';
@@ -192,8 +193,9 @@ export function WeekLegend({
 }
 
 /**
- * Both people's answers on one day, one tap from the week strip. Its one main action is what Maya
- * can do about that day: log it while it is open, or review what waits from it.
+ * Both people's answers on one day, one tap from the week strip, one person at a time (a chip for
+ * each). Its one main action is what Maya can do about that day: log it while it is open, or review
+ * what waits from it.
  */
 export function DaySheet({
   day,
@@ -210,6 +212,16 @@ export function DaySheet({
   const d = day ?? shown;
   const acts = d ? dayActions(world, d) : { open: 0, review: 0 };
   const people = [world.me, world.partner];
+  const [whose, setWhose] = useState(world.me.id);
+  const p = people.find((x) => x.id === whose) ?? world.me;
+  const rows = d ? dayRows(world, p.id, d) : [];
+  // Daily check-ins first (the missed count counts these), then weekly ones by the week.
+  const daily = rows.filter((r) => r.rule.kind !== 'weekly');
+  const weekly = rows.filter((r) => r.rule.kind === 'weekly');
+  const misses =
+    d && dayColor(world, p.id, d) === 'missed'
+      ? dayMisses(world, p.id, d)
+      : null;
 
   const footer =
     acts.open > 0 || acts.review > 0 ? (
@@ -242,66 +254,79 @@ export function DaySheet({
       footer={footer}
     >
       {d && (
-        <div className="flex flex-col gap-6">
-          {people.map((p) => {
-            const rows = dayRows(world, p.id, d);
-            // Daily check-ins first (the missed count counts these), then weekly ones by the week.
-            const daily = rows.filter((r) => r.rule.kind !== 'weekly');
-            const weekly = rows.filter((r) => r.rule.kind === 'weekly');
-            const mine = p.id === world.me.id;
-            const misses =
-              dayColor(world, p.id, d) === 'missed'
-                ? dayMisses(world, p.id, d)
-                : null;
-            return (
-              <section key={p.id} aria-label={mine ? 'You' : p.name}>
-                <h3 className="flex items-center gap-2.5 font-nx-serif text-nx-h3">
-                  <Avatar person={p} size="sm" decorative />
-                  {mine ? 'You' : p.name}
-                  {misses && (
-                    <span className="ml-auto font-nx-sans text-nx-2 font-semibold text-nx-missed">
-                      {missesLine(misses)}
+        <div className="flex flex-col gap-3">
+          {/* One person at a time, as on Progress: each chip shows how that person's day went, so
+              both are still seen at a glance, and the sheet fits without scrolling. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <fieldset className="flex gap-2">
+              <legend className="sr-only">Whose answers</legend>
+              {people.map((x) => {
+                const tone = dayColor(world, x.id, d);
+                return (
+                  <PersonChip
+                    key={x.id}
+                    person={x}
+                    pressed={x.id === p.id}
+                    onClick={() => setWhose(x.id)}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      {x.id === world.me.id ? 'You' : x.name}
+                      <span
+                        className="nx-day size-5 rounded-md"
+                        data-tone={tone}
+                        aria-hidden="true"
+                      >
+                        <DayIcon tone={tone} size={12} />
+                      </span>
+                      <span className="sr-only">
+                        {`: ${COLOR_WORDS[tone].toLowerCase()}`}
+                      </span>
                     </span>
-                  )}
-                </h3>
-                <ul className="mt-1 divide-y divide-nx-line">
-                  {daily.map((r) => (
-                    <li key={r.rule.id} className="flex flex-col gap-2 py-3">
-                      <div className="flex items-start gap-3">
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <p className="text-nx-body text-nx-ink">{r.title}</p>
-                          {r.answer && (
-                            <p className="text-nx-2 text-nx-ink-2">
-                              {r.answer}
-                            </p>
-                          )}
-                        </div>
-                        <StatusPill
-                          status={r.pill.status}
-                          label={r.pill.label}
-                          className="mt-0.5"
-                        />
-                      </div>
-                      {r.said ? (
-                        <p className="rounded-nx-sm bg-nx-sunken px-3 py-2 text-nx-2 text-nx-ink">
-                          {r.said.by}: “{r.said.text}”
-                        </p>
-                      ) : (
-                        r.note && (
-                          <p className="text-nx-2 text-nx-ink-2">
-                            Note: {r.note}
-                          </p>
-                        )
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                {weekly.length > 0 && (
-                  <WeeklyRows personId={p.id} day={d} rows={weekly} />
+                  </PersonChip>
+                );
+              })}
+            </fieldset>
+            {misses && (
+              <p className="text-nx-2 font-semibold text-nx-missed sm:ml-auto">
+                {missesLine(misses)}
+              </p>
+            )}
+          </div>
+          <ul className="divide-y divide-nx-line">
+            {daily.map((r) => (
+              <li
+                key={r.rule.id}
+                className="flex flex-col gap-2 py-2.5 sm:gap-1.5 sm:py-2"
+              >
+                <div className="flex items-start gap-3">
+                  {/* From 640px the answer ("39 min") follows the name on its line. */}
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
+                    <p className="text-nx-body text-nx-ink">{r.title}</p>
+                    {r.answer && (
+                      <p className="text-nx-2 text-nx-ink-2">{r.answer}</p>
+                    )}
+                  </div>
+                  <StatusPill
+                    status={r.pill.status}
+                    label={r.pill.label}
+                    className="mt-0.5"
+                  />
+                </div>
+                {r.said ? (
+                  <p className="rounded-nx-sm bg-nx-sunken px-3 py-1.5 text-nx-2 text-nx-ink">
+                    {r.said.by}: “{r.said.text}”
+                  </p>
+                ) : (
+                  r.note && (
+                    <p className="text-nx-2 text-nx-ink-2">Note: {r.note}</p>
+                  )
                 )}
-              </section>
-            );
-          })}
+              </li>
+            ))}
+          </ul>
+          {weekly.length > 0 && (
+            <WeeklyRows personId={p.id} day={d} rows={weekly} />
+          )}
         </div>
       )}
     </Sheet>
@@ -333,8 +358,8 @@ function WeeklyRows({
   const world = useWorld();
   const name = weekName(world, day);
   return (
-    <div className="mt-2 flex flex-col">
-      <h4 className="pt-2 font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
+    <div className="mt-1 flex flex-col">
+      <h4 className="pt-1 font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
         {name}
       </h4>
       <ul className="divide-y divide-nx-line">
@@ -347,9 +372,12 @@ function WeeklyRows({
                 ? 'No visit'
                 : r.pill.label;
           return (
-            <li key={r.rule.id} className="flex flex-col gap-2 py-3">
+            <li
+              key={r.rule.id}
+              className="flex flex-col gap-2 py-2.5 sm:gap-1.5 sm:py-2"
+            >
               <div className="flex items-start gap-3">
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
                   <p className="text-nx-body text-nx-ink">{r.title}</p>
                   {week && (
                     <p className="text-nx-2 text-nx-ink-2">
@@ -364,7 +392,7 @@ function WeeklyRows({
                 />
               </div>
               {r.said && (
-                <p className="rounded-nx-sm bg-nx-sunken px-3 py-2 text-nx-2 text-nx-ink">
+                <p className="rounded-nx-sm bg-nx-sunken px-3 py-1.5 text-nx-2 text-nx-ink">
                   {r.said.by}: “{r.said.text}”
                 </p>
               )}

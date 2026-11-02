@@ -372,7 +372,7 @@ export function wholeTally(w: World, personId: string): Tally {
 }
 
 /** Joins facts so a wrapped line ends with the dot instead of starting with it. */
-const DOT = '\u00a0· ';
+export const DOT = '\u00a0· ';
 
 /** "9 points · 1 forgiven · 1 asked to forgive" (parts at 0 left out, but points). */
 export function pointsLine(t: Tally) {

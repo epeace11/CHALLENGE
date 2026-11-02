@@ -89,6 +89,33 @@
     }
   }
 
+  /* A calendar in a sheet: every day still a 44px target, with less space around it. */
+  .compact .square {
+    min-height: 44px;
+  }
+  .compact .grid {
+    gap: 3px;
+  }
+  .compact .weekday {
+    min-height: 22px;
+  }
+
+  /* A weekly habit's weeks: one row of day squares, each the week's first date and how it went. */
+  .weeks {
+    display: grid;
+    grid-template-columns: repeat(var(--weeks, 5), minmax(0, 1fr));
+    gap: 3px;
+  }
+  .week {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 44px;
+    font: 500 14px/1 var(--nx-font-sans);
+  }
+
   /* A legend swatch: a small day square (`nx-day`) with its icon. */
   .swatch {
     flex-shrink: 0;

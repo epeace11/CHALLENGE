@@ -1038,6 +1038,10 @@
     gap: 12px;
     padding: 14px 16px 4px 24px;
   }
+  /* The Back arrow before a stepped-in sheet's title, its icon in line with the text below. */
+  .nx-sheet-back {
+    margin: 0 -6px 0 -12px;
+  }
   .nx-sheet-title {
     flex: 1;
     min-width: 0;
@@ -1058,6 +1062,10 @@
     overscroll-behavior: contain;
     padding: 16px 24px 24px;
   }
+  /* With buttons under it, the footer's own padding is the space, so the body keeps less. */
+  .nx-sheet-body:has(+ .nx-sheet-foot) {
+    padding-bottom: 16px;
+  }
   .nx-sheet-foot {
     display: flex;
     flex-direction: column-reverse;
@@ -1072,7 +1080,8 @@
       bottom: auto;
       top: calc(50% + var(--nx-top-inset) / 2);
       width: min(560px, calc(100vw - 48px));
-      max-height: min(760px, calc(100dvh - var(--nx-top-inset) - 64px));
+      /* 16px clear above and below, so a short window keeps as much of the sheet as it can. */
+      max-height: min(760px, calc(100dvh - var(--nx-top-inset) - 32px));
       border-radius: 28px;
       border-bottom: 1px solid var(--nx-glass-border);
       box-shadow: 0 30px 80px -20px #1b1f3a66;
@@ -1087,12 +1096,12 @@
       display: none;
     }
     .nx-sheet-head {
-      padding-top: 20px;
+      padding-top: 16px;
     }
     .nx-sheet-foot {
       flex-direction: row;
       justify-content: flex-end;
-      padding-bottom: 20px;
+      padding-bottom: 16px;
     }
   }
   [data-theme='dark'] .nx-sheet {
@@ -1588,10 +1597,13 @@
       background var(--nx-base) var(--nx-ease),
       border-color var(--nx-base) var(--nx-ease);
   }
+  /* Alone, it's a wide strip with the icon beside the label: low, so the form above it stays in view. */
   .nx-proof-add[data-wide] {
     flex: 1 1 100%;
+    flex-direction: row;
+    gap: 12px;
     width: 100%;
-    height: 124px;
+    height: 72px;
     border-radius: 18px;
     font-size: 17px;
   }
@@ -1714,7 +1726,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 24px;
+    /* Pages put it in their own gap; this only adds a little, so a page that nearly fits does. */
+    margin-top: 12px;
     padding: 12px;
     border-radius: 22px;
     border: 1px solid var(--nx-glass-border);
