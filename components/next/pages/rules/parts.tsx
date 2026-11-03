@@ -36,6 +36,7 @@ import { useWorld } from '@/components/next/world';
 import { cn } from '@/lib/utils';
 import {
   answerLabel,
+  limitFacts,
   describe,
   whoLabel,
   type Proposal,
@@ -183,6 +184,7 @@ export function RuleSheet({
         ['For', whoLabel(world, shown.who)],
         ...(when ? [['Days', when] as [string, string]] : []),
         ['Answer', answerLabel(shown)],
+        ...limitFacts(world, shown),
         [
           'Screenshot',
           shown.proof === 'required'

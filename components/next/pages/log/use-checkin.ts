@@ -18,6 +18,7 @@ import {
   openDays,
   rulesOn,
   shift,
+  targetFor,
   timeLeft,
 } from '@/lib/next/selectors';
 import { useBackend } from '@/components/next/backend';
@@ -205,8 +206,11 @@ export function useCheckin({ top, heading }: Anchors) {
   const [picked, setPicked] = useState<DateString | null>(null);
   const day = picked ?? loggable[0] ?? null;
   const late = day ? isClosed(c, day, world.now) : false;
-  const rules = day ? rulesOn(c, me, day) : [];
-  const open = day && !late ? openCheckins(world, me, day) : [];
+  // A rule where each sets their own target asks against yours.
+  const own = (r: Rule): Rule =>
+    r.personalTarget ? { ...r, target: targetFor(r, me) } : r;
+  const rules = day ? rulesOn(c, me, day).map(own) : [];
+  const open = day && !late ? openCheckins(world, me, day).map(own) : [];
 
   const [skipped, setSkipped] = useState<string[]>([]);
   const [focus, setFocus] = useState<string | null>(null);

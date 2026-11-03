@@ -12,6 +12,7 @@ import {
   formatTarget,
   formatWeekday,
   meetsTarget,
+  targetFor,
   openCheckins,
   openDay,
   titleSays,
@@ -286,18 +287,26 @@ function Value({
  * own admission, so it says so. A rule whose name already says the target ("10,000 steps") or the
  * days ("Gym, 4 days a week") doesn't get them again under it.
  */
-function TargetLine({ rule, shown }: { rule: Rule; shown: Shown }) {
+function TargetLine({
+  rule,
+  shown,
+  personId,
+}: {
+  rule: Rule;
+  shown: Shown;
+  /** Whose answer: a rule where each sets their own target is judged against theirs. */
+  personId: string;
+}) {
   if (rule.kind === 'weekly') {
     const when = whenUnlessTitled(rule);
     return when ? <p className="text-nx-2 text-nx-ink-2">{when}</p> : null;
   }
-  if (!rule.target || shown.value === undefined) return null;
-  const titled = titleSays(rule.title, rule.target?.value);
-  if (meetsTarget(rule.target, shown.value))
+  const target = targetFor(rule, personId);
+  if (!target || shown.value === undefined) return null;
+  const titled = titleSays(rule.title, target.value);
+  if (meetsTarget(target, shown.value))
     return titled ? null : (
-      <p className="text-nx-2 text-nx-ink-2">
-        Target: {formatTarget(rule.target)}
-      </p>
+      <p className="text-nx-2 text-nx-ink-2">Target: {formatTarget(target)}</p>
     );
   return (
     <p className="flex items-start gap-1.5 text-nx-2 font-semibold text-nx-missed">
@@ -310,7 +319,7 @@ function TargetLine({ rule, shown }: { rule: Rule; shown: Shown }) {
       <span>
         {titled
           ? 'Misses the target'
-          : `Misses the target: ${formatTarget(rule.target)}`}
+          : `Misses the target: ${formatTarget(target)}`}
       </span>
     </p>
   );
@@ -350,7 +359,7 @@ export function AnswerBody({
   const answer = (
     <>
       <Value rule={rule} shown={shown} size={size} />
-      <TargetLine rule={rule} shown={shown} />
+      <TargetLine rule={rule} shown={shown} personId={entry.personId} />
       {late && (
         <p className="text-nx-2 text-nx-ink-2">
           Before: {formatAnswer(rule, entry)}
@@ -642,7 +651,11 @@ export function ApproveDaySheet({
                   <p className="font-nx-serif text-nx-h3 leading-tight tabular-nums">
                     {formatAnswer(item.rule, shown)}
                   </p>
-                  <TargetLine rule={item.rule} shown={shown} />
+                  <TargetLine
+                    rule={item.rule}
+                    shown={shown}
+                    personId={item.entry.personId}
+                  />
                   {shown.note && (
                     <p className="line-clamp-2 text-nx-2 text-nx-ink-2">
                       <span className="sr-only">{partner.name}’s note: </span>“

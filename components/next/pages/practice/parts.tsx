@@ -20,7 +20,7 @@ import {
   ladderLine,
   needsShot,
   partnerAnswerText,
-  partnerShot,
+  shotOf,
   sampleShot,
   shortTitle,
   type Practice,
@@ -42,6 +42,10 @@ export function PracticeBanner({ className }: { className?: string }) {
     </p>
   );
 }
+
+/** How far − and + move a sample number. */
+const stepOf = (rule: Rule) =>
+  rule.target?.unit === 'steps' ? 500 : rule.target?.unit === 'min' ? 5 : 1;
 
 const unitLabel = (rule: Rule) => {
   const unit = rule.target?.unit ?? '';
@@ -84,7 +88,7 @@ export function Question({
             value={a.value}
             onChange={(value) => set({ value })}
             target={rule.target}
-            step={5}
+            step={stepOf(rule)}
           />
           {rule.proof !== 'none' && (
             <div className="flex flex-col gap-2">
@@ -99,7 +103,7 @@ export function Question({
                 onAdd={
                   a.proofs.length
                     ? undefined
-                    : () => set({ proofs: [sampleShot(world)] })
+                    : () => set({ proofs: sampleShot(world, index) })
                 }
                 onRemove={() => set({ proofs: [] })}
               />
@@ -125,7 +129,7 @@ export function Question({
 
 /**
  * One of the pretend partner's answers, for you to approve or dispute with the pinned buttons: the
- * rule, the answer, and its screenshot (which, for the steps, doesn't match).
+ * rule, the answer, and its screenshot (which, for a number, doesn't match).
  */
 export function AnswerToReview({
   item,
@@ -137,6 +141,8 @@ export function AnswerToReview({
 }) {
   const world = useWorld();
   const partner = world.partner.name;
+  const shot =
+    item.shot === undefined ? null : shotOf(world, item.rule, item.shot);
   return (
     // From 640px the screenshot sits beside the answer.
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
@@ -153,9 +159,7 @@ export function AnswerToReview({
           {partnerAnswerText(item.rule, item.answer)}
         </p>
       </div>
-      {item.shot !== undefined && (
-        <ProofStrip proofs={[partnerShot(world, item.shot)]} />
-      )}
+      {shot && <ProofStrip proofs={[shot]} />}
     </div>
   );
 }

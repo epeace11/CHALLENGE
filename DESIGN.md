@@ -348,7 +348,7 @@ The page is a cool, near-white mist, and one muted accent per look. Status colou
 
 ## Elevation & Depth
 
-Depth comes from frosted glass rather than heavy shadows. Cards are translucent white gradients with a 22px backdrop blur, a bright hairline border and a soft, wide, cool shadow. Something tappable lifts a little on hover. Sheets and the action bar are opaque surfaces with a lift shadow, so text scrolling underneath never shows through. Dark mode keeps the structure, swaps the shadows for deeper black ones, and adds a faint inner top highlight.
+Depth comes from glass cards rather than heavy shadows. Cards are translucent white gradients over the page's soft glow, with a bright hairline border and a soft, wide, cool shadow. They don't blur what's behind them (only the glow is), so scrolling stays smooth on older phones; the tab bar and the laptop header blur, since content scrolls under them. Something tappable lifts a little on hover. Sheets and the action bar are opaque surfaces with a lift shadow, so text scrolling underneath never shows through. Dark mode keeps the structure, swaps the shadows for deeper black ones, and adds a faint inner top highlight.
 
 ### Shadow Vocabulary
 
@@ -395,7 +395,7 @@ Shapes are soft but not bubbly:
 
 ### Cards / Containers
 
-- **Glass card:** 18px corners, translucent white gradient, 22px blur, glass shadow.
+- **Glass card:** 18px corners, translucent white gradient, glass shadow, no blur.
 - **Plain card:** 14px corners, hairline border, faint surface.
 - **Row:** a whole glass card is one button, at least 60px tall, ending in an accent chevron that nudges right on hover.
 

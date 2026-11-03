@@ -31,6 +31,7 @@ import {
   nameOf,
   shift,
   weekday,
+  targetFor,
   titleSays,
 } from '@/lib/next/selectors';
 
@@ -65,6 +66,8 @@ export const whenLabel = (rule: Rule) => formatWhen(rule);
 
 /** How it is answered: "Yes or No", "A number: 60 min or less" ("A number" when the name says the target). */
 export function answerLabel(rule: Rule) {
+  // Each person's own target is its own row (limitFacts).
+  if (rule.kind === 'number' && rule.personalTarget) return 'A number';
   if (
     rule.kind === 'number' &&
     rule.target &&
@@ -74,6 +77,19 @@ export function answerLabel(rule: Rule) {
   if (rule.kind === 'number') return 'A number';
   if (rule.kind === 'weekly') return 'Yes or No each day';
   return 'Yes or No';
+}
+
+/** On a rule where each sets their own target: "Your limit · 1,800 kcal or less", then the partner's. */
+export function limitFacts(world: World, rule: Rule): [string, string][] {
+  if (!rule.personalTarget || !rule.target) return [];
+  const word = rule.target.op === '<=' ? 'limit' : 'target';
+  const of = (id: string) => formatTarget(targetFor(rule, id) ?? rule.target!);
+  const facts: [string, string][] = [];
+  if (rule.who === 'both' || rule.who === world.me.id)
+    facts.push([`Your ${word}`, of(world.me.id)]);
+  if (rule.who === 'both' || rule.who === world.partner.id)
+    facts.push([`${world.partner.name}’s ${word}`, of(world.partner.id)]);
+  return facts;
 }
 
 /** "Screenshot required", "Screenshot optional", or null for none. */

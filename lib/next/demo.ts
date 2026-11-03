@@ -734,7 +734,7 @@ const PRACTICE: PracticeScript = {
   questions: [
     // The first is left for you to answer: a plain Yes saves on tap, as in Check in.
     { rule: fallRule('bed'), sample: {} },
-    { rule: fallRule('social'), sample: { value: 45 } },
+    { rule: fallRule('social'), sample: { value: 45 }, shot: 72 },
     { rule: fallRule('eating-out'), sample: { done: false } },
   ],
   partnerReview: [

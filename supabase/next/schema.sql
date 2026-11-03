@@ -85,6 +85,10 @@ create table public.rules(
   proof text not null default 'none' check (proof in ('none','optional','required')),
   starts_on date,
   ends_on date,
+  -- A number rule where each person sets their own target (a calorie limit): `limits` holds each
+  -- one's value by person id, set when they sign; target_value is the suggestion until then.
+  personal boolean not null default false,
+  limits jsonb not null default '{}',
   check (kind <> 'weekly' or weekly_target is not null),
   check (kind <> 'number' or (target_op is not null and target_value is not null))
 );
@@ -391,13 +395,20 @@ begin
       when exists(select 1 from couple_members where couple_id = c.couple_id and person_id::text = x->>'who') then (x->>'who')::uuid
       else null end;
     insert into rules(challenge_id, position, title, question, description, rule_group, kind, days, weekly_target,
-                      target_op, target_value, target_unit, who, for_invitee, proof, starts_on, ends_on)
+                      target_op, target_value, target_unit, who, for_invitee, proof, starts_on, ends_on, personal, limits)
     values (c.id, i, trim(x->>'title'), trim(x->>'question'), coalesce(x->>'description', ''),
             coalesce(x->>'group', 'Mind'), x->>'kind',
             array(select jsonb_array_elements_text(x->'days')::integer),
             (x->>'weeklyTarget')::integer,
             x->'target'->>'op', (x->'target'->>'value')::numeric, x->'target'->>'unit',
-            who, x->>'who' = 'partner' and partner is null, coalesce(x->>'proof', 'none'), (x->>'startsOn')::date, (x->>'endsOn')::date);
+            who, x->>'who' = 'partner' and partner is null, coalesce(x->>'proof', 'none'), (x->>'startsOn')::date, (x->>'endsOn')::date,
+            x->>'kind' = 'number' and coalesce((x->>'personalTarget')::boolean, false),
+            -- Limits already set stay with the rule, for the couple's own members only.
+            case when x->>'kind' = 'number' and coalesce((x->>'personalTarget')::boolean, false) then coalesce((
+              select jsonb_object_agg(l.key, l.value) from jsonb_each(case when jsonb_typeof(x->'limits') = 'object' then x->'limits' else '{}' end) l
+              where jsonb_typeof(l.value) = 'number' and (l.value #>> '{}')::numeric > 0
+                and exists(select 1 from couple_members m where m.couple_id = c.couple_id and m.person_id::text = l.key)), '{}')
+            else '{}' end);
     i := i + 1;
   end loop;
 end $$;
@@ -462,7 +473,8 @@ begin
   end if;
 end $$;
 
--- Setup is done: the viewer signs, and the partner is invited (or, if already in the couple, asked to sign).
+-- Setup is done and the pact opens: the viewer reads it and signs (nx_sign_pact), then invites the
+-- partner, or, with the partner already in the couple, waits for them to sign.
 create function public.nx_finish_setup(p_challenge uuid) returns void language plpgsql security definer set search_path = public as $$
 declare c challenges := nx_enter(p_challenge);
 begin
@@ -471,7 +483,6 @@ begin
   if c.status = 'draft' then
     update challenges set status = case when nx_partner(c.id, auth.uid()) is null then 'invited' else 'signing' end where id = c.id;
   end if;
-  perform nx_sign_pact(c.id);
 end $$;
 
 -- Makes (or remakes) the invite link. Returns the token once; only its hash is kept.
@@ -543,22 +554,36 @@ begin
   return c.id;
 end $$;
 
--- Signs the pact. Once both have signed, the challenge is running.
-create function public.nx_sign_pact(p_challenge uuid) returns void language plpgsql security definer set search_path = public as $$
-declare c challenges := nx_enter(p_challenge);
+-- Signs the pact, with the signer's own limits as {rule id: value} for the rules where each person
+-- sets their own. A limit is set once, with the signature. Once both have signed, the challenge is running.
+create function public.nx_sign_pact(p_challenge uuid, p_limits jsonb default null) returns void language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge); k text; v jsonb; r rules;
 begin
   if c.status not in ('invited','signing') then raise exception 'There''s nothing to sign right now.'; end if;
-  insert into signatures(challenge_id, person_id) values (c.id, auth.uid()) on conflict do nothing;
+  if exists(select 1 from signatures where challenge_id = c.id and person_id = auth.uid()) then return; end if;
+  if jsonb_typeof(p_limits) = 'object' then
+    for k, v in select l.key, l.value from jsonb_each(p_limits) l loop
+      select * into r from rules where challenge_id = c.id and id::text = k;
+      if r.id is null or not r.personal or not nx_rule_for(r, auth.uid()) then raise exception 'That rule has no limit of your own.'; end if;
+      if jsonb_typeof(v) <> 'number' or (v #>> '{}')::numeric <= 0 then raise exception 'Enter your limit first.'; end if;
+      update rules set limits = limits || jsonb_build_object(auth.uid()::text, v) where id = r.id;
+    end loop;
+  end if;
+  insert into signatures(challenge_id, person_id) values (c.id, auth.uid());
   if c.status = 'signing' and (select count(*) from signatures where challenge_id = c.id) = 2 then
-    -- Signed after the planned first day: Day 1 is today, so no day counts before both had agreed.
-    update challenges set status = 'running', start_date = greatest(start_date, nx_today(c)) where id = c.id;
+    -- Day 1 is never before the day after both signed: nobody starts a day already under way.
+    update challenges set status = 'running', start_date = greatest(start_date, nx_today(c) + 1) where id = c.id;
   end if;
 end $$;
 
 /* ── Checking in ───────────────────────────────────────────────────────── */
 
-create function public.nx_meets(r public.rules, p_value numeric) returns boolean language sql immutable as $$
-  select case r.target_op when '>=' then p_value >= r.target_value when '<=' then p_value <= r.target_value else false end
+-- Whether `p_value` meets the rule's target for `p_person`: their own limit on a personal rule.
+create function public.nx_meets(r public.rules, p_value numeric, p_person uuid) returns boolean language sql immutable as $$
+  select case r.target_op
+    when '>=' then p_value >= coalesce((r.limits->>p_person::text)::numeric, r.target_value)
+    when '<=' then p_value <= coalesce((r.limits->>p_person::text)::numeric, r.target_value)
+    else false end
 $$;
 
 -- Proofs must be the caller's own uploads in this challenge's folder: [{path, takenAt}], at most six.
@@ -620,7 +645,7 @@ begin
   if p_day > nx_today(c) or (p_day = nx_today(c) and c.deadline_days > 0) then
     raise exception 'You can log a day once it''s over.';
   end if;
-  v_done := case when r.kind = 'number' then p_value is not null and nx_meets(r, p_value) else coalesce(p_done, false) end;
+  v_done := case when r.kind = 'number' then p_value is not null and nx_meets(r, p_value, auth.uid()) else coalesce(p_done, false) end;
   if r.kind = 'number' and p_value is null then raise exception 'Enter a number first.'; end if;
   v_proofs := nx_check_proofs(c, p_proofs);
   if v_done and r.proof = 'required' and jsonb_array_length(v_proofs) = 0 then raise exception 'Attach a screenshot first.'; end if;
@@ -823,7 +848,7 @@ begin
       'days', to_jsonb(r.days), 'weeklyTarget', r.weekly_target,
       'target', case when r.target_op is not null then jsonb_build_object('op', r.target_op, 'value', r.target_value, 'unit', coalesce(r.target_unit, '')) end,
       'who', case when r.for_invitee then 'partner' when r.who is null then 'both' when r.who = auth.uid() then 'me' else 'partner' end,
-      'proof', r.proof)) order by r.position)
+      'proof', r.proof, 'personalTarget', case when r.personal then true end)) order by r.position)
     from rules r where r.challenge_id = c.id), '[]'), auth.uid())
   returning id into s;
   return s;
@@ -1010,7 +1035,7 @@ do $$ declare f text; begin
   foreach f in array array['nx_sync(uuid)','nx_set_name(text)',
     'nx_create_challenge(text,text,text,date,integer,text,numeric,numeric,jsonb)',
     'nx_update_challenge(uuid,text,text,date,integer,text,numeric,numeric,boolean,integer,time,integer,jsonb)',
-    'nx_finish_setup(uuid)','nx_create_invite(uuid,text,text)','nx_accept_invite(text)','nx_sign_pact(uuid)',
+    'nx_finish_setup(uuid)','nx_create_invite(uuid,text,text)','nx_accept_invite(text)','nx_sign_pact(uuid,jsonb)',
     'nx_save_checkin(uuid,uuid,date,boolean,numeric,text,jsonb,text)','nx_review(uuid,text,text)',
     'nx_resolve_dispute(uuid,text,text)','nx_ask_forgiveness(uuid,text)','nx_decide_forgiveness(uuid,boolean)',
     'nx_forgive_point(uuid)','nx_add_note(uuid,date,text)','nx_edit_note(uuid,text)','nx_remove_note(uuid)',

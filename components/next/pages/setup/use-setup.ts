@@ -4,6 +4,7 @@ import type { Rule } from '@/lib/next/model';
 import { useBackend, type SetupDraft } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
+import { openPactAsSetter } from '../pact/entry';
 import { draftCap, draftDays, matchingRule, type Draft } from './draft';
 import { useDraft } from './use-draft';
 
@@ -67,7 +68,7 @@ export type Removed = { rule: Rule; index: number };
 /**
  * The page's state: the draft, which sheet is open, the rule being built, the errors, removing a
  * rule (its row says Removed, with Undo, for a few seconds or until the next change), adding from
- * the library, and finishing (the live app's finishSetup, or the Invite page in the preview).
+ * the library, and finishing (the live app's finishSetup, then the pact to sign).
  */
 export function useSetup() {
   const world = useWorld();
@@ -184,7 +185,16 @@ export function useSetup() {
     setErrors(found);
     const first = firstProblem(found);
     if (first) return onProblem(first);
-    if (!host) return navigate('invite');
+    if (!host) {
+      // The preview's pact shows the challenge as drafted, from the side of the one who set it up.
+      const d = toSetup(draft, world.challenge.days);
+      openPactAsSetter({
+        ...world.challenge,
+        ...d,
+        status: 'invited',
+      });
+      return navigate('pact');
+    }
     // Finishing saves everything, so a save still waiting would only repeat it.
     pending.current = null;
     setBusy(true);
@@ -193,11 +203,8 @@ export function useSetup() {
       .then(() => setBusy(false));
   };
 
-  // With the partner already in, finishing signs it; they sign next time they open the app.
-  const finishLabel =
-    host && !world.partnerPending
-      ? 'Sign and finish'
-      : `Invite ${world.partner.name}`;
+  // Finishing opens the pact, which the one who set it up reads and signs before the partner does.
+  const finishLabel = 'Read the pact';
 
   return {
     ...drafted,

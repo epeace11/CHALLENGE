@@ -22,6 +22,7 @@ import type {
 import { BLANK_NAME, LIBRARY, THEMES } from '../next/catalog.ts';
 import { dateIn, lastDay, lockTime, shift } from '../next/calendar.ts';
 import { world as sample } from '../next/demo.ts';
+import { practiceFor } from '../next/practice.ts';
 import {
   activePoints,
   badges,
@@ -81,6 +82,9 @@ export type RuleRow = {
   proof: Rule['proof'];
   starts_on: string | null;
   ends_on: string | null;
+  /** Each person sets their own target, kept in `limits` by person id (pact-limits.sql). */
+  personal?: boolean;
+  limits?: Record<string, number | string> | null;
 };
 export type ProofRow = { path: string; takenAt?: string | null };
 export type EntryRow = {
@@ -254,6 +258,14 @@ export function ruleOf(r: RuleRow, partnerId: string): Rule {
     proof: r.proof,
     ...(r.starts_on ? { startsOn: r.starts_on } : {}),
     ...(r.ends_on ? { endsOn: r.ends_on } : {}),
+    ...(r.personal
+      ? {
+          personalTarget: true,
+          limits: Object.fromEntries(
+            Object.entries(r.limits ?? {}).map(([id, v]) => [id, Number(v)]),
+          ),
+        }
+      : {}),
   };
 }
 
@@ -528,9 +540,8 @@ export function buildWorld(
   const signedAt = (id: string) =>
     signatures.find((s) => s.person_id === id)?.signed_at ?? null;
 
-  // The invite and pact pages speak to whoever has not signed yet as "you", and to the other as the
-  // inviter. So the inviter is the partner when the viewer still has to sign.
-  const inviterId = iSigned ? me.id : partner.id;
+  // Whoever set the challenge up invites the other.
+  const inviterId = current?.created_by === partner.id ? partner.id : me.id;
   const liveInvite: Invite = {
     id: invite?.id ?? '',
     challengeId: challenge.id,
@@ -580,7 +591,8 @@ export function buildWorld(
         { personId: partner.id, signedAt: signedAt(partner.id) },
       ],
     },
-    practice: practiceFor(challenge),
+    // From the couple's own rules; a part they can't play takes the sample's.
+    practice: practiceFor(challenge, me.id, partner.id, sample.practice),
     sayRules: { sentence: '', rules: [], questions: [] },
     partnerPending: !partnerRow,
   };
@@ -661,14 +673,6 @@ export function nextLock(
   return null;
 }
 
-/** The practice day uses the sample script, on this challenge's step when it has one. */
-function practiceFor(c: Challenge) {
-  return {
-    ...sample.practice,
-    miss: { ...sample.practice.miss, cost: c.step },
-  };
-}
-
 /** An invite link as nx_invite_preview returns it. */
 export type InvitePreviewRow = {
   from: ProfileRow;
@@ -737,7 +741,7 @@ export function inviteWorld(
         { personId: me.id, signedAt: null },
       ],
     },
-    practice: practiceFor(challenge),
+    practice: practiceFor(challenge, me.id, inviter.id, sample.practice),
     sayRules: { sentence: '', rules: [], questions: [] },
     partnerPending: false,
   };

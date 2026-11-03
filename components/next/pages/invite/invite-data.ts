@@ -1,6 +1,7 @@
 import type { Challenge, Person, Rule, World } from '@/lib/next/model';
 import { SUN_THU } from '@/lib/next/catalog';
 import {
+  asIfSignedToday,
   dateIn,
   formatDay,
   formatDeadline,
@@ -61,7 +62,8 @@ const placeOf = (timeZone: string) =>
   (timeZone.split('/').pop() ?? timeZone).replace(/_/g, ' ');
 
 export function inviteView(world: World) {
-  const c = world.challenge;
+  // Before both have signed, the first day it will be (never before the day after both sign).
+  const c = asIfSignedToday(world.challenge, world.today);
   const inviter = personById(world, world.invite.from) ?? world.me;
   const you = partnerOf(world, inviter.id);
   const groups: RuleGroupView[] = (

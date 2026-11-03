@@ -40,7 +40,8 @@ export type Command =
   | { type: 'addNote'; day: DateString; text: string }
   | { type: 'editNote'; noteId: string; text: string }
   | { type: 'removeNote'; noteId: string }
-  | { type: 'signPact' }
+  /** With the signer's own limits ({rule id: value}) on rules where each sets their own. */
+  | { type: 'signPact'; limits?: Record<string, number> }
   /** Ending a running challenge early: ask, take the request back, or turn the partner's down. */
   | { type: 'askToEnd' }
   | { type: 'withdrawEnd' }
@@ -106,7 +107,7 @@ export type Host = {
   startFrom: (template: Template) => Promise<boolean>;
   /** Saves a challenge still in setup without moving on, so leaving keeps it as a draft. */
   saveDraft: (draft: SetupDraft) => Promise<boolean>;
-  /** Saves Set up and moves on: the invite, or the pact when the partner is already in. */
+  /** Saves Set up and opens the pact, which the person who set it up signs before inviting. */
   finishSetup: (draft: SetupDraft) => Promise<boolean>;
   /**
    * Cancels the challenge for both people: deleted before Day 1, ended now while it runs (the days

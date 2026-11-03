@@ -6,13 +6,14 @@ import type {
   Proof,
   World,
 } from './model.ts';
-import { isClosed } from './calendar.ts';
+import { isClosed, shift } from './calendar.ts';
 import {
   entryFor,
   meetsTarget,
   pendingRequestFor,
   pointOfEntry,
   ruleById,
+  targetFor,
 } from './selectors.ts';
 
 /**
@@ -86,11 +87,12 @@ export function saveCheckin(w: World, input: CheckinInput): World {
   const c = w.challenge,
     rule = ruleById(c, input.ruleId);
   if (!rule) return w;
+  const target = targetFor(rule, input.personId);
   const done =
     rule.kind === 'number'
       ? input.value !== undefined &&
-        !!rule.target &&
-        meetsTarget(rule.target, input.value)
+        !!target &&
+        meetsTarget(target, input.value)
       : !!input.done;
   const existing = entryFor(w, input.personId, input.ruleId, input.day),
     note = input.note ?? '',
@@ -344,16 +346,44 @@ export const removeNote = (w: World, noteId: string): World => ({
   journal: w.journal.filter((n) => n.id !== noteId),
 });
 
-/** Signs the pact for one person. */
-export function signPact(w: World, personId: string): World {
+/**
+ * Signs the pact for one person, with their own limits ({rule id: value}) on the rules where each
+ * sets their own. Once both have signed it runs, and Day 1 is never before the day after (as
+ * nx_sign_pact).
+ */
+export function signPact(
+  w: World,
+  personId: string,
+  limits: Record<string, number> = {},
+): World {
+  const c = w.challenge;
+  if (w.pact.signatures.some((s) => s.personId === personId && s.signedAt))
+    return w;
+  const signatures = w.pact.signatures.map((s) =>
+    s.personId === personId ? { ...s, signedAt: w.now } : s,
+  );
+  const rules = c.rules.map((r) =>
+    r.personalTarget && limits[r.id] > 0
+      ? { ...r, limits: { ...r.limits, [personId]: limits[r.id] } }
+      : r,
+  );
+  const starts =
+    (c.status === 'invited' || c.status === 'signing') &&
+    signatures.every((s) => !!s.signedAt);
+  const earliest = shift(w.today, 1);
   return {
     ...w,
-    pact: {
-      ...w.pact,
-      signatures: w.pact.signatures.map((s) =>
-        s.personId === personId ? { ...s, signedAt: s.signedAt ?? w.now } : s,
-      ),
+    challenge: {
+      ...c,
+      rules,
+      ...(starts
+        ? {
+            status: 'running' as const,
+            start: c.start < earliest ? earliest : c.start,
+          }
+        : {}),
     },
+    pact: { ...w.pact, signatures },
   };
 }
 

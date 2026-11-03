@@ -74,8 +74,10 @@ export type Rule = {
   weeklyTarget?: number;
   /** Number rules only. */
   target?: Target;
-  /** Each person sets their own target value at setup (a calorie limit). Themes only. */
+  /** Each person sets their own target value (a calorie limit) when they sign; `target` is the suggestion. */
   personalTarget?: boolean;
+  /** On a `personalTarget` rule: each person's own value, by person id, once they've signed. */
+  limits?: Record<string, number>;
   /** 'both', or the id of the one person who has it. */
   who: 'both' | (string & {});
   proof: ProofNeed;
@@ -350,8 +352,15 @@ export type Pact = {
 
 /** A pretend day that shows how check-ins, reviews and misses work, before the real start. */
 export type PracticeScript = {
-  /** Three sample questions with a suggested answer each. */
-  questions: { rule: Rule; sample: { done?: boolean; value?: number } }[];
+  /**
+   * Three sample questions with a suggested answer each. A number rule's `shot` is what its sample
+   * screenshot shows (screen time or steps), which the pretend partner disputes.
+   */
+  questions: {
+    rule: Rule;
+    sample: { done?: boolean; value?: number };
+    shot?: number;
+  }[];
   /** What the pretend partner does with the answers. */
   partnerReview: {
     ruleId: string;

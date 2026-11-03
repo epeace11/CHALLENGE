@@ -320,6 +320,12 @@ export function ruleInput(rule: Rule, meId: string, partnerId: string) {
     proof: rule.proof,
     ...(rule.startsOn ? { startsOn: rule.startsOn } : {}),
     ...(rule.endsOn ? { endsOn: rule.endsOn } : {}),
+    ...(rule.personalTarget
+      ? {
+          personalTarget: true,
+          ...(rule.limits ? { limits: rule.limits } : {}),
+        }
+      : {}),
   };
 }
 
@@ -597,7 +603,10 @@ export function send(challengeId: string, c: Command) {
     case 'removeNote':
       return rpc('nx_remove_note', { p_note: c.noteId });
     case 'signPact':
-      return rpc('nx_sign_pact', { p_challenge: challengeId });
+      return rpc('nx_sign_pact', {
+        p_challenge: challengeId,
+        ...(c.limits ? { p_limits: c.limits } : {}),
+      });
     case 'askToEnd':
     case 'withdrawEnd':
     case 'declineEnd':

@@ -38,6 +38,7 @@ for (const script of [
   'fixes-oct-18.sql',
   'cancel-challenge.sql',
   'end-requests.sql',
+  'pact-limits.sql',
 ])
   await db.exec(
     readFileSync(
@@ -131,8 +132,16 @@ const pray = await rule('Pray daily'),
   gym = await rule('Gym'),
   alcohol = await rule('No alcohol');
 
-// Invite: Maya finishes setup, makes a link; Jordan previews it signed out, then accepts.
+// Invite: Maya finishes setup and signs the pact herself, makes a link; Jordan previews it signed
+// out, then accepts.
 await as(maya, `select nx_finish_setup($1)`, [fall]);
+assert.equal(
+  (await as(maya, `select * from signatures where challenge_id=$1`, [fall]))
+    .length,
+  0,
+  'finishing setup opens the pact without signing it',
+);
+await as(maya, `select nx_sign_pact($1)`, [fall]);
 const { token, code } = await one(
   maya,
   `select * from nx_create_invite($1,'Jordan','jordan@example.com')`,
@@ -728,19 +737,29 @@ const sam2 = buildWorld(
 );
 assert.equal(sam2.world.partner.name, 'Priya');
 
-// Signing after the planned first day: Day 1 becomes today. With a same-night deadline, today is logged
-// today, and a day nobody logged is a miss once that night is over.
-await as(priya, `select nx_update_challenge($1,p_deadline_days=>0)`, [dry]);
-await as(priya, `select nx_sign_pact($1)`, [dry]);
-await as(sam, `select nx_sign_pact($1)`, [dry]);
-assert.deepEqual(
-  await one(
-    priya,
-    `select status, start_date::text s from challenges where id=$1`,
-    [dry],
-  ),
-  { status: 'running', s: '2026-11-17' },
-);
+// A calorie limit each sets for themselves: the suggested 2,000 until they sign with their own. Only
+// the couple's own members keep a limit when the rules are saved.
+const calories = {
+  title: 'Stay under your calorie limit',
+  question: 'How many calories did you eat?',
+  kind: 'number',
+  days: [0, 1, 2, 3, 4, 5, 6],
+  target: { op: '<=', value: 2000, unit: 'kcal' },
+  personalTarget: true,
+  who: 'both',
+};
+await as(priya, `select nx_update_challenge($1,p_rules=>$2::jsonb)`, [
+  dry,
+  JSON.stringify([
+    ...JSON.parse(rules),
+    { ...calories, limits: { [sam]: 2100, [maya]: 1500 } },
+  ]),
+]);
+const dryCalories = (
+  await one(priya, `select id from rules where challenge_id=$1 and personal`, [
+    dry,
+  ])
+).id;
 const dryPray = (
   await one(
     priya,
@@ -748,16 +767,103 @@ const dryPray = (
     [dry],
   )
 ).id;
-await clock('2026-11-17T20:00:00-08:00');
-await as(priya, `select nx_save_checkin($1,$2,'2026-11-17',true)`, [
+assert.deepEqual(
+  (await one(priya, `select limits from rules where id=$1`, [dryCalories]))
+    .limits,
+  { [sam]: 2100 },
+);
+
+// Signing after the planned first day: Day 1 is the next day, so no day under way when both signed
+// counts. With a same-night deadline, a day is logged that day, and a day nobody logged is a miss once
+// that night is over.
+await as(priya, `select nx_update_challenge($1,p_deadline_days=>0)`, [dry]);
+await as(priya, `select nx_sign_pact($1,$2::jsonb)`, [
+  dry,
+  JSON.stringify({ [dryCalories]: 1800 }),
+]);
+// A limit is set once, with the signature.
+await as(priya, `select nx_sign_pact($1,$2::jsonb)`, [
+  dry,
+  JSON.stringify({ [dryCalories]: 3000 }),
+]);
+await fails(
+  as(sam, `select nx_sign_pact($1,$2::jsonb)`, [
+    dry,
+    JSON.stringify({ [dryPray]: 5 }),
+  ]),
+  /no limit of your own/,
+);
+await fails(
+  as(sam, `select nx_sign_pact($1,$2::jsonb)`, [
+    dry,
+    JSON.stringify({ [dryCalories]: 0 }),
+  ]),
+  /Enter your limit/,
+);
+await as(sam, `select nx_sign_pact($1,$2::jsonb)`, [
+  dry,
+  JSON.stringify({ [dryCalories]: 2400 }),
+]);
+assert.deepEqual(
+  (await one(priya, `select limits from rules where id=$1`, [dryCalories]))
+    .limits,
+  { [priya]: 1800, [sam]: 2400 },
+);
+assert.deepEqual(
+  await one(
+    priya,
+    `select status, start_date::text s from challenges where id=$1`,
+    [dry],
+  ),
+  { status: 'running', s: '2026-11-18' },
+);
+await clock('2026-11-18T20:00:00-08:00');
+await as(priya, `select nx_save_checkin($1,$2,'2026-11-18',true)`, [
   dry,
   dryPray,
 ]);
 await fails(
-  as(priya, `select nx_save_checkin($1,$2,'2026-11-18',true)`, [dry, dryPray]),
+  as(priya, `select nx_save_checkin($1,$2,'2026-11-19',true)`, [dry, dryPray]),
   /once it's over/,
 );
-await clock('2026-11-18T09:00:00-08:00');
+// Each answer is checked against its owner's own limit.
+const caloriesOf = async (id) =>
+  (
+    await one(
+      id,
+      `select status from entries where rule_id=$1 and person_id=$2`,
+      [dryCalories, id],
+    )
+  ).status;
+await as(priya, `select nx_save_checkin($1,$2,'2026-11-18',p_value=>1900)`, [
+  dry,
+  dryCalories,
+]);
+assert.equal(await caloriesOf(priya), 'missed', "over Priya's own 1,800");
+await as(priya, `select nx_save_checkin($1,$2,'2026-11-18',p_value=>1700)`, [
+  dry,
+  dryCalories,
+]);
+await as(sam, `select nx_save_checkin($1,$2,'2026-11-18',p_value=>2300)`, [
+  dry,
+  dryCalories,
+]);
+assert.equal(
+  await caloriesOf(sam),
+  'pending',
+  "over the suggested 2,000 but under Sam's own 2,400",
+);
+const limitsWorld = buildWorld(
+  await rowsFor(priya),
+  '2026-11-19T04:00:00.000Z',
+  'America/Los_Angeles',
+  links,
+).world;
+assert.deepEqual(
+  limitsWorld.challenge.rules.find((r) => r.personalTarget)?.limits,
+  { [priya]: 1800, [sam]: 2400 },
+);
+await clock('2026-11-19T09:00:00-08:00');
 await as(sam, `select nx_sync($1)`, [dry]);
 assert.deepEqual(
   await as(
@@ -774,7 +880,7 @@ assert.equal(
   (
     await as(
       priya,
-      `select count(*)::int n from points where challenge_id=$1 and day<'2026-11-17'`,
+      `select count(*)::int n from points where challenge_id=$1 and day<'2026-11-18'`,
       [dry],
     )
   )[0].n,
@@ -786,7 +892,7 @@ assert.equal(
 // declines), and the one who asked can withdraw. Ending keeps the days that have closed and drops
 // later answers; only its own couple can, and once it's over it stays over. A challenge still in
 // setup is deleted by either person.
-await as(sam, `select nx_save_checkin($1,$2,'2026-11-18',true)`, [
+await as(sam, `select nx_save_checkin($1,$2,'2026-11-19',true)`, [
   dry,
   dryPray,
 ]);
@@ -834,7 +940,7 @@ assert.deepEqual(
       [dry],
     )
   ).map((r) => r.d),
-  ['2026-11-17'],
+  ['2026-11-18'],
   "the open day's answers are gone",
 );
 assert.equal(

@@ -21,7 +21,12 @@ import {
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
-import { formatDate, formatRange, lastDay } from '@/lib/next/selectors';
+import {
+  asIfSignedToday,
+  formatDate,
+  formatRange,
+  lastDay,
+} from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import { SavedSheet } from './saved-sheet';
 import { ShareLink } from './share-link';
@@ -294,11 +299,8 @@ function NotStarted() {
               to: live ? null : ('invite' as const),
               note: `Waiting for ${partner} to join`,
             }
-          : {
-              label: 'Keep setting up',
-              to: 'setup' as const,
-              note: `Waiting for ${partner} to join`,
-            }
+          : // Setup is done; the one who set it up signs before inviting.
+            { label: 'Sign the pact', to: 'pact' as const }
         : signed(world.me.id)
           ? {
               label: 'See the rules',
@@ -313,7 +315,7 @@ function NotStarted() {
       detail={
         'note' in step && step.note
           ? step.note
-          : `Starts ${formatDate(c.start)} · ${c.days} days`
+          : `Starts ${formatDate(asIfSignedToday(c, world.today).start)} · ${c.days} days`
       }
     >
       <Button

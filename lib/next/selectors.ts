@@ -117,6 +117,24 @@ export const libraryByGroup = (rules: Rule[]) =>
 export const meetsTarget = (t: Target, value: number) =>
   t.op === '>=' ? value >= t.value : value <= t.value;
 
+/** The target `personId` answers against: their own limit on a rule where each sets their own. */
+export function targetFor(rule: Rule, personId: string): Target | undefined {
+  const own = rule.personalTarget ? rule.limits?.[personId] : undefined;
+  return rule.target && own !== undefined
+    ? { ...rule.target, value: own }
+    : rule.target;
+}
+
+/**
+ * Before both have signed: the challenge with the first day it gets if they both sign today. Day 1 is
+ * never before the day after both signed (nx_sign_pact), so a planned first day already here moves.
+ */
+export function asIfSignedToday(c: Challenge, today: DateString): Challenge {
+  if (c.status === 'running' || c.status === 'finished') return c;
+  const earliest = shift(today, 1);
+  return c.start >= earliest ? c : { ...c, start: earliest };
+}
+
 /* ── Days and deadlines ────────────────────────────────────────────────── */
 
 /** "Day 19": today's place in the challenge (0 before it starts, `days` after it ends). */

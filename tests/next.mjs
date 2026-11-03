@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import {
   answerLine,
   activePoints,
+  asIfSignedToday,
+  targetFor,
   asViewer,
   badges,
   calendar,
@@ -77,6 +79,7 @@ import {
   withdrawDispute,
 } from '../lib/next/actions.ts';
 import { world, FALL_RESET } from '../lib/next/demo.ts';
+import { practiceFor } from '../lib/next/practice.ts';
 import { EVERY_DAY, SUN_THU, MON_FRI } from '../lib/next/catalog.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -597,6 +600,75 @@ assert.equal(n.journal.at(-1).text, 'Early night.');
 n = removeNote(n, n.journal.at(-1).id);
 assert.equal(n.journal.length, w.journal.length);
 assert.ok(signPact(w, JORDAN).pact.signatures.every((s) => s.signedAt));
+// Signing before Day 1: a limit of your own on a rule where each sets theirs, and once both have
+// signed, Day 1 is never before the next day.
+{
+  const calories = {
+    ...ruleById(FALL_RESET, 'read'),
+    id: 'calories',
+    kind: 'number',
+    who: 'both',
+    target: { op: '<=', value: 2000, unit: 'kcal' },
+    personalTarget: true,
+  };
+  const before = {
+    ...w,
+    challenge: {
+      ...w.challenge,
+      status: 'signing',
+      start: '2026-11-20',
+      rules: [...w.challenge.rules, calories],
+    },
+  };
+  assert.equal(asIfSignedToday(before.challenge, w.today).start, '2026-11-21');
+  assert.equal(asIfSignedToday(w.challenge, w.today).start, w.challenge.start);
+  const signed = signPact(before, JORDAN, { calories: 1800, read: 5 });
+  const rule = ruleById(signed.challenge, 'calories');
+  assert.deepEqual(rule.limits, { [JORDAN]: 1800 }, 'only a personal rule');
+  assert.equal(targetFor(rule, JORDAN).value, 1800);
+  assert.equal(targetFor(rule, MAYA).value, 2000, 'the suggestion until set');
+  assert.deepEqual(
+    [signed.challenge.status, signed.challenge.start],
+    ['running', '2026-11-21'],
+  );
+  assert.equal(signPact(signed, JORDAN, { calories: 3000 }), signed);
+}
+// Practice from a couple's own rules: the sample couple's (as hand-made), and a couple with only
+// Yes-or-No rules, whose number parts fall back to the sample's.
+{
+  const built = practiceFor(FALL_RESET, MAYA, JORDAN, w.practice);
+  assert.deepEqual(
+    built.questions.map((q) => [q.rule.id, q.sample, q.shot]),
+    [
+      ['bed', {}, undefined],
+      ['social', { value: 45 }, 72],
+      ['phones', { done: false }, undefined],
+    ],
+  );
+  assert.equal(
+    built.partnerReview.find((r) => r.decision === 'dispute').comment,
+    w.practice.partnerReview.find((r) => r.decision === 'dispute').comment,
+    'the dispute quotes the screenshot',
+  );
+  assert.deepEqual(
+    built.partnerAnswers.map((a) => [a.rule.id, a.answer, a.shot]),
+    [
+      ['eating-out', { done: true }, undefined],
+      ['steps', { value: 10200 }, 8412],
+    ],
+    "the partner's answers aren't the ones you just gave",
+  );
+  const dry = {
+    ...FALL_RESET,
+    step: 2,
+    rules: FALL_RESET.rules.filter((r) => r.kind === 'yesno'),
+  };
+  const yesOnly = practiceFor(dry, MAYA, JORDAN, w.practice);
+  assert.ok(yesOnly.questions.every((q) => q.rule.kind === 'yesno'));
+  assert.deepEqual(yesOnly.questions[1].sample, { done: true });
+  assert.equal(yesOnly.miss.cost, 2);
+  assert.equal(yesOnly.partnerAnswers[1], w.practice.partnerAnswers[1]);
+}
 assert.equal(
   setShareLink(w, 'saved-summer-sprint', true).saved[0].linkOn,
   true,

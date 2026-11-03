@@ -8,6 +8,7 @@ import {
   meetsTarget,
   shift,
 } from '@/lib/next/selectors';
+import { shotKind } from '@/lib/next/practice';
 import { screenTimeShot, stepsShot } from '@/lib/next/shots';
 import { useReducedMotion } from '@/components/next/ui';
 import { useWorld } from '@/components/next/world';
@@ -37,35 +38,44 @@ export const shortTitle = (rule: Pick<Rule, 'title'>) =>
   rule.title.split(', ')[0];
 
 /**
- * The sample screenshot: 1h 12m of social and games, drawn as Social 47m and Games 25m (with
- * Productivity, 2h 1m in all). The pretend partner's dispute of the 45 min sample answer quotes
- * those two rows, so keep them in step with `practice.partnerReview` in lib/next/demo.ts.
+ * A practice screenshot for a number rule, showing `value` yesterday: screen time (social 65% and
+ * games, plus some productivity) or a step count. The pretend partner's dispute quotes what it
+ * shows (practiceFor in lib/next/practice.ts). Null for a rule practice can't draw.
  */
-const SHOT_MINUTES = 72;
-
-export function sampleShot(w: World): Proof {
-  return {
-    id: 'practice-screen-time',
-    src: screenTimeShot(SHOT_MINUTES, shift(w.today, -1)),
-    alt: 'Screen Time screenshot: 2h 1m in all, with social 47m and games 25m',
-  };
+export function shotOf(w: World, rule: Rule, value: number): Proof | null {
+  const day = shift(w.today, -1);
+  const id = `practice-${rule.id}-${value}`;
+  if (shotKind(rule) === 'steps')
+    return {
+      id,
+      src: stepsShot(value, day),
+      alt: `Step count screenshot, ${value.toLocaleString('en-US')} steps`,
+    };
+  if (shotKind(rule) === 'screen') {
+    const social = Math.round(value * 0.65);
+    return {
+      id,
+      src: screenTimeShot(value, day),
+      alt: `Screen Time screenshot: social ${social}m and games ${value - social}m`,
+    };
+  }
+  return null;
 }
 
-/** The partner's step-count screenshot, for an answer to review. */
-export function partnerShot(w: World, steps: number): Proof {
-  return {
-    id: `practice-partner-steps-${steps}`,
-    src: stepsShot(steps, shift(w.today, -1)),
-    alt: `Step count screenshot, ${steps.toLocaleString('en-US')} steps`,
-  };
-}
+/** The screenshot that goes with your sample answer to question `i`, when it has one. */
+export const sampleShot = (w: World, i: number): Proof[] => {
+  const q = w.practice.questions[i];
+  const shot = q.shot ?? q.sample.value;
+  const proof = shot === undefined ? null : shotOf(w, q.rule, shot);
+  return proof ? [proof] : [];
+};
 
 /** The sample answers, with the screenshot a required one needs, so every sample can be saved as it is. */
 const firstAnswers = (w: World): Answer[] =>
-  w.practice.questions.map((q) => ({
+  w.practice.questions.map((q, i) => ({
     done: q.sample.done ?? null,
     value: q.sample.value ?? null,
-    proofs: q.rule.proof === 'required' ? [sampleShot(w)] : [],
+    proofs: q.rule.proof === 'required' ? sampleShot(w, i) : [],
   }));
 
 /** A Yes, or a number that meets its target. */

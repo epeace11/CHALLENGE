@@ -129,6 +129,8 @@ function RuleSheet({ flow }: { flow: PactFlow }) {
       : rule?.proof === 'optional'
         ? 'Optional'
         : 'Not needed';
+  // On a rule where each sets their own target, the other's once they've signed.
+  const theirLimit = rule?.limits?.[flow.other.id];
   return (
     <Sheet
       open={flow.sheet === 'rule'}
@@ -156,8 +158,17 @@ function RuleSheet({ flow }: { flow: PactFlow }) {
                   ? 'Any day, counted Monday to Sunday'
                   : `${formatWhen(rule)}, Monday to Sunday`}
             </Fact>
-            {rule.target && !titleSays(rule.title, rule.target.value) && (
-              <Fact label="Target">{formatTarget(rule.target)}</Fact>
+            {rule.target && rule.personalTarget ? (
+              <Fact label="Target">
+                {theirLimit === undefined
+                  ? 'Each of you sets your own'
+                  : `Each of you sets your own. ${flow.other.name}’s: ${formatTarget({ ...rule.target, value: theirLimit })}`}
+              </Fact>
+            ) : (
+              rule.target &&
+              !titleSays(rule.title, rule.target.value) && (
+                <Fact label="Target">{formatTarget(rule.target)}</Fact>
+              )
             )}
             {rule.kind === 'weekly' && (
               <Fact label="How it counts">

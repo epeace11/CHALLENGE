@@ -1,6 +1,7 @@
-import type { Instant, Person, Rule, World } from '@/lib/next/model';
+import type { Challenge, Instant, Person, Rule, World } from '@/lib/next/model';
 import { signPact } from '@/lib/next/actions';
 import {
+  asIfSignedToday,
   dateIn,
   formatDate,
   formatDay,
@@ -12,6 +13,7 @@ import {
   lockTime,
   ms,
   partnerOf,
+  rulesFor,
   stakesPreview,
   zonedTime,
 } from '@/lib/next/selectors';
@@ -62,7 +64,7 @@ export function ruleDetail(rule: Rule) {
  * one who signed first. Epoch milliseconds.
  */
 export function pactMoment(world: World, otherId: string) {
-  const c = world.challenge;
+  const c = asIfSignedToday(world.challenge, world.today);
   const start = zonedTime(c.start, '00:00', c.timeZone);
   if (ms(world.now) < start) return ms(world.now);
   const theirs = world.pact.signatures.find(
@@ -73,8 +75,36 @@ export function pactMoment(world: World, otherId: string) {
 }
 
 /** Signs for `personId` at `at` rather than at the world's `now` (the page's moment, before Day 1). */
-export function signPactAt(w: World, personId: string, at: Instant): World {
-  return { ...signPact({ ...w, now: at }, personId), now: w.now };
+export function signPactAt(
+  w: World,
+  personId: string,
+  at: Instant,
+  limits: Record<string, number> = {},
+): World {
+  return { ...signPact({ ...w, now: at }, personId, limits), now: w.now };
+}
+
+/**
+ * The pact as the one who set it up sees it in the preview, opened from Set up: the challenge as
+ * drafted, nobody signed (or only them, at `signedAt`), and the partner not invited yet.
+ */
+export function asSetter(
+  w: World,
+  drafted: Challenge,
+  signedAt: Instant | null,
+): World {
+  return {
+    ...w,
+    challenge: { ...drafted, status: 'invited' },
+    pact: {
+      ...w.pact,
+      signatures: w.pact.signatures.map((s) => ({
+        ...s,
+        signedAt: s.personId === w.me.id ? signedAt : null,
+      })),
+    },
+    partnerPending: true,
+  };
 }
 
 export type Signer = {
@@ -93,7 +123,8 @@ export type RuleGroupView = {
 
 /** Everything the pact page shows, from `you`'s side (see `pactViewer`). */
 export function pactView(world: World, you: Person) {
-  const c = world.challenge;
+  // Before both have signed, the first day it will be (never before the day after both sign).
+  const c = asIfSignedToday(world.challenge, world.today);
   // The other one: Maya in the preview, the partner in the live app.
   const other = partnerOf(world, you.id);
   const signedAt = (id: string) =>
@@ -148,6 +179,10 @@ export function pactView(world: World, you: Person) {
       hours: Math.floor((left % 864e5) / 36e5),
     },
     groups,
+    /** Rules where each person sets their own target, which `you` sets when signing. */
+    limitRules: rulesFor(c, you.id).filter(
+      (r) => r.kind === 'number' && r.personalTarget && !!r.target,
+    ),
     terms: world.pact.terms,
     start: formatDay(c.start),
     startDate: formatDate(c.start),

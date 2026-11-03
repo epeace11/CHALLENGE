@@ -642,8 +642,6 @@
     border: 1px solid var(--nx-glass-border);
     background: var(--nx-glass);
     box-shadow: var(--nx-glass-shadow);
-    -webkit-backdrop-filter: blur(22px) saturate(1.15);
-    backdrop-filter: blur(22px) saturate(1.15);
   }
   .nx-card {
     position: relative;
@@ -1473,8 +1471,6 @@
     border: 1.5px solid var(--nx-line-strong);
     background: transparent;
     box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
     color: var(--nx-ink-2);
   }
   /* Days still to come are plain glass, like the cards; days a habit doesn't ask for are fainter. */

@@ -1,15 +1,15 @@
-// One step at a time: the stakes and Day 1, then the rules, then your signature; after signing the countdown to Day 1 is the hero.
+// One step at a time: the stakes and Day 1, then the rules, your own limit when a rule has one, then your signature; after signing the countdown to Day 1 is the hero.
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
-import { useBackend } from '@/components/next/backend';
 import {
   ActionBar,
   Button,
   CountUp,
   GlassCard,
   Glide,
+  NumberField,
   StatButton,
 } from '@/components/next/ui';
 import { HoldToSign, SealRing, SOLID_BAR, Terms } from './parts';
@@ -21,16 +21,15 @@ import { SignatureLine } from './signature-line';
 import { forgetPactFromInvite, pactFromInvite } from './entry';
 import { usePact, type PactFlow } from './use-pact';
 
-const STEPS = 3;
-
-/** Sign the pact: three short steps, then the countdown. */
+/** Sign the pact: three or four short steps, then the countdown. */
 export default function PactV1() {
   const flow = usePact();
-  const { live } = useBackend();
   const signed = !!flow.yours.signedAt;
-  // Straight from Invite's Accept, it opens on the signature (see entry.ts).
-  const [step, setStep] = useState(() => (pactFromInvite() ? STEPS - 1 : 0));
+  // Straight from Invite's Accept, it opens after the rules: your limit, or the signature (see entry.ts).
+  const [step, setStep] = useState(() => (pactFromInvite() ? 2 : 0));
   useEffect(forgetPactFromInvite, []);
+  // A limit left empty says so when Next is pressed.
+  const [limitShown, setLimitShown] = useState(false);
   const [direction, setDirection] = useState<1 | -1>(1);
   // Once someone moves between steps, each new step's title takes focus (not on first load).
   const [moved, setMoved] = useState(false);
@@ -49,8 +48,12 @@ export default function PactV1() {
     setMoved(true);
     flow.sign();
   };
-  const last = step === STEPS - 1;
-  const action = signed ? 'signed' : last ? 'sign' : 'next';
+  const at = flow.steps[step];
+  const action = signed ? 'signed' : at === 'sign' ? 'sign' : 'next';
+  const next = () => {
+    if (at === 'limits' && !flow.limitsSet) return setLimitShown(true);
+    go(step + 1);
+  };
   return (
     <PlainFrame
       back={
@@ -58,24 +61,26 @@ export default function PactV1() {
           ? undefined
           : step > 0
             ? { onClick: () => go(step - 1) }
-            : // In the live app the invite has been accepted, so Back goes to Your challenges.
-              { to: live ? 'home' : 'invite' }
+            : // Set up for the one who set it up; otherwise the invite has been accepted.
+              { to: flow.back }
       }
       aside={<AccountMenu cancel={!signed} person={flow.you} />}
     >
       <Glide id={signed ? 'signed' : step} direction={direction}>
         {signed ? (
           <Signed flow={flow} focus={moved} />
-        ) : step === 0 ? (
+        ) : at === 'start' ? (
           <StartsAndStakes flow={flow} focus={moved} />
-        ) : step === 1 ? (
+        ) : at === 'rules' ? (
           <Rules flow={flow} focus={moved} />
+        ) : at === 'limits' ? (
+          <Limits flow={flow} focus={moved} shown={limitShown} />
         ) : (
           <SignStep flow={flow} focus={moved} holding={holding} />
         )}
       </Glide>
 
-      {/* One bar for every step: Next turns into Hold to sign, then Go to Overview, in the same place.
+      {/* One bar for every step: Next turns into Hold to sign, then where to go next, in the same place.
           From 640px it is a compact bar centred under the page, the same width on every step. */}
       <ActionBar className={cn(SOLID_BAR, 'sm:mx-auto sm:w-96')}>
         <Glide id={action} direction={direction} className="w-full">
@@ -86,9 +91,9 @@ export default function PactV1() {
                 size="lg"
                 iconEnd={ArrowRight}
                 className="w-full sm:w-auto sm:flex-1"
-                onClick={flow.goToOverview}
+                onClick={flow.next.go}
               >
-                Go to Overview
+                {flow.next.label}
               </Button>
               <Button variant="quiet" onClick={() => flow.open('pact')}>
                 See the pact
@@ -107,7 +112,7 @@ export default function PactV1() {
               size="lg"
               iconEnd={ArrowRight}
               className="w-full"
-              onClick={() => go(step + 1)}
+              onClick={next}
             >
               Next
             </Button>
@@ -123,11 +128,13 @@ export default function PactV1() {
 /** A step's title and "Step 1 of 3". It takes focus when the step is reached by Next or Back. */
 function StepTitle({
   title,
+  flow,
   step,
   focus,
 }: {
   title: string;
-  step: number;
+  flow: PactFlow;
+  step: PactFlow['steps'][number];
   focus: boolean;
 }) {
   const ref = useFocusOnMount<HTMLHeadingElement>(focus);
@@ -137,7 +144,7 @@ function StepTitle({
         {title}
       </h1>
       <p className="text-nx-body text-nx-ink-2">
-        Step {step} of {STEPS}
+        Step {flow.steps.indexOf(step) + 1} of {flow.steps.length}
       </p>
     </header>
   );
@@ -159,7 +166,12 @@ function StartsAndStakes({ flow, focus }: { flow: PactFlow; focus: boolean }) {
   const c = flow.challenge;
   return (
     <div className="flex flex-col gap-7">
-      <StepTitle title={`Sign the ${c.name} pact`} step={1} focus={focus} />
+      <StepTitle
+        title={`Sign the ${c.name} pact`}
+        flow={flow}
+        step="start"
+        focus={focus}
+      />
       <div className="flex flex-col gap-3">
         <StatButton
           size="lg"
@@ -185,9 +197,58 @@ function StartsAndStakes({ flow, focus }: { flow: PactFlow; focus: boolean }) {
 function Rules({ flow, focus }: { flow: PactFlow; focus: boolean }) {
   return (
     <div className="flex flex-col gap-7">
-      <StepTitle title="The rules" step={2} focus={focus} />
+      <StepTitle title="The rules" flow={flow} step="rules" focus={focus} />
       <GlassCard>
         <RuleList flow={flow} />
+      </GlassCard>
+    </div>
+  );
+}
+
+/* ── Step 3, when a rule has one: your own limit ─────────────────────────── */
+
+/** Each rule where each of you sets your own target: yours, starting from the suggestion. */
+function Limits({
+  flow,
+  focus,
+  shown,
+}: {
+  flow: PactFlow;
+  focus: boolean;
+  /** Next was pressed with a limit empty. */
+  shown: boolean;
+}) {
+  const word = flow.limitRules.every((r) => r.target?.op === '<=')
+    ? 'limit'
+    : 'target';
+  const many = flow.limitRules.length > 1;
+  return (
+    <div className="flex flex-col gap-7">
+      <StepTitle
+        title={`Your ${word}${many ? 's' : ''}`}
+        flow={flow}
+        step="limits"
+        focus={focus}
+      />
+      <GlassCard className="flex flex-col gap-6">
+        {flow.limitRules.map((rule) => {
+          const value = flow.limits[rule.id] ?? null;
+          return (
+            <NumberField
+              key={rule.id}
+              label={rule.title}
+              value={value}
+              onChange={(v) => flow.setLimit(rule.id, v)}
+              unit={rule.target?.unit}
+              hint={`${flow.other.name} sets their own.`}
+              error={
+                shown && !(value !== null && value > 0)
+                  ? `Enter your ${word}.`
+                  : undefined
+              }
+            />
+          );
+        })}
       </GlassCard>
     </div>
   );
@@ -211,7 +272,7 @@ function SignStep({
   const c = flow.challenge;
   return (
     <div className="flex flex-col gap-7">
-      <StepTitle title="Your signature" step={3} focus={focus} />
+      <StepTitle title="Your signature" flow={flow} step="sign" focus={focus} />
       <GlassCard pad="none" className="flex flex-col px-5 pt-5 pb-4 sm:p-7">
         <section
           aria-labelledby="pact-promises"
