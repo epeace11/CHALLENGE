@@ -2,6 +2,70 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 3, 2026 (Erin's answers, then polish, harden, onboard and speed)
+
+Erin's answers to the fifth critique's questions: a plain Yes saves on tap; Practice rehearses reviewing; Progress doesn't tell someone behind that they can catch up; nobody names their gift yet. Then Impeccable's remaining passes ran (polish, harden, onboard, plus the first-load work the audit held back), each as a review whose findings were checked in the code before fixing.
+
+Erin's calls, built:
+
+- **A plain Yes saves on tap** on Check in: a tap or click on Yes for a rule with no screenshot saves it and the next question glides in. No still waits for Save (a miss can ask to be forgiven), and so do a Yes with a screenshot (required or optional), a Yes with a note just opened, a late answer, and anything chosen with the keyboard: arrow keys and Space only choose, so moving between Yes and No never saves by itself (YesNo's `onTap`). A question ignores Yes and No for its first 350 ms, so a double tap can't answer the next one.
+- **Practice rehearses reviewing.** A new step, "Review Jordan's answers", shows two of Jordan's sample answers one at a time with Dispute and Approve pinned, as on Review. The second (10,200 steps against a screenshot of 8,412) is there to dispute; Dispute asks for a reason in the same sheet as Review. Practice's first question starts empty and saves on a tap of Yes, as Check in does.
+
+Practice fits:
+
+- Only the step under way is open; the others are their titles. The practice marker moved into the top bar beside Back ("Practice. Nothing counts."), the saved answers became a bar on the step's row, and on laptops the review's short cards sit two to a row, the screenshot beside the answer, and the gift's amount beside its steps. Every step now fits at 390×904 and at 700×728.
+- Save stays filled and, pressed early, says "Choose Yes or No." and goes to the answer, as on Check in. After Jordan's review the button is "Next" (the next step's title says what). A partner who hasn't joined is "Your partner" at the start of a sentence.
+
+Check in fits in its last two scrolling states:
+
+- **A miss:** its card is the cost ("Adds $7 to the gift you give.") and "Ask Jordan to forgive it ›", which opens the reason in a sheet (the kit's new `ReasonSheet`, shared with Review and Practice). With a reason, the card shows "Asking Jordan to forgive it", the reason (tap to change) and Don't ask. An optional screenshot on a miss is a small "Add screenshot" beside "Add a note" instead of a tile.
+- **Saving keeps what was typed** until the write lands: a failed save brings the check-in back with its note, screenshots and reason.
+- **A screenshot uploading** shows a spinner on its tile, Save waits ("The screenshot is still uploading."), and the tile goes after six (the database's limit).
+
+Faster first load:
+
+- **Each page loads the first time it's shown** (`pages/registry.ts`), and `/app` fetches the rest 1.5 s after its first page is up, so moving between pages never waits. The first load's scripts went from about 1.38 MB to 1.1 MB. A page that is slow to arrive shows a spinner after 300 ms; one that fails to arrive tries again on its next showing.
+- **The old app's stylesheets aren't loaded** on this branch (only `shell.css`, `touch.css` and `next.css`), and next.css's block that cancelled them is gone. A sweep of every element on all 19 pages found the same computed styles before and after.
+
+The live app, hardened (`components/live`, `lib/live`):
+
+- **Losing signal no longer looks like being signed out:** a network error keeps what's on screen and tries again, and a failed save says "Couldn’t save. Check your connection." instead of the browser's error.
+- **A save never flickers back:** changes still being sent stay on screen through every reload, quick saves in a row reload once, and live updates wait 300 ms and skip while a save is sending.
+- **A page that fails** (or whose code can't be fetched after a deploy) shows the Can't load card with Try again, never a blank app.
+- **Start, join and accept can't run twice** from a double tap. The clock moves (a tab left open overnight logs the right day), screenshots aren't fetched again on every reload, and the screenshot picker always settles (cancel included).
+- **Links:** an expired or used invite says so ("This invite link has expired or was already used. Ask your partner to send a new one.") instead of showing the landing page; a shared link survives a bad connection; the invite screen says when the link couldn't be made, whether the partner has opened it, and offers Try a practice day; after signing up from an invite, Accept isn't needed twice.
+
+Onboarding:
+
+- **Day 1 says when to answer.** Overview's top card on Day 1 is "Nothing to log yet" with "Tomorrow, answer for today by 11:59 pm." and today's check-ins, and its main action is Try a practice day; the zero gifts and "Waiting for you 0" wait until there's something to show. Check in's empty state says the same (and before Day 1, "Day 1 is … On Wednesday, answer for Tuesday by 11:59 pm."). Before Day 1, Overview drops its "Day 1 starts in" tile (the title and the top bar already say it) for that line.
+- **The invited partner:** without an account the invite's top bar offers Sign in instead of an account menu, Sign up says "Then sign the pact with Maya.", and after Accept the pact opens on its signature (they've just read the start, stakes and rules on the invite; Back still steps through them).
+- **A theme tapped on the landing page** opens on its sheet in Start after sign-up. A brand-new account's Start says "Joining your partner's challenge? Open the invite link they sent you."
+
+Polish and harden, smaller:
+
+- Typed notes, reasons and disputes keep their line breaks, and a pasted link wraps instead of running off.
+- A day with none of your check-ins says "Nothing to answer" instead of "All logged" and an empty tally.
+- An avatar's initial is a name's first whole character, so a name starting with an emoji keeps it.
+- Placeholders reach 4.5:1 in light mode. Practice's answer to review is sans, not bold Georgia, and its question text is 17px.
+
+A sixth audit, after all of this, scored 16/20 (14 before): keyboard and screen readers, every look's contrast in light and dark, and the split pages count for it. Its fixes:
+
+- **The screenshot viewer fits a tall screenshot to the screen** (it was cut off below the screen on phones, and showed at full size on laptops), and zooms with a pinch, a double-tap or the wheel, panning by drag; swiping and pulling down to close work when it isn't zoomed. Page zoom stays blocked, as decided, so this is where zoom lives.
+- **Moving to a page whose code hasn't arrived keeps the current page up** until it has, instead of a blank screen; Overview's code is fetched with the data at start-up, and the preview fetches every page too.
+- **A sheet stays above a phone's keyboard,** so Dispute, Reply and Ask stay in reach while typing.
+- Screen readers hear Copy link's result, and a failed write once, not twice. touch.css lost the old app's selectors and its 16px rule for inputs (every input is 17px from the kit).
+
+Not changed, for later or for Erin:
+
+- **For Erin:**
+  - Every glass card has a 22px backdrop blur (DESIGN.md's frosted glass). Behind them is only the page's soft glow, so dropping it would look nearly the same and scroll more smoothly on older phones. Drop it?
+  - A weekly No (gym) costs nothing and shows nothing more: should it save on tap like Yes?
+  - When the partner opens the invite after the planned start, signing makes Day 1 the signing day; should it be the day after both sign (a database change)?
+  - Practice uses the sample rules, not the couple's own; build it from their rules?
+  - The person who sets it up signs by tapping Invite your partner, without seeing the pact's terms; show them first?
+  - Fitness & Food's "each of you sets your own limit" has nowhere to set it.
+- **For later:** deadlines show in the challenge's time zone with no label (a partner in another city reads Toronto's 11:59 pm as theirs); a failed dispute or reply on Review loses its text; "Opened" on the invite screen updates on a reload, not live (the invites table isn't in the realtime publication, a database change); Safari before 16.4 can't tell a cancelled screenshot picker; Motion is loaded whole (about a third of the kit's 112 KB) for a few fades and glides; at 260px (150% zoom on a phone) Start's account chip and a few card rows are cut off rather than reflowing (320px passes).
+
 ## Decisions, November 2, 2026 (fifth design critique and audit)
 
 Impeccable's remaining steps ran for the first time: `PRODUCT.md` (from Erin's answers: couples she shares it with register themselves; success is finishing together, having fun and starting another; they open it on a phone whenever they remember) and `DESIGN.md` (the Calm style as built). Then a technical audit scored 14/20 and a fifth critique 29/40 (26, 28, 26, 27, 29). Erin's answers: fix everything both found, keep pinch-zoom blocked, and take the recommendation on the 75-Day colour and on Overview's day.

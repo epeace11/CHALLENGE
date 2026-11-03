@@ -1,4 +1,5 @@
 import { parse as parseExif } from 'exifr';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { compress } from '@/lib/proof';
 import type { Command, SetupDraft, Template } from '@/components/next/backend';
@@ -46,13 +47,25 @@ async function select<T>(table: string, columns = '*', order = 'id') {
 /* ── Loading ───────────────────────────────────────────────────────────── */
 
 /**
- * Everything the signed-in person can read, after running the deadlines for their running
- * challenges. Null when the account has no profile yet (it needs a first name).
+ * The signed-in account, or null when signed out. When the auth server can't be reached (no
+ * signal), supabase-js answers "no user" with a retryable error: that throws, so losing signal is a
+ * failed load (what's on screen stays and it tries again), never signing out.
  */
-export async function loadRows(): Promise<Rows | null> {
+async function currentUser() {
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
+  if (isAuthRetryableFetchError(error)) throw new Error(error.message);
+  return user;
+}
+
+/**
+ * Everything the signed-in person can read, after running the deadlines for their running
+ * challenges. Null when signed out, or when the account has no profile yet (it needs a first name).
+ */
+export async function loadRows(): Promise<Rows | null> {
+  const user = await currentUser();
   if (!user) return null;
   const challenges = await select<ChallengeRow>('challenges');
   await Promise.all(
@@ -125,19 +138,44 @@ export async function loadRows(): Promise<Rows | null> {
   };
 }
 
-/** Signed URLs for every screenshot in `rows`, good for an hour. */
+/** How long a signed screenshot URL works, in seconds. */
+const SIGNED_FOR = 3600;
+/** A URL this close to expiring is signed again on the next load. */
+const RENEW_WITHIN = 10 * 60e3;
+/**
+ * Signed URLs by storage path, kept across loads: a screenshot keeps the same URL, so its thumbnail
+ * isn't downloaded again (and doesn't flash) every time the rows reload.
+ */
+const signed = new Map<string, { url: string; until: number }>();
+
+/**
+ * Signed URLs for every screenshot in `rows`. Only paths that are new, or whose URL expires within
+ * 10 minutes, are signed; the rest come from `signed`. Never throws: a path it couldn't sign shows
+ * no image until a later load signs it.
+ */
 export async function proofUrls(rows: Rows): Promise<ProofUrls> {
   const paths = new Set<string>();
   for (const e of rows.entries)
     for (const p of [...(e.proofs ?? []), ...(e.correction_proofs ?? [])])
       paths.add(p.path);
-  if (!paths.size) return {};
-  const { data } = await supabase.storage
-    .from(PROOF_BUCKET)
-    .createSignedUrls([...paths], 3600);
+  const now = Date.now();
+  const stale = [...paths].filter(
+    (p) => (signed.get(p)?.until ?? 0) - now < RENEW_WITHIN,
+  );
+  if (stale.length) {
+    const { data } = await supabase.storage
+      .from(PROOF_BUCKET)
+      .createSignedUrls(stale, SIGNED_FOR)
+      .catch(() => ({ data: null }));
+    for (const d of data ?? [])
+      if (d.path && d.signedUrl)
+        signed.set(d.path, { url: d.signedUrl, until: now + SIGNED_FOR * 1e3 });
+  }
   const out: ProofUrls = {};
-  for (const d of data ?? [])
-    if (d.path && d.signedUrl) out[d.path] = d.signedUrl;
+  for (const p of paths) {
+    const s = signed.get(p);
+    if (s && s.until > now) out[p] = s.url;
+  }
   return out;
 }
 
@@ -147,9 +185,7 @@ export const setName = (name: string) => rpc('nx_set_name', { p_name: name });
 
 /** Makes the profile from the name given at sign-up, the first time someone signs in. */
 export async function ensureProfile() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await currentUser();
   if (!user) return;
   const { data } = await supabase
     .from('profiles')

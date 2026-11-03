@@ -100,7 +100,8 @@ function ToastItem({
       exit={{ opacity: 0, y: 8, scale: 0.98 }}
       transition={{ duration: still ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
     >
-      <output className="nx-toast-text">{toast.text}</output>
+      {/* Plain text: the container is the one live region (an output inside would be read twice). */}
+      <span className="nx-toast-text">{toast.text}</span>
       {toast.action && (
         <Button
           variant="quiet"

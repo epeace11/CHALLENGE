@@ -9,8 +9,9 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import type { DateString, World } from '@/lib/next/model';
+import type { DateString, Proof, World } from '@/lib/next/model';
 import { shift } from '@/lib/next/calendar';
+import { formatDay } from '@/lib/next/selectors';
 import {
   HostContext,
   type Host,
@@ -23,17 +24,10 @@ import {
   type Nav,
   type PageId,
 } from '@/components/next/nav';
-import { pageById } from '@/components/next/pages/registry';
+import { pageById, preloadPages } from '@/components/next/pages/registry';
 import { setSignupMode } from '@/components/next/pages/signup/mode';
 import { showVerdictFor } from '@/components/next/pages/verdict/which';
-import { WifiOff } from 'lucide-react';
-import {
-  Button,
-  EmptyState,
-  GlassCard,
-  NxRoot,
-  useToast,
-} from '@/components/next/ui';
+import { NxRoot, useToast } from '@/components/next/ui';
 import { HostedWorld } from '@/components/next/world';
 import { world as signedOutWorld } from '@/lib/next/demo';
 import * as api from '@/lib/live/api';
@@ -41,6 +35,7 @@ import {
   PENDING_PARTNER,
   buildWorld,
   inviteWorld,
+  nextLock,
   withShared,
   type Built,
   type InvitePreviewRow,
@@ -48,6 +43,8 @@ import {
   type Rows,
   type SharedRow,
 } from '@/lib/live/world';
+import { CantLoad, PageBoundary } from './cant-load';
+import { InviteGone } from './invite-gone';
 import { NewPassword } from './new-password';
 import { Waiting } from './waiting';
 
@@ -71,13 +68,57 @@ const TAB_TITLES: Partial<Record<PageId, string>> = {
 const INVITE_KEY = 'nx-invite';
 const SHARED_KEY = 'nx-shared';
 const LINK_KEY = 'nx-invite-link';
+/** The invite whose Accept was tapped before having an account: accepted once they're signed in. */
+const ACCEPT_KEY = 'nx-invite-accept';
 
 /** The invite token from the link (?invite=…), kept while its person signs up. */
 let inviteToken: string | null = null;
 /** A shared challenge's token from its link (?shared=…), kept the same way. */
 let sharedToken: string | null = null;
+/** ACCEPT_KEY's token, kept here instead in a browser that can't store it (private mode). */
+let acceptAfter: string | null = null;
+/** The challenge the invite link showed last, to tell "used by this account" from "expired". */
+let lastInvite: { token: string; challenge: string } | null = null;
+/** The shared challenge last shown, still shown when a load can't reach its link. */
+let lastShared: { token: string; row: SharedRow } | null = null;
 /** Counts loads, so only the newest one's rows land on screen. */
 let loads = 0;
+
+/**
+ * A change a page made (useBackend().act) that is on screen before the database has it. Every load
+ * that lands shows the fresh rows with these applied on top, oldest first, so a reload never takes
+ * back a change that is still on its way. A change leaves the list when its write fails, or once a
+ * load that began after its write succeeded lands (those rows have it).
+ */
+type Pending = {
+  id: number;
+  change: (w: World) => World;
+  /** Once its write succeeded: `loads` at that moment. Loads numbered higher began after it. */
+  savedAt?: number;
+};
+/** Numbers each change a page applies. */
+let changes = 0;
+/** Changes applied but not yet sent: act() applies its change and sends its command right after. */
+let unclaimed: number[] = [];
+/** Sends still on their way. */
+let sending = 0;
+/** A start or join is on its way (see `once` in Hosting). */
+let joining = false;
+
+/** `list` without the changes saved before load `load` began: that load's rows have them. */
+function withoutSaved(list: Pending[], load: number) {
+  const left = list.filter((p) => p.savedAt === undefined || p.savedAt >= load);
+  return left.length === list.length ? list : left;
+}
+
+/** What a failed write says. Network errors become one plain line; the database's own messages stay. */
+function failure(e: unknown) {
+  const text = e instanceof Error ? e.message : '';
+  if (!navigator.onLine || /fetch|Load failed|NetworkError/i.test(text))
+    return 'Couldn’t save. Check your connection.';
+  return text || 'Something went wrong. Try again.';
+}
+
 /** Fired a few seconds after a load fails, to try again. */
 const RETRY_EVENT = 'nx-retry';
 /** Opened from a password reset email's link (?reset=1): ask for the new password once signed in. */
@@ -112,12 +153,14 @@ const readStored = (key: string) => {
     return null;
   }
 };
+/** False when this browser can't keep it (private mode): links then live only in the URL. */
 const writeStored = (key: string, value: string | null) => {
   try {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, value);
+    return true;
   } catch {
-    // Private mode: links then live only in the URL.
+    return false;
   }
 };
 
@@ -134,6 +177,8 @@ type Loaded =
       urls: ProofUrls;
       preview: InvitePreviewRow | null;
       shared: SharedRow | null;
+      /** When these rows landed (epoch ms). */
+      at: number;
     };
 
 const SIGNED_OUT: PageId[] = ['landing', 'signup'];
@@ -221,9 +266,20 @@ function resolveAccount(
 export function LiveApp() {
   const [loaded, setLoaded] = useState<Loaded>({ kind: 'loading' });
   const [wantedChallenge, setWantedChallenge] = useState<string | null>(null);
-  const [overlay, setOverlay] = useState<World | null>(null);
+  /** Changes on screen whose writes aren't in the loaded rows yet, oldest first (see `Pending`). */
+  const [pending, setPending] = useState<Pending[]>([]);
+  /** The clock: set when rows land and every minute between, so a tab left open keeps up. */
+  const [now, setNow] = useState(nowIso);
+  // Overview is the usual first page: its code is fetched with the data, not after it.
+  useEffect(() => {
+    void pageById('overview')
+      .components[0].preload()
+      .catch(() => {});
+  }, []);
   /** The last load failed (offline, or the database didn't answer); it tries again by itself. */
   const [failed, setFailed] = useState(false);
+  /** The invite link opened had expired or was already used. Any navigation leaves it. */
+  const [inviteGone, setInviteGone] = useState(false);
   /** Signed in from a reset link and still choosing the new password. */
   const [resetChoosing, setResetting] = useState(true);
   const query = useSyncExternalStore(subscribeUrl, search, noSearch);
@@ -234,34 +290,78 @@ export function LiveApp() {
   const reload = useCallback(async () => {
     // Only the newest load lands: one started earlier but answered later would put old rows back.
     const mine = ++loads;
-    const preview = inviteToken
-      ? ((await api
-          .invitePreview(inviteToken)
-          .catch(() => null)) as InvitePreviewRow | null)
-      : null;
-    const shared = sharedToken
-      ? await api.sharedPreview(sharedToken).catch(() => null)
-      : null;
-    // A link that was turned off is forgotten.
-    if (sharedToken && !shared) {
-      sharedToken = null;
-      writeStored(SHARED_KEY, null);
+    /** Keeps what is on screen, shows the failed state if nothing is, and tries again soon. */
+    const fail = () => {
+      if (mine !== loads) return;
+      setFailed(true);
+      setTimeout(() => window.dispatchEvent(new Event(RETRY_EVENT)), 4000);
+    };
+    // An invite link: null when it expired or was used, and it's forgotten; an error is a failed
+    // load, and the link is kept for the next one.
+    const invite = inviteToken;
+    let preview: InvitePreviewRow | null = null;
+    /** The invite link that just turned out expired or used. */
+    let gone: string | null = null;
+    if (invite) {
+      try {
+        preview = (await api.invitePreview(invite)) as InvitePreviewRow | null;
+      } catch {
+        return fail();
+      }
+      if (preview)
+        lastInvite = { token: invite, challenge: preview.challenge.id };
+      // Not while it's being accepted here: that uses it up, and the pact opens instead.
+      else if (invite === inviteToken && !joining) {
+        gone = invite;
+        inviteToken = acceptAfter = null;
+        writeStored(INVITE_KEY, null);
+        writeStored(ACCEPT_KEY, null);
+      }
+    }
+    // A shared link: null once it was turned off (forget it). An error keeps the link, and the
+    // challenge it showed last.
+    const share = sharedToken;
+    let shared: SharedRow | null = null;
+    if (share) {
+      try {
+        shared = await api.sharedPreview(share);
+        if (!shared && share === sharedToken) {
+          sharedToken = null;
+          writeStored(SHARED_KEY, null);
+        }
+      } catch {
+        shared = lastShared?.token === share ? lastShared.row : null;
+      }
+      if (shared) lastShared = { token: share, row: shared };
     }
     await api.ensureProfile().catch(() => {});
     // null: signed out (or no profile yet). A failed load keeps what is on screen until the next one.
     const rows = await api.loadRows().catch(() => undefined);
+    // Say the invite link is spent, unless this account is in its challenge now (accepted in another
+    // tab, or on another device): then it's just forgotten.
+    if (
+      gone &&
+      !(
+        rows &&
+        lastInvite?.token === gone &&
+        rows.challenges.some((c) => c.id === lastInvite?.challenge)
+      )
+    )
+      setInviteGone(true);
     if (mine !== loads) return;
-    if (rows === undefined) {
-      setFailed(true);
-      setTimeout(() => window.dispatchEvent(new Event(RETRY_EVENT)), 4000);
-      return;
-    }
+    if (rows === undefined) return fail();
+    const urls = rows ? await api.proofUrls(rows).catch(() => ({})) : {};
+    if (mine !== loads) return;
+    // The load lands in one render: the rows, a fresh clock, and the pending changes these rows
+    // already have taken off (the rest stay on top of them).
     setFailed(false);
-    if (!rows) return setLoaded({ kind: 'out', preview, shared });
-    const urls = await api.proofUrls(rows).catch(() => ({}));
-    if (mine !== loads) return;
-    setOverlay(null);
-    setLoaded({ kind: 'in', rows, urls, preview, shared });
+    setNow(nowIso());
+    setPending((list) => withoutSaved(list, mine));
+    setLoaded(
+      rows
+        ? { kind: 'in', rows, urls, preview, shared, at: Date.now() }
+        : { kind: 'out', preview, shared },
+    );
   }, []);
 
   // The page, an invite and a shared link come from the URL: /app?page=log, ?invite=…, ?shared=….
@@ -278,7 +378,16 @@ export function LiveApp() {
     // oxlint-disable-next-line react/react-compiler
     void reload();
     const auth = api.onAuthChange(() => void reload());
-    const unsubscribe = api.subscribe(() => void reload());
+    // One write changes several rows, and each arrives on its own: reload once, a moment after the
+    // last. While a change of ours is on its way, skip it: that send reloads when it's done, and
+    // that load has this change too.
+    let soon: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = api.subscribe(() => {
+      clearTimeout(soon);
+      soon = setTimeout(() => {
+        if (sending === 0) void reload();
+      }, 300);
+    });
     const onFocus = () => {
       if (document.visibilityState === 'visible') void reload();
     };
@@ -286,7 +395,11 @@ export function LiveApp() {
     const again = () => void reload();
     window.addEventListener(RETRY_EVENT, again);
     window.addEventListener('online', again);
+    // The clock moves on without reloading, so today, what's open and the deadlines stay right.
+    const tick = setInterval(() => setNow(nowIso()), 60e3);
     return () => {
+      clearTimeout(soon);
+      clearInterval(tick);
       window.removeEventListener(RETRY_EVENT, again);
       window.removeEventListener('online', again);
       auth.unsubscribe();
@@ -300,18 +413,18 @@ export function LiveApp() {
       loaded.kind === 'in'
         ? buildWorld(
             loaded.rows,
-            nowIso(),
+            now,
             deviceZone(),
             { origin: location.origin },
             loaded.urls,
             wantedChallenge,
           )
         : null,
-    [loaded, wantedChallenge],
+    [loaded, wantedChallenge, now],
   );
 
-  const world: World | null = useMemo(() => {
-    if (overlay) return overlay;
+  /** The world as the database has it. */
+  const saved: World | null = useMemo(() => {
     if (loaded.kind === 'loading') return null;
     if (
       loaded.preview &&
@@ -323,7 +436,7 @@ export function LiveApp() {
       return inviteWorld(
         loaded.preview,
         loaded.kind === 'in' ? loaded.rows.me : null,
-        nowIso(),
+        now,
       );
     const links = { origin: location.origin };
     // Signed out, Landing and Sign up only show the themes, and Shared its one challenge.
@@ -339,7 +452,29 @@ export function LiveApp() {
     return loaded.shared
       ? withShared(built.world, loaded.shared, links)
       : built.world;
-  }, [overlay, loaded, built]);
+  }, [loaded, built, now]);
+
+  /** What's on screen: that world with the changes still on their way applied, in order. */
+  const world = useMemo(
+    () => saved && pending.reduce((w, p) => p.change(w), saved),
+    [saved, pending],
+  );
+
+  // When the oldest open day locks, reload: it shows as closed, and the load runs the deadlines, so
+  // what wasn't logged is marked. Worked out from when the rows landed, so the minute tick never
+  // moves it; a few seconds late, so the database's clock has passed it too.
+  const lockAt =
+    loaded.kind === 'in' && built?.current?.status === 'running'
+      ? nextLock(built.world.challenge, loaded.at)
+      : null;
+  useEffect(() => {
+    if (lockAt === null) return;
+    const wait = Math.max(lockAt - Date.now(), 0) + 5e3;
+    // Past setTimeout's limit (24 days): a later load schedules it.
+    if (wait > 2 ** 31 - 1) return;
+    const timer = setTimeout(() => void reload(), wait);
+    return () => clearTimeout(timer);
+  }, [lockAt, reload]);
 
   const resetting = resetChoosing && resetOpened && loaded.kind === 'in';
   const shown = resolve(
@@ -348,6 +483,11 @@ export function LiveApp() {
     built,
     new URLSearchParams(query).has('shared'),
   );
+  /** Signed in, on an invite to a challenge this account isn't in yet. */
+  const inviteOpen =
+    loaded.kind === 'in' &&
+    !!loaded.preview &&
+    !loaded.rows.challenges.some((c) => c.id === loaded.preview?.challenge.id);
 
   // The browser tab names the page, so history and the tab switcher can tell pages apart.
   useEffect(() => {
@@ -368,6 +508,7 @@ export function LiveApp() {
     history.pushState(null, '', url);
     window.dispatchEvent(new Event(URL_EVENT));
     window.scrollTo({ top: 0 });
+    setInviteGone(false);
   }, []);
 
   const nav = useMemo<Nav>(
@@ -384,22 +525,9 @@ export function LiveApp() {
       <NxRoot>
         <div className="nx-frame" aria-busy={!failed}>
           {failed && (
-            <main className="nx-main flex min-h-dvh flex-col justify-center">
-              <GlassCard pad="lg" role="alert">
-                <EmptyState
-                  icon={WifiOff}
-                  title="Can’t load The Challenge"
-                  action={
-                    <Button variant="primary" onClick={() => void reload()}>
-                      Try again
-                    </Button>
-                  }
-                >
-                  Check that you’re online. It tries again every few seconds
-                  too.
-                </EmptyState>
-              </GlassCard>
-            </main>
+            <CantLoad onRetry={() => void reload()}>
+              Check that you’re online. It tries again every few seconds too.
+            </CantLoad>
           )}
         </div>
       </NxRoot>
@@ -411,9 +539,10 @@ export function LiveApp() {
         <Hosting
           world={world}
           built={built}
+          inviteOpen={inviteOpen}
           reload={reload}
           navigate={navigate}
-          setOverlay={setOverlay}
+          setPending={setPending}
           setWantedChallenge={setWantedChallenge}
         >
           {(host) => (
@@ -426,10 +555,12 @@ export function LiveApp() {
                     navigate(null);
                   }}
                 />
+              ) : inviteGone ? (
+                <InviteGone signedIn={loaded.kind === 'in'} />
               ) : shown === 'waiting' ? (
                 <Waiting world={world} host={host} />
               ) : (
-                <Page id={shown} />
+                <ShownPage id={shown} />
               )}
             </HostedWorld>
           )}
@@ -439,26 +570,63 @@ export function LiveApp() {
   );
 }
 
-function Page({ id }: { id: PageId }) {
+/**
+ * The page on screen. Moving to a page whose code hasn't arrived keeps the page before it up until it
+ * has (never a blank frame); the first page waits on its own, with a spinner if it's slow. A page
+ * that throws, or whose code can't be fetched, shows the Can't load card.
+ */
+function ShownPage({ id }: { id: PageId }) {
   const Version = pageById(id).components[0];
-  return <Version key={id} />;
+  /** The last page whose code had arrived (or that failed to arrive, for its card to say so). */
+  const [held, setHeld] = useState(id);
+  useEffect(() => {
+    let on = true;
+    const show = () => on && setHeld(id);
+    Version.preload().then(show, show);
+    return () => {
+      on = false;
+    };
+  }, [Version, id]);
+  // The first page loads alone; a moment after it's up, the rest are fetched so moving on never waits.
+  useEffect(() => {
+    const later = setTimeout(preloadPages, 1500);
+    return () => clearTimeout(later);
+  }, []);
+  const page = Version.ready() ? id : held;
+  const Shown = pageById(page).components[0];
+  return (
+    <PageBoundary key={page}>
+      <Shown />
+    </PageBoundary>
+  );
 }
+
+/** The invite link made for the partner, as kept in this browser (LINK_KEY). */
+type StoredLink = {
+  challenge: string;
+  link: string;
+  code: string;
+  /** Epoch ms after which a new link is made (links last 7 days). */
+  renewAt?: number;
+};
 
 /** The host every page reaches through useBackend(). Inside NxRoot so it can show toasts. */
 function Hosting({
   world,
   built,
+  inviteOpen,
   reload,
   navigate,
-  setOverlay,
+  setPending,
   setWantedChallenge,
   children,
 }: {
   world: World;
   built: Built | null;
+  inviteOpen: boolean;
   reload: () => Promise<void>;
   navigate: Nav['navigate'];
-  setOverlay: (w: World | null | ((w: World | null) => World | null)) => void;
+  setPending: (f: (list: Pending[]) => Pending[]) => void;
   setWantedChallenge: (id: string | null) => void;
   children: (host: Host) => ReactNode;
 }) {
@@ -470,17 +638,37 @@ function Hosting({
   }, [world, built]);
 
   const host = useMemo<Host>(() => {
-    /** Runs `f`; on failure shows the database's message, reloads, and returns false. */
-    async function attempt<T>(f: () => Promise<T>): Promise<T | false> {
+    /** The one pop-up the app keeps: a write that failed, so it never fails silently. */
+    const fail = (e: unknown) => toast(failure(e));
+    /**
+     * Runs `f`; on failure says so, reloads, and returns false. `quiet`: the page shows the failure
+     * itself, so there's no pop-up and no reload.
+     */
+    async function attempt<T>(
+      f: () => Promise<T>,
+      quiet = false,
+    ): Promise<T | false> {
       try {
         return await f();
       } catch (e) {
-        // The one pop-up the app keeps: a write that failed, so it never fails silently.
-        toast(
-          e instanceof Error ? e.message : 'Something went wrong. Try again.',
-        );
+        if (quiet) return false;
+        fail(e);
         await reload();
         return false;
+      }
+    }
+    /**
+     * Starting, joining or ending a challenge: a second tap while the first is still on its way
+     * returns false at once, instead of making a second challenge (nx_create_challenge has no lock
+     * against two calls from one account) or failing on the first one's leftovers.
+     */
+    async function once(f: () => Promise<boolean>) {
+      if (joining) return false;
+      joining = true;
+      try {
+        return await f();
+      } finally {
+        joining = false;
       }
     }
     const ids = () => {
@@ -499,35 +687,100 @@ function Hosting({
       afterSignIn = null;
       if (to) navigate(to);
     }
+    /** The partner's invite link: the one kept in this browser while it has days left, else a new one. */
+    async function makeLink() {
+      const { world: w } = latest.current;
+      let kept: StoredLink | null = null;
+      try {
+        kept = JSON.parse(readStored(LINK_KEY) ?? 'null') as StoredLink | null;
+      } catch {
+        // Unreadable: make a new one.
+      }
+      if (
+        kept?.challenge === w.challenge.id &&
+        Date.now() < (kept.renewAt ?? 0)
+      )
+        return kept;
+      const name = w.partner.id === PENDING_PARTNER ? '' : w.partner.name;
+      // Quiet: the invite screen says it couldn't make the link, with Try again.
+      const made = await attempt(
+        () => api.createInvite(w.challenge.id, name),
+        true,
+      );
+      if (made === false) return null;
+      const out: StoredLink = {
+        challenge: w.challenge.id,
+        link: `${location.origin}/app?invite=${made.token}`,
+        code: made.code,
+        // A day before the link expires, so a link shown here always has time left.
+        renewAt: Date.now() + 6 * 864e5,
+      };
+      writeStored(LINK_KEY, JSON.stringify(out));
+      return out;
+    }
+    /** The link being made: a second ask meanwhile waits for the same one, never a second invite. */
+    let making: Promise<StoredLink | null> | null = null;
+
     return {
       send: async (commands) => {
-        const challenge = ids().challenge;
-        const ok = await attempt(async () => {
+        // The change already on screen for these commands: act() applies it just before sending.
+        const mine = unclaimed;
+        unclaimed = [];
+        const { challenge } = ids();
+        sending += 1;
+        let ok = true;
+        try {
           for (const c of commands) await api.send(challenge, c);
-        });
-        if (ok !== false) await reload();
-        return ok !== false;
+        } catch (e) {
+          ok = false;
+          fail(e);
+        }
+        // Saved: it stays on screen until a load that begins after this moment lands, since that
+        // load has it. Failed: it comes off the screen at once.
+        const at = loads;
+        setPending((list) =>
+          ok
+            ? list.map((p) => (mine.includes(p.id) ? { ...p, savedAt: at } : p))
+            : list.filter((p) => !mine.includes(p.id)),
+        );
+        sending -= 1;
+        // Several quick saves reload once, after the last: that load has every one of them.
+        if (sending === 0) await reload();
+        return ok;
       },
+      // Always settles: the proof, or null when the person cancels or the upload fails.
       pickProof: (day: DateString) =>
-        new Promise((resolve) => {
+        new Promise<Proof | null>((resolve) => {
           const input = document.createElement('input');
           input.type = 'file';
           input.accept = 'image/jpeg,image/png,image/webp';
-          input.onchange = async () => {
+          // In the page while picking (some browsers send its events only then), out of sight.
+          input.style.cssText =
+            'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+          let settled = false;
+          const done = (proof: Proof | null) => {
+            if (settled) return;
+            settled = true;
+            input.remove();
+            resolve(proof);
+          };
+          input.addEventListener('cancel', () => done(null));
+          input.addEventListener('change', async () => {
             const file = input.files?.[0];
-            if (!file) return resolve(null);
+            if (!file) return done(null);
             const { challenge, me } = ids();
             const up = await attempt(() =>
               api.uploadProof(challenge, me, file),
             );
-            if (up === false) return resolve(null);
-            resolve({
+            if (up === false) return done(null);
+            done({
               id: up.path,
               src: URL.createObjectURL(up.blob),
-              alt: `Screenshot for ${day}`,
+              alt: `Screenshot for ${formatDay(day)}`,
               ...(up.takenAt ? { takenAt: up.takenAt } : {}),
             });
-          };
+          });
+          document.body.appendChild(input);
           input.click();
         }),
       signUp: async (a) => {
@@ -561,36 +814,38 @@ function Hosting({
       },
       signOut: async () => {
         await api.signOut();
-        for (const key of [INVITE_KEY, SHARED_KEY, LINK_KEY])
+        for (const key of [INVITE_KEY, SHARED_KEY, LINK_KEY, ACCEPT_KEY])
           writeStored(key, null);
-        inviteToken = sharedToken = afterSignIn = null;
+        inviteToken = sharedToken = afterSignIn = acceptAfter = null;
+        lastShared = lastInvite = null;
         await reload();
         navigate('landing');
       },
-      startFrom: async (template: Template) => {
-        const { world: w, built: b } = latest.current;
-        const draft = b?.current?.status === 'draft' ? b.current.id : null;
-        // Starting from scratch again opens the draft as it was left, instead of clearing it.
-        if (draft && template.kind === 'blank') {
+      startFrom: (template: Template) =>
+        once(async () => {
+          const { world: w, built: b } = latest.current;
+          const draft = b?.current?.status === 'draft' ? b.current.id : null;
+          // Starting from scratch again opens the draft as it was left, instead of clearing it.
+          if (draft && template.kind === 'blank') {
+            navigate('setup');
+            return true;
+          }
+          const id = await attempt(() =>
+            api.startChallenge(
+              template,
+              shift(w.today, 1),
+              deviceZone(),
+              w.me.id,
+              w.partner.id,
+              draft,
+            ),
+          );
+          if (id === false) return false;
+          setWantedChallenge(id);
+          await reload();
           navigate('setup');
           return true;
-        }
-        const id = await attempt(() =>
-          api.startChallenge(
-            template,
-            shift(w.today, 1),
-            deviceZone(),
-            w.me.id,
-            w.partner.id,
-            draft,
-          ),
-        );
-        if (id === false) return false;
-        setWantedChallenge(id);
-        await reload();
-        navigate('setup');
-        return true;
-      },
+        }),
       saveDraft: async (draft: SetupDraft) => {
         const { challenge, me, partner } = ids();
         const { world: w } = latest.current;
@@ -602,143 +857,138 @@ function Hosting({
         await reload();
         return true;
       },
-      finishSetup: async (draft: SetupDraft) => {
-        const { challenge, me, partner } = ids();
-        const { world: w } = latest.current;
-        const ok = await attempt(() =>
-          api.finishSetup(
-            challenge,
-            draft,
-            me,
-            partner,
-            w.challenge.id === challenge ? w.challenge : null,
-          ),
-        );
-        if (ok === false) return false;
-        await reload();
-        navigate(null);
-        return true;
-      },
-      cancelChallenge: async () => {
-        const { challenge } = ids();
-        const done = await attempt(() => api.cancelChallenge(challenge));
-        if (done === false) return false;
-        writeStored(LINK_KEY, null);
-        setWantedChallenge(null);
-        await reload();
-        if (done === 'ended') showVerdictFor(challenge);
-        navigate(done === 'ended' ? 'verdict' : null);
-        return true;
-      },
-      inviteLink: async () => {
-        const { world: w } = latest.current;
-        const kept = readStored(LINK_KEY);
-        if (kept) {
-          const saved = JSON.parse(kept) as {
-            challenge: string;
-            link: string;
-            code: string;
-            /** Epoch ms after which a new link is made (links last 7 days). */
-            renewAt?: number;
-          };
-          if (
-            saved.challenge === w.challenge.id &&
-            Date.now() < (saved.renewAt ?? 0)
-          )
-            return saved;
-        }
-        const name = w.partner.id === PENDING_PARTNER ? '' : w.partner.name;
-        const made = await attempt(() =>
-          api.createInvite(w.challenge.id, name),
-        );
-        if (made === false) return null;
-        const out = {
-          challenge: w.challenge.id,
-          link: `${location.origin}/app?invite=${made.token}`,
-          code: made.code,
-          // A day before the link expires, so a link shown here always has time left.
-          renewAt: Date.now() + 6 * 864e5,
-        };
-        writeStored(LINK_KEY, JSON.stringify(out));
-        return out;
-      },
-      startShared: async () => {
-        const { world: w } = latest.current;
-        const shared = w.saved.find((x) => x.source === 'link');
-        if (!shared) return false;
-        if (!latest.current.built) {
-          // Not signed in yet: make the account first; the link waits in this browser.
-          afterSignIn = 'shared';
-          setSignupMode('signup');
-          navigate('signup');
-          return false;
-        }
-        const id = await attempt(() =>
-          api.startChallenge(
-            { kind: 'saved', saved: shared },
-            shift(w.today, 1),
-            deviceZone(),
-            w.me.id,
-            w.partner.id,
-            latest.current.built?.current?.status === 'draft'
-              ? latest.current.built.current.id
-              : null,
-          ),
-        );
-        if (id === false) return false;
-        sharedToken = null;
-        writeStored(SHARED_KEY, null);
-        setWantedChallenge(id);
-        await reload();
-        navigate('setup');
-        return true;
-      },
-      saveShared: async () => {
-        const t = sharedToken;
-        if (!t) return false;
-        if (!latest.current.built) {
-          afterSignIn = 'shared';
-          setSignupMode('signup');
-          navigate('signup');
-          return false;
-        }
-        const ok = await attempt(() => api.saveShared(t));
-        if (ok === false) return false;
-        // Saved: the link has done its job, and Your challenges lists the copy.
-        sharedToken = null;
-        writeStored(SHARED_KEY, null);
-        await reload();
-        return true;
-      },
-      acceptInvite: async () => {
-        const t = inviteToken;
-        if (!t) return false;
-        const { world: w } = latest.current;
-        if (w.me.id === 'invitee') {
-          // Not signed in yet: make the account first; the invite waits in this tab.
-          setSignupMode('signup');
-          navigate('signup');
-          return false;
-        }
-        const id = await attempt(() => api.acceptInvite(t));
-        if (id === false) return false;
-        writeStored(INVITE_KEY, null);
-        inviteToken = null;
-        setWantedChallenge(id);
-        await reload();
-        navigate('pact');
-        return true;
-      },
+      finishSetup: (draft: SetupDraft) =>
+        once(async () => {
+          const { challenge, me, partner } = ids();
+          const { world: w } = latest.current;
+          const ok = await attempt(() =>
+            api.finishSetup(
+              challenge,
+              draft,
+              me,
+              partner,
+              w.challenge.id === challenge ? w.challenge : null,
+            ),
+          );
+          if (ok === false) return false;
+          await reload();
+          navigate(null);
+          return true;
+        }),
+      cancelChallenge: () =>
+        once(async () => {
+          const { challenge } = ids();
+          const done = await attempt(() => api.cancelChallenge(challenge));
+          if (done === false) return false;
+          writeStored(LINK_KEY, null);
+          setWantedChallenge(null);
+          await reload();
+          if (done === 'ended') showVerdictFor(challenge);
+          navigate(done === 'ended' ? 'verdict' : null);
+          return true;
+        }),
+      inviteLink: () =>
+        (making ??= makeLink().finally(() => {
+          making = null;
+        })),
+      startShared: () =>
+        once(async () => {
+          const { world: w } = latest.current;
+          const shared = w.saved.find((x) => x.source === 'link');
+          if (!shared) return false;
+          if (!latest.current.built) {
+            // Not signed in yet: make the account first; the link waits in this browser.
+            afterSignIn = 'shared';
+            setSignupMode('signup');
+            navigate('signup');
+            return false;
+          }
+          const id = await attempt(() =>
+            api.startChallenge(
+              { kind: 'saved', saved: shared },
+              shift(w.today, 1),
+              deviceZone(),
+              w.me.id,
+              w.partner.id,
+              latest.current.built?.current?.status === 'draft'
+                ? latest.current.built.current.id
+                : null,
+            ),
+          );
+          if (id === false) return false;
+          sharedToken = null;
+          writeStored(SHARED_KEY, null);
+          setWantedChallenge(id);
+          await reload();
+          navigate('setup');
+          return true;
+        }),
+      saveShared: () =>
+        once(async () => {
+          const t = sharedToken;
+          if (!t) return false;
+          if (!latest.current.built) {
+            afterSignIn = 'shared';
+            setSignupMode('signup');
+            navigate('signup');
+            return false;
+          }
+          const ok = await attempt(() => api.saveShared(t));
+          if (ok === false) return false;
+          // Saved: the link has done its job, and Your challenges lists the copy.
+          sharedToken = null;
+          writeStored(SHARED_KEY, null);
+          await reload();
+          return true;
+        }),
+      acceptInvite: () =>
+        once(async () => {
+          const t = inviteToken;
+          if (!t) return false;
+          const { world: w } = latest.current;
+          if (w.me.id === 'invitee') {
+            // Not signed in yet: make the account first. The invite waits in this browser, and is
+            // accepted as soon as they're signed in (the effect below), even from the email's tab.
+            acceptAfter = writeStored(ACCEPT_KEY, t) ? null : t;
+            setSignupMode('signup');
+            navigate('signup');
+            return false;
+          }
+          const id = await attempt(() => api.acceptInvite(t));
+          if (id === false) return false;
+          writeStored(INVITE_KEY, null);
+          writeStored(ACCEPT_KEY, null);
+          inviteToken = acceptAfter = null;
+          setWantedChallenge(id);
+          await reload();
+          navigate('pact');
+          return true;
+        }),
     };
-  }, [toast, reload, navigate, setWantedChallenge]);
+  }, [toast, reload, navigate, setPending, setWantedChallenge]);
+
+  // Accept was tapped before having an account: now that they're signed in on the invite, accept it
+  // for them, once, so they land on the pact instead of tapping Accept again.
+  useEffect(() => {
+    const t = inviteToken;
+    if (!inviteOpen || !t) return;
+    if (acceptAfter !== t && readStored(ACCEPT_KEY) !== t) return;
+    acceptAfter = null;
+    writeStored(ACCEPT_KEY, null);
+    void host.acceptInvite();
+  }, [inviteOpen, host]);
 
   const ctx = useMemo(
     () => ({
       host,
-      apply: (change: (w: World) => World) =>
-        setOverlay((w) => change(w ?? world)),
+      // Shows the change at once and keeps it on screen until its send settles (see `Pending`).
+      apply: (change: (w: World) => World) => {
+        const id = ++changes;
+        unclaimed.push(id);
+        setPending((list) => [...list, { id, change }]);
+      },
     }),
-    [host, setOverlay, world],
+    [host, setPending],
   );
   return (
     <HostContext.Provider value={ctx}>

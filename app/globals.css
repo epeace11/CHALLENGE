@@ -1,17 +1,8 @@
 @import 'tailwindcss';
-@import 'tw-animate-css';
-/* Order matters: later files override earlier ones, so keep this order. */
-@import '../styles/base.css';
-@import '../styles/history-and-dialogs.css';
+/* Order matters: later files override earlier ones, so keep this order. Only the new app is routed
+   on this branch, so the old app's stylesheets (base.css, dark.css and the rest in styles/) aren't
+   loaded; they stay for main. */
+@import '../styles/shell.css';
 @import '../styles/touch.css';
-@import '../styles/loading.css';
-@import '../styles/progress.css';
-@import '../styles/journal.css';
-@import '../styles/cards.css';
-@import '../styles/checkin.css';
-@import '../styles/badges.css';
-@import '../styles/viewer.css';
-@import '../styles/dark.css';
-@import '../styles/extras.css';
 /* The new UI (components/next): scoped under .nx, so it must stay last. */
 @import '../styles/next.css';

@@ -1,6 +1,14 @@
 'use client';
-import { useId, useRef, type ReactNode, type Ref } from 'react';
-import { ChevronRight, Gift, NotebookPen, type LucideIcon } from 'lucide-react';
+import { useId, useRef, useState, type ReactNode, type Ref } from 'react';
+import {
+  ChevronRight,
+  Gift,
+  HandHeart,
+  ImagePlus,
+  NotebookPen,
+  Pencil,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
 import {
   countsForWeek,
@@ -17,8 +25,8 @@ import {
   Card,
   NumberField,
   ProofStrip,
+  ReasonSheet,
   TextField,
-  Toggle,
   YesNo,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
@@ -39,18 +47,22 @@ export function LinkLine({
   children,
   onClick,
   tone = 'accent',
+  popup,
   className,
 }: {
   icon?: LucideIcon;
   children: ReactNode;
   onClick: () => void;
   tone?: 'accent' | 'missed' | 'done';
+  /** It opens a sheet. */
+  popup?: boolean;
   className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-haspopup={popup ? 'dialog' : undefined}
       className={cn(styles.link, 'nx-press', className)}
       data-tone={tone}
     >
@@ -116,7 +128,7 @@ export function QuestionHead({
 }
 
 /**
- * Everything one check-in asks, as a draft until Save: Yes or No or a number (pass or fail shown
+ * Everything one check-in asks, as a draft until Save (a plain Yes saves on tap): Yes or No or a number (pass or fail shown
  * as you type), the week so far for weekly rules, screenshots, a note, and with a miss what it
  * costs and "Ask Jordan to forgive this".
  */
@@ -131,9 +143,16 @@ export function QuestionFields({
 }) {
   const { navigate } = useNav();
   const { world, me, partner, day, late } = ci;
-  const reasonBox = useRef<HTMLDivElement>(null),
-    noteBox = useRef<HTMLDivElement>(null);
-  /** Moves focus into a field that just opened (the reason or the note). */
+  const noteBox = useRef<HTMLDivElement>(null),
+    missCard = useRef<HTMLDivElement>(null);
+  /** The sheet that asks why the miss should be forgiven is open; each opening starts from the reason as it is. */
+  const [asking, setAsking] = useState(false);
+  const [opened, setOpened] = useState(0);
+  const ask = () => {
+    setOpened((n) => n + 1);
+    setAsking(true);
+  };
+  /** Moves focus into the note once it opens. */
   const focusIn = (box: typeof noteBox) =>
     requestAnimationFrame(() =>
       box.current?.querySelector('textarea')?.focus(),
@@ -155,13 +174,18 @@ export function QuestionFields({
   /** The miss card can show here: a late answer never asks to forgive, and a weekly No costs nothing. */
   const canMiss = !late && rule.kind !== 'weekly';
   const missed = canMiss && outcome === 'miss';
+  /**
+   * On a miss a screenshot is optional, so until one is added it is a small button beside "Add a
+   * note" instead of a tile, and the miss's card fits under the answer.
+   */
+  const shotButton = rule.proof !== 'none' && shots === 0 && outcome === 'miss';
   /** What goes with the answer: its screenshot, the week so far, what a miss costs. */
-  const side = rule.proof !== 'none' || !!week || missed;
+  const side = (rule.proof !== 'none' && !shotButton) || !!week || missed;
   /** Two columns from 640px whenever the right one can have something in it. */
   const columns = rule.proof !== 'none' || !!week || canMiss;
 
   // Save brings a missing part into view and focuses it (see revealField in use-checkin.ts).
-  const field = (name: 'answer' | 'proof' | 'reason') => ({
+  const field = (name: 'answer' | 'proof') => ({
     'data-field': name,
     'data-rule': rule.id,
   });
@@ -192,13 +216,14 @@ export function QuestionFields({
             label={rule.question}
             value={draft.done}
             onChange={(done) => ci.change(rule, { done })}
+            onTap={(done) => ci.answer(rule, done)}
           />
         )}
       </div>
 
       {side && (
         <div className="flex flex-col gap-5 sm:col-start-2 sm:row-span-2 sm:row-start-1">
-          {rule.proof !== 'none' && (
+          {rule.proof !== 'none' && !shotButton && (
             <div {...field('proof')} className="flex flex-col gap-2.5">
               {/* Once a screenshot is added, the thumbnail says so: no status beside the label, and
                   on phones no label either, so the form still fits. */}
@@ -228,6 +253,9 @@ export function QuestionFields({
               </p>
               <ProofStrip
                 proofs={draft.proofs}
+                // The database takes six at most.
+                max={6}
+                busy={ci.uploadingFor(rule)}
                 onAdd={() => ci.addProof(rule)}
                 onRemove={(id) => ci.removeProof(rule, id)}
               />
@@ -262,56 +290,126 @@ export function QuestionFields({
           )}
 
           {missed && (
-            <Card pad="sm" className="nx-enter flex flex-col gap-1">
-              {!hasPoint && (
-                <LinkLine
-                  icon={Gift}
-                  tone="missed"
-                  className="-mx-2 w-[calc(100%+16px)]"
-                  onClick={() => navigate('gifts')}
-                >
-                  {/* The toggle under it names the partner, so this line doesn't. */}
-                  A miss adds {formatMoney(nextMissCost(world, me))} to the gift
-                  you give.
-                </LinkLine>
-              )}
-              <Toggle
-                checked={draft.forgive}
-                onChange={(forgive) => {
-                  ci.change(rule, { forgive });
-                  if (forgive) focusIn(reasonBox);
-                }}
-                label={`Ask ${partner} to forgive this`}
-                description={`If ${partner} agrees, the point costs nothing.`}
-              />
-              <div
-                ref={reasonBox}
-                {...field('reason')}
-                className="empty:hidden"
-              >
-                {draft.forgive && (
-                  <TextField
-                    className="nx-enter pb-2"
-                    // The toggle above asks it; the field only needs a name.
-                    label="Your reason"
-                    multiline
-                    rows={3}
-                    maxLength={500}
-                    value={draft.reason}
-                    onChange={(reason) => ci.change(rule, { reason })}
-                  />
+            <div ref={missCard}>
+              <Card pad="sm" className="nx-enter flex flex-col gap-1">
+                {!draft.forgive ? (
+                  <>
+                    {!hasPoint && (
+                      <LinkLine
+                        icon={Gift}
+                        tone="missed"
+                        className="-mx-2 w-[calc(100%+16px)]"
+                        onClick={() => navigate('gifts')}
+                      >
+                        {/* The card says it's a miss and the line under it names the partner. */}
+                        Adds {formatMoney(nextMissCost(world, me))} to the gift
+                        you give.
+                      </LinkLine>
+                    )}
+                    {/* The reason is asked in a sheet, as on Review; the sheet says what forgiving does. */}
+                    <LinkLine
+                      icon={HandHeart}
+                      popup
+                      className="-mx-2 w-[calc(100%+16px)]"
+                      onClick={ask}
+                    >
+                      Ask {partner} to forgive it
+                    </LinkLine>
+                  </>
+                ) : (
+                  // Asking: the request takes the cost's place; Don't ask brings the cost back.
+                  <div className="nx-enter flex flex-col gap-1.5 py-1">
+                    <p className="text-nx-2 font-semibold text-nx-ink">
+                      Asking {partner} to forgive it
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="nx-press flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-nx-sm bg-nx-sunken px-3 py-2 text-left"
+                        aria-haspopup="dialog"
+                        aria-label={`Your reason: ${draft.reason}. Change it`}
+                        onClick={ask}
+                      >
+                        <span className="min-w-0 flex-1 truncate text-nx-2 text-nx-ink">
+                          {draft.reason}
+                        </span>
+                        <Pencil
+                          size={18}
+                          aria-hidden="true"
+                          className="shrink-0 text-nx-accent"
+                        />
+                      </button>
+                      <Button
+                        variant="quiet"
+                        className="shrink-0 px-3"
+                        onClick={() => ci.change(rule, { forgive: false })}
+                      >
+                        Don’t ask
+                      </Button>
+                    </div>
+                  </div>
                 )}
-              </div>
-            </Card>
+              </Card>
+            </div>
           )}
+          <ReasonSheet
+            key={`forgive:${day}:${rule.id}:${opened}`}
+            open={asking}
+            onOpenChange={setAsking}
+            title={`Ask ${partner} to forgive it`}
+            description={`If ${partner} agrees, the point costs nothing.`}
+            label="Your reason"
+            initial={draft.reason}
+            maxLength={500}
+            // Back to the request, now its reason (or still the Ask row, after Cancel).
+            finalFocus={() =>
+              missCard.current?.querySelector<HTMLElement>(
+                '[aria-haspopup="dialog"]',
+              ) ?? null
+            }
+            submit="Add to answer"
+            missing="Write your reason first."
+            onSubmit={(reason) => {
+              ci.change(rule, { forgive: true, reason });
+              setAsking(false);
+            }}
+          />
         </div>
       )}
 
       <div
         ref={noteBox}
-        className="flex flex-col sm:col-start-1 sm:row-start-2"
+        className="flex flex-col gap-4 sm:col-start-1 sm:row-start-2"
       >
-        {draft.noteOpen || draft.note ? (
+        {/* The buttons keep their 44px, reaching into the space above and below them, so their
+            row is only as tall as their words. */}
+        {(shotButton || !(draft.noteOpen || draft.note)) && (
+          <div className="-my-3 -ml-3 flex flex-wrap">
+            {shotButton && (
+              <Button
+                variant="quiet"
+                icon={ImagePlus}
+                loading={ci.uploadingFor(rule)}
+                onClick={() => ci.addProof(rule)}
+              >
+                Add screenshot
+              </Button>
+            )}
+            {!(draft.noteOpen || draft.note) && (
+              <Button
+                variant="quiet"
+                icon={NotebookPen}
+                onClick={() => {
+                  ci.change(rule, { noteOpen: true });
+                  focusIn(noteBox);
+                }}
+              >
+                Add a note
+              </Button>
+            )}
+          </div>
+        )}
+        {(draft.noteOpen || draft.note) && (
           <TextField
             className="nx-enter"
             label="Note"
@@ -322,20 +420,6 @@ export function QuestionFields({
             onChange={(note) => ci.change(rule, { note })}
             hint={`${partner} sees it with your answer.`}
           />
-        ) : (
-          <Button
-            variant="quiet"
-            icon={NotebookPen}
-            // The button keeps its 44px, reaching into the space above and below it, so its row is
-            // only as tall as its words.
-            className="-my-3 -ml-3 self-start"
-            onClick={() => {
-              ci.change(rule, { noteOpen: true });
-              focusIn(noteBox);
-            }}
-          >
-            Add a note to this answer
-          </Button>
         )}
       </div>
     </div>

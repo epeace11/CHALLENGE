@@ -410,7 +410,10 @@ function PersonDay({
             Notes
           </h3>
           {notes.map((n) => (
-            <p key={n.id} className="text-pretty text-nx-body">
+            <p
+              key={n.id}
+              className="text-pretty text-nx-body whitespace-pre-line [overflow-wrap:anywhere]"
+            >
               {n.text}{' '}
               <span className="text-nx-2 whitespace-nowrap text-nx-ink-2">
                 {formatTime(n.createdAt, world.challenge.timeZone)}
@@ -558,9 +561,13 @@ export function CheckinDetail({
                 ? ' · withdrawn'
                 : ''}
           </p>
-          <p className="text-nx-body">“{d.comment}”</p>
+          <p className="text-nx-body whitespace-pre-line [overflow-wrap:anywhere]">
+            “{d.comment}”
+          </p>
           {d.reply && (
-            <p className="text-nx-body text-nx-ink-2">Reply: “{d.reply}”</p>
+            <p className="text-nx-body whitespace-pre-line [overflow-wrap:anywhere] text-nx-ink-2">
+              Reply: “{d.reply}”
+            </p>
           )}
         </Card>
       ))}
@@ -574,7 +581,9 @@ export function CheckinDetail({
                 ? ' · declined'
                 : ''}
           </p>
-          <p className="text-nx-body">“{r.reason}”</p>
+          <p className="text-nx-body whitespace-pre-line [overflow-wrap:anywhere]">
+            “{r.reason}”
+          </p>
         </Card>
       ))}
       {entry?.loggedAt && (

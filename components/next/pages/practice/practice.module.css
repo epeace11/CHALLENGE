@@ -30,30 +30,15 @@
     }
   }
 
-  /* The practice marker stays in view while the page scrolls (below the preview's bar), 8px down
-     on a backing in the page's colour: the gap above it and its rounded corners hide what scrolls
-     under. The backing is the page's own glow, fixed like the page's, so at rest it doesn't show;
-     the negative margin keeps its 8px out of the layout. */
-  .sticky {
-    position: sticky;
-    top: var(--nx-top-inset);
-    z-index: 20;
-    margin-top: -8px;
-    padding-top: 8px;
-    background: var(--nx-page-bg, var(--nx-page));
-    background-attachment: fixed;
-  }
-
   /* The timeline's line between steps. */
   .rail {
     position: absolute;
     top: 40px;
-    bottom: -24px;
+    bottom: -16px;
     left: 15px;
     width: 2px;
     border-radius: 2px;
     background: var(--nx-line-strong);
-    transform-origin: top;
     transition: background var(--nx-slow) var(--nx-ease);
   }
   .rail[data-done] {

@@ -21,6 +21,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  // Android shrinks the page for the keyboard, so a sheet's buttons stay above it (iOS: see Sheet).
+  interactiveWidget: 'resizes-content',
 };
 export default function RootLayout({
   children,

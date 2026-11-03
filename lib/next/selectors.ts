@@ -35,7 +35,7 @@ import {
   weeksOf,
   type Week,
 } from './calendar.ts';
-import { formatValue } from './format.ts';
+import { formatTime, formatValue, formatWeekday } from './format.ts';
 
 /**
  * Everything a page asks of the world: what is left to log, what waits for review, points and
@@ -148,6 +148,26 @@ export function openDays(w: World): DateString[] {
       out.unshift(d);
   }
   return out;
+}
+
+/**
+ * When `day` is first answered: "Tomorrow, answer for today by 11:59 pm." (Day 1 on Overview) or
+ * "On Wednesday, answer for Tuesday by 11:59 pm." (before Day 1). A same-day deadline answers it
+ * that evening.
+ */
+export function answerLine(w: World, day: DateString) {
+  const c = w.challenge,
+    lock = lockTime(c, day),
+    on = dateIn(c.timeZone, lock),
+    time = formatTime(lock, c.timeZone);
+  const name = day === w.today ? 'today' : formatWeekday(day);
+  if (c.deadline.daysAfter === 0)
+    return `Answer for ${name} by ${time} that day.`;
+  const opens = shift(day, 1);
+  const by = on === opens ? time : `${time} ${formatWeekday(on)}`;
+  return opens === shift(w.today, 1)
+    ? `Tomorrow, answer for ${name} by ${by}.`
+    : `On ${formatWeekday(opens)}, answer for ${name} by ${by}.`;
 }
 
 /** The day being logged: the oldest open day (yesterday in the sample world), or null when nothing can be logged. */

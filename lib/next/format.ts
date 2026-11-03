@@ -163,3 +163,11 @@ export function formatDuration(msLeft: number) {
   if (hours > 0) return `${hours}h ${mins}m`;
   return `${mins}m`;
 }
+
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/** A name's initial for its avatar: its first whole character ("🌸" from "🌸Maya", not half of it). */
+export function initialOf(name: string) {
+  const first = graphemes.segment(name.trim())[Symbol.iterator]().next();
+  return first.done ? '?' : first.value.segment.toUpperCase();
+}

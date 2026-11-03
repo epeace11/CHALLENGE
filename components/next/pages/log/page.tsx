@@ -28,7 +28,12 @@ import {
   IconButton,
 } from '@/components/next/ui';
 import type { Rule } from '@/lib/next/model';
-import { formatDate, formatDay, formatWeekday } from '@/lib/next/selectors';
+import {
+  answerLine,
+  formatDate,
+  formatDay,
+  formatWeekday,
+} from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import { Bar } from './bar';
 import { ClosedDay } from './closed-day';
@@ -89,7 +94,12 @@ export function CheckinPage({
               </Button>
             }
           >
-            The next day opens at midnight.
+            {/* Before Day 1 and on it, say when the first answer is due; later, the next day. */}
+            {ci.world.today < ci.world.challenge.start
+              ? `Day 1 is ${formatDay(ci.world.challenge.start)}. ${answerLine(ci.world, ci.world.challenge.start)}`
+              : ci.world.today === ci.world.challenge.start
+                ? answerLine(ci.world, ci.world.today)
+                : 'The next day opens at midnight.'}
           </EmptyState>
         </GlassCard>
       </AppFrame>

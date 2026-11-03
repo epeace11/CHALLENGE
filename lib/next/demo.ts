@@ -732,7 +732,8 @@ const fallRule = (id: string) => FALL_RULES.find((r) => r.id === id)!;
 
 const PRACTICE: PracticeScript = {
   questions: [
-    { rule: fallRule('bed'), sample: { done: true } },
+    // The first is left for you to answer: a plain Yes saves on tap, as in Check in.
+    { rule: fallRule('bed'), sample: {} },
     { rule: fallRule('social'), sample: { value: 45 } },
     { rule: fallRule('eating-out'), sample: { done: false } },
   ],
@@ -745,6 +746,10 @@ const PRACTICE: PracticeScript = {
     },
   ],
   miss: { ruleId: 'eating-out', cost: FALL_RESET.step },
+  partnerAnswers: [
+    { rule: fallRule('phones'), answer: { done: true } },
+    { rule: fallRule('steps'), answer: { value: 10200 }, shot: 8412 },
+  ],
 };
 
 const SAY_RULES: SayRulesDraft = {

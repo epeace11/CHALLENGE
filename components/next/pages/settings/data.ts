@@ -1,5 +1,6 @@
 import type { Challenge, Person, World } from '@/lib/next/model';
 import {
+  initialOf,
   activePoints,
   formatMoney,
   formatWeekday,
@@ -21,7 +22,7 @@ export function renamePerson(w: World, personId: string, name: string): World {
       ? {
           ...p,
           name: trimmed,
-          initial: trimmed.charAt(0).toUpperCase(),
+          initial: initialOf(trimmed),
         }
       : p;
   return {

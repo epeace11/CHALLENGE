@@ -13,6 +13,7 @@ export { ProgressBar, StackedBar, type BarTone } from './progress';
 export { Avatar, PairAvatars, PersonChip } from './people';
 export { StatusPill } from './pill';
 export { Sheet } from './sheet';
+export { ReasonSheet } from './reason-sheet';
 export { useToast } from './toast';
 export { Menu, type MenuItem } from './menu';
 export { YesNo, SegmentedControl, Toggle } from './choice';

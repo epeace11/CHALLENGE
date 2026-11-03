@@ -119,7 +119,9 @@ export function WaitingProposals({ proposals }: { proposals: Proposals }) {
                   </p>
                   <p className="text-nx-2 text-nx-ink-2">{detail}</p>
                   {p.note && (
-                    <p className="mt-1 text-nx-body text-nx-ink">“{p.note}”</p>
+                    <p className="mt-1 text-nx-body whitespace-pre-line [overflow-wrap:anywhere] text-nx-ink">
+                      “{p.note}”
+                    </p>
                   )}
                 </div>
                 <Button

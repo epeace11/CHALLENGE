@@ -26,7 +26,17 @@ export default function InviteV2() {
   const flow = useInvite();
   const { challenge: c, inviter } = flow;
   return (
-    <PlainFrame aside={<AccountMenu flow={flow} />}>
+    <PlainFrame
+      aside={
+        flow.signedOut ? (
+          <Button variant="quiet" onClick={flow.signIn}>
+            Sign in
+          </Button>
+        ) : (
+          <AccountMenu flow={flow} />
+        )
+      }
+    >
       <div className="relative flex flex-col gap-9">
         <PageTitle
           title={

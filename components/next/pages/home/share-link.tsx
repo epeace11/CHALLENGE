@@ -42,6 +42,15 @@ export function ShareLink({ saved }: { saved: SavedChallenge }) {
         label="Share link"
         description="Other couples can start a copy with its name, rules and stakes, never your answers."
       />
+      {/* Always on the page, so a screen reader hears Copy link's result (the button's label
+          changing isn't announced). */}
+      <output className="sr-only">
+        {copied
+          ? 'Link copied'
+          : copied === false
+            ? 'Couldn’t copy. Select the link and copy it.'
+            : ''}
+      </output>
       <Presence initial={false}>
         {saved.linkOn && (
           <motion.div

@@ -27,8 +27,8 @@ import {
   GlassCard,
   ProofViewer,
   RowButton,
+  ReasonSheet,
   Sheet,
-  TextField,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import { STAMP } from './motion';
@@ -145,7 +145,8 @@ export function Quote({
   return (
     <div className={cn('flex items-start gap-3', className)}>
       <Avatar person={person} size="sm" decorative />
-      <p className="min-w-0 flex-1 rounded-nx rounded-tl-md bg-nx-sunken px-4 py-2.5 text-nx-body text-nx-ink">
+      {/* Written text keeps its line breaks, and a pasted link wraps instead of running off. */}
+      <p className="min-w-0 flex-1 rounded-nx rounded-tl-md bg-nx-sunken px-4 py-2.5 text-nx-body whitespace-pre-line [overflow-wrap:anywhere] text-nx-ink">
         <span className="sr-only">{person.name}: </span>
         {children}
       </p>
@@ -655,95 +656,6 @@ export function ApproveDaySheet({
           })}
         </ul>
       )}
-    </Sheet>
-  );
-}
-
-/**
- * A sheet that asks for a few words before acting: a reason to dispute, a reply that keeps a
- * dispute open. The field is focused when it opens; sending without words says what is missing.
- * Give it a `key` per item so a draft never carries over to another one.
- */
-export function ReasonSheet({
-  open,
-  onOpenChange,
-  title,
-  description,
-  label,
-  submit,
-  missing,
-  hint,
-  placeholder,
-  onSubmit,
-  children,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description?: string;
-  label: string;
-  submit: string;
-  /** What the error says when the field is empty. */
-  missing: string;
-  hint?: string;
-  placeholder?: string;
-  onSubmit: (text: string) => void;
-  children?: ReactNode;
-}) {
-  const [text, setText] = useState('');
-  const [error, setError] = useState(false);
-  const field = useRef<HTMLElement | null>(null);
-  const send = () => {
-    const words = text.trim();
-    if (!words) {
-      setError(true);
-      return;
-    }
-    onSubmit(words);
-    setText('');
-    setError(false);
-  };
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) setError(false);
-        onOpenChange(next);
-      }}
-      title={title}
-      description={description}
-      initialFocus={field}
-      footer={
-        <>
-          <Button onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button variant="primary" onClick={send}>
-            {submit}
-          </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-5">
-        {children}
-        <div
-          ref={(el) => {
-            field.current = el?.querySelector('textarea') ?? null;
-          }}
-        >
-          <TextField
-            label={label}
-            multiline
-            rows={3}
-            hint={hint}
-            placeholder={placeholder}
-            value={text}
-            onChange={(v) => {
-              setText(v);
-              if (v.trim()) setError(false);
-            }}
-            error={error ? missing : undefined}
-          />
-        </div>
-      </div>
     </Sheet>
   );
 }

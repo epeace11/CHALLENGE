@@ -1,8 +1,17 @@
 'use client';
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Check, X } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
+
+/** The keys that choose a radio: arrows move the choice, Space picks the focused one. */
+const CHOOSING_KEYS = new Set([
+  ' ',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+]);
 
 /**
  * Two big answer buttons, Yes and No, 64px tall. The chosen one fills with the accent. They are
@@ -11,6 +20,7 @@ import { cn } from '@/lib/utils';
 export function YesNo({
   value,
   onChange,
+  onTap,
   label,
   yes = 'Yes',
   no = 'No',
@@ -19,6 +29,11 @@ export function YesNo({
 }: {
   value: boolean | null;
   onChange: (value: boolean) => void;
+  /**
+   * An option chosen by a tap or click, not the keyboard: Check in saves a plain Yes at once. Arrow
+   * keys and Space only choose (onChange), so moving between Yes and No never acts by itself.
+   */
+  onTap?: (value: boolean) => void;
   /** The question, for screen readers. */
   label: string;
   yes?: string;
@@ -27,6 +42,9 @@ export function YesNo({
   className?: string;
 }) {
   const name = useId();
+  // Arrow keys change a radio as they go down, Space as it comes back up; anything else that
+  // chooses (a tap, a click, a screen reader's activate) is a tap.
+  const keyed = useRef(false);
   return (
     <fieldset className={cn('nx-yesno min-w-0', className)} disabled={disabled}>
       <legend className="sr-only">{label}</legend>
@@ -39,7 +57,14 @@ export function YesNo({
               name={name}
               className="sr-only"
               checked={value === option}
-              onChange={() => onChange(option)}
+              onKeyDown={(e) => {
+                if (CHOOSING_KEYS.has(e.key)) keyed.current = true;
+              }}
+              onKeyUp={() => setTimeout(() => (keyed.current = false))}
+              onBlur={() => (keyed.current = false)}
+              onChange={() =>
+                (keyed.current || !onTap ? onChange : onTap)(option)
+              }
             />
             {value === option && (
               <Icon size={22} strokeWidth={2.4} aria-hidden="true" />

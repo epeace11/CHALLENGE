@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  answerLine,
   activePoints,
   asViewer,
   badges,
@@ -428,11 +429,23 @@ assert.equal(
   w.sayRules.questions[0].text,
   'Every night, or Sun–Thu like bedtime?',
 );
+// When a day is first answered, said on Day 1 and before it (the sample's deadline: 11:59 pm the next day).
+assert.equal(answerLine(w, w.today), 'Tomorrow, answer for today by 11:59 pm.');
+assert.equal(
+  answerLine(w, '2026-11-24'),
+  'On Wednesday, answer for Tuesday by 11:59 pm.',
+);
 assert.equal(w.practice.questions.length, 3);
 assert.deepEqual(w.practice.partnerReview.map((r) => r.decision).sort(), [
   'approve',
   'dispute',
 ]);
+// One of the partner's answers to review doesn't match its screenshot.
+assert.ok(
+  w.practice.partnerAnswers.some(
+    (a) => a.shot !== undefined && a.shot !== a.answer.value,
+  ),
+);
 assert.deepEqual(
   w.pact.signatures.map((s) => [s.personId, !!s.signedAt]),
   [
@@ -624,8 +637,8 @@ for (const [id, count] of Object.entries(PLANNED)) {
   const index = readFileSync(join(dir, 'index.ts'), 'utf8');
   assert.match(
     registry,
-    new RegExp(`from '\\./${id}'`),
-    `registry imports ${id}`,
+    new RegExp(`import\\('\\./${id}'\\)`),
+    `registry loads ${id}`,
   );
   for (let v = 1; v <= count; v++) {
     const file = join(dir, `v${v}.tsx`);

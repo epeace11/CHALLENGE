@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { setSignupMode } from '../signup/mode';
+import { wantTheme } from '../start/wanted';
 
 /**
  * Where the landing page's buttons go, shared by both versions. "Start a challenge" and every theme
@@ -13,7 +14,9 @@ import { setSignupMode } from '../signup/mode';
 export function useLanding() {
   const { navigate } = useNav();
   const [how, setHow] = useState(false);
-  const start = () => {
+  /** Sign up; from a theme's tile, Start then opens on that theme. */
+  const start = (themeId?: string) => {
+    if (themeId) wantTheme(themeId);
     setHow(false);
     setSignupMode('signup');
     navigate('signup');

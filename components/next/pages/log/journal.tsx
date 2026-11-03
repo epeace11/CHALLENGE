@@ -78,7 +78,9 @@ function NoteItem({
   if (asking)
     return (
       <Card pad="sm" className="flex flex-col gap-3">
-        <p className="text-nx-body text-nx-ink">{note.text}</p>
+        <p className="text-nx-body whitespace-pre-line [overflow-wrap:anywhere] text-nx-ink">
+          {note.text}
+        </p>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <p className="w-full text-nx-2 font-semibold text-nx-ink">
             Remove this note?
@@ -148,7 +150,9 @@ function NoteItem({
         <p className="text-nx-2 font-semibold text-nx-ink">
           {mine ? 'You' : person?.name}
         </p>
-        <p className="text-nx-body text-nx-ink">{note.text}</p>
+        <p className="text-nx-body whitespace-pre-line [overflow-wrap:anywhere] text-nx-ink">
+          {note.text}
+        </p>
       </div>
       {mine && (
         <div className="-my-1 -mr-1 flex">

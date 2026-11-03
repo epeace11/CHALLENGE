@@ -14,8 +14,10 @@ import {
   openDay,
   plural,
   reviewQueue,
+  answerLine,
   ruleIsFor,
   rulesFor,
+  rulesOn,
   shift,
   standings,
   streakToProtect,
@@ -145,6 +147,10 @@ export function overviewOf(w: World) {
     left: open.length,
     /** Time left to log it, in ms, and "11:59 pm tonight". */
     msLeft: timeLeft(w),
+    /** Day 1, before anything can be logged: when today is answered, and today's check-ins. */
+    firstDay: !day && w.today === c.start,
+    answerToday: answerLine(w, w.today),
+    todayRules: rulesOn(c, w.me.id, w.today),
     closes: day ? closesAt(w, lockTime(c, day)) : '',
     /** What waits for Maya: Jordan's answers, requests, and disputes on her answers. */
     queue,

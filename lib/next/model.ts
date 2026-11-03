@@ -360,6 +360,15 @@ export type PracticeScript = {
   }[];
   /** The answer that turns into a pretend miss, and what it would cost. */
   miss: { ruleId: string; cost: number };
+  /**
+   * The pretend partner's answers for you to review. A number rule's `shot` is the count its
+   * step-count screenshot shows: different from the answer, so there is something to dispute.
+   */
+  partnerAnswers: {
+    rule: Rule;
+    answer: { done?: boolean; value?: number };
+    shot?: number;
+  }[];
 };
 
 /** What "Say your rules" drafts from one spoken or typed sentence. */

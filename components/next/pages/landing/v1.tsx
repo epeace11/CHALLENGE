@@ -70,7 +70,7 @@ export default function LandingV2() {
               variant="primary"
               size="lg"
               iconEnd={ArrowRight}
-              onClick={start}
+              onClick={() => start()}
             >
               Start a challenge
             </Button>
@@ -102,7 +102,7 @@ export default function LandingV2() {
                   key={theme.id}
                   theme={theme}
                   facts={themeFacts(theme)}
-                  onClick={start}
+                  onClick={() => start(theme.id)}
                 />
               ))}
             </Stagger>
@@ -110,7 +110,11 @@ export default function LandingV2() {
         </Enter>
       </div>
 
-      <HowItWorksSheet open={how} onOpenChange={setHow} onStart={start} />
+      <HowItWorksSheet
+        open={how}
+        onOpenChange={setHow}
+        onStart={() => start()}
+      />
     </PlainFrame>
   );
 }

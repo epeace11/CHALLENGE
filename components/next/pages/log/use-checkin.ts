@@ -25,8 +25,8 @@ import { useWorld } from '@/components/next/world';
 
 /**
  * The state every Check in version shares: which day is on screen, the check-in being answered,
- * drafts (nothing is saved until Save), skipping, jumping to or changing an answer, and one Save
- * per check-in. Versions differ only in how they lay this out.
+ * drafts (nothing is saved until Save, except a plain Yes), skipping, jumping to or changing an
+ * answer, and one Save per check-in. Versions differ only in how they lay this out.
  */
 
 export type Draft = {
@@ -81,14 +81,13 @@ export function outcomeOf(rule: Rule, d: Draft): Outcome {
   return rule.kind === 'weekly' ? 'rest' : 'miss';
 }
 
-/** The part of a check-in that Save is waiting for: the answer, the screenshot, or the reason. */
-export type Field = 'answer' | 'proof' | 'reason';
+/** The part of a check-in that Save is waiting for: the answer or the screenshot. */
+export type Field = 'answer' | 'proof';
 
 /** Why Save can't save yet, whether to say so (an empty answer speaks for itself), and where. */
 export function problemOf(
   rule: Rule,
   d: Draft,
-  late: boolean,
 ): { text: string; show: boolean; field: Field } | null {
   const o = outcomeOf(rule, d);
   if (o === null)
@@ -102,12 +101,6 @@ export function problemOf(
     };
   if (o === 'yes' && rule.proof === 'required' && d.proofs.length === 0)
     return { text: 'Add the screenshot to save.', show: true, field: 'proof' };
-  if (o === 'miss' && !late && d.forgive && !d.reason.trim())
-    return {
-      text: 'Say why, or turn off the forgiveness request.',
-      show: true,
-      field: 'reason',
-    };
   return null;
 }
 
@@ -120,7 +113,7 @@ function fieldBox(ruleId: string, field: Field) {
 
 /**
  * The controls of one part of the form that take focus: the number, both Yes and No, the
- * add-screenshot button, or the reason box. The first is the one Save focuses.
+ * add-screenshot button. The first is the one Save focuses.
  */
 export function fieldControls(ruleId: string, field: Field): HTMLElement[] {
   const box = fieldBox(ruleId, field);
@@ -139,7 +132,7 @@ export function fieldControls(ruleId: string, field: Field): HTMLElement[] {
 
 /**
  * Brings one part of a check-in's form into view, clear of the pinned Save bar, and focuses it:
- * the number or Yes, the add-screenshot button, or the reason box.
+ * the number or Yes, or the add-screenshot button.
  */
 function revealField(ruleId: string, field: Field) {
   const box = fieldBox(ruleId, field);
@@ -244,11 +237,10 @@ export function useCheckin({ top, heading }: Anchors) {
     setDrafts((all) => ({ ...all, [k]: { ...(all[k] ?? base), ...patch } }));
   };
   /** True when a saved answer's draft still says what was saved: Save would send nothing new. */
-  const unchanged = (rule: Rule) => {
+  const unchanged = (rule: Rule, d = draftOf(rule)) => {
     const entry = entryOf(rule);
     if (!isAnswered(entry)) return false;
-    const d = draftOf(rule),
-      base = draftFrom(entry);
+    const base = draftFrom(entry);
     const ids = (x: Draft) => x.proofs.map((p) => p.id).join();
     return (
       d.done === base.done &&
@@ -259,17 +251,21 @@ export function useCheckin({ top, heading }: Anchors) {
     );
   };
   /** Save does something: the answer is complete and differs from what was saved. */
-  const canSave = (rule: Rule) =>
-    !problemOf(rule, draftOf(rule), late) && !unchanged(rule);
+  const canSave = (rule: Rule, d = draftOf(rule)) =>
+    uploading !== key(rule) && !problemOf(rule, d) && !unchanged(rule, d);
   // Save stays pressable when it can't save; pressing it then says why next to it.
   const [tried, setTried] = useState<string | null>(null);
+  /** The check-in whose screenshot is uploading: its add tile spins and Save waits for it. */
+  const [uploading, setUploading] = useState<string | null>(null);
   /**
    * Why Save can't save this check-in and the part of the form to fix, once Save was pressed or
    * when it isn't obvious; else null.
    */
   const blocked = (rule: Rule): { text: string; field: Field } | null => {
+    if (uploading === key(rule))
+      return { text: 'The screenshot is still uploading.', field: 'proof' };
     const pressed = tried === key(rule),
-      problem = problemOf(rule, draftOf(rule), late);
+      problem = problemOf(rule, draftOf(rule));
     if (problem) return problem.show || pressed ? problem : null;
     return pressed && unchanged(rule)
       ? { text: 'Change the answer to save.', field: 'answer' }
@@ -285,7 +281,9 @@ export function useCheckin({ top, heading }: Anchors) {
     // An answer saved as it was: the answer is what to change.
     revealField(
       rule.id,
-      problemOf(rule, draftOf(rule), late)?.field ?? 'answer',
+      uploading === key(rule)
+        ? 'proof'
+        : (problemOf(rule, draftOf(rule))?.field ?? 'answer'),
     );
   };
   const drop = (rule: Rule) => {
@@ -300,7 +298,10 @@ export function useCheckin({ top, heading }: Anchors) {
   // After Save or Skip, keyboard and screen reader focus moves to the next question.
   const moved = useRef(false);
   const currentKey = current ? key(current) : 'none';
+  /** When the question on screen arrived: a second tap of a double tap must not answer the next one. */
+  const arrived = useRef(0);
   useEffect(() => {
+    arrived.current = performance.now();
     if (!moved.current) return;
     moved.current = false;
     heading.current?.focus({ preventScroll: true });
@@ -329,11 +330,10 @@ export function useCheckin({ top, heading }: Anchors) {
     heading.current?.focus({ preventScroll: true });
   };
 
-  const save = (rule: Rule) => {
+  const save = (rule: Rule, d = draftOf(rule)) => {
     // A card still gliding away keeps its buttons for a moment; only the one on screen saves.
-    if (!day || rule.id !== current?.id || !canSave(rule)) return;
-    const d = draftOf(rule),
-      o = outcomeOf(rule, d);
+    if (!day || rule.id !== current?.id || !canSave(rule, d)) return;
+    const o = outcomeOf(rule, d);
     const ask = o === 'miss' && !late && d.forgive ? d.reason.trim() : '';
     const input: CheckinInput = {
       personId: me,
@@ -346,13 +346,42 @@ export function useCheckin({ top, heading }: Anchors) {
         : { done: d.done === true }),
       ...(ask ? { forgiveness: ask } : {}),
     };
-    backend.act({ type: 'saveCheckin', input }, (w) => saveCheckin(w, input));
     // No toast: the card gliding on to the next question (or the end of the day) shows it saved.
-    drop(rule);
+    // The draft is kept until the write lands, so a failed one (the host says so) loses nothing
+    // typed: the check-in comes back open with it. A draft changed since isn't touched.
+    const k = key(rule),
+      sent = drafts[k];
+    void backend
+      .save({ type: 'saveCheckin', input }, (w) => saveCheckin(w, input))
+      .then((saved) => {
+        if (saved && sent)
+          setDrafts((all) => {
+            if (all[k] !== sent) return all;
+            const next = { ...all };
+            delete next[k];
+            return next;
+          });
+      });
     setFocus(null);
     setSkipped((s) => s.filter((id) => id !== rule.id));
     setDirection(1);
     reveal();
+  };
+
+  /**
+   * Yes or No, tapped (the keyboard only chooses; see YesNo's onTap). A plain Yes saves at once: one
+   * on a rule with no screenshot, so nothing on the card is left to add (a note just opened and
+   * still empty waits too). No always waits for Save, since a miss can ask to be forgiven, and so
+   * does a late answer, which goes to the partner.
+   */
+  const answer = (rule: Rule, done: boolean) => {
+    // A plain Yes moves straight on, so Yes and No ignore taps in the first 350 ms of a question.
+    if (performance.now() - arrived.current < 350) return;
+    const d = { ...draftOf(rule), done };
+    const opened = d.noteOpen && !d.note.trim();
+    const plain = rule.proof === 'none' && !opened;
+    if (done && !late && plain && canSave(rule, d)) save(rule, d);
+    else change(rule, { done });
   };
 
   const skip = (rule: Rule) => {
@@ -387,13 +416,18 @@ export function useCheckin({ top, heading }: Anchors) {
 
   const addProof = async (rule: Rule) => {
     const d = draftOf(rule);
+    const k = key(rule);
+    if (uploading === k) return;
     shots.current += 1;
-    const proof = backend.host
-      ? day && (await backend.host.pickProof(day))
-      : sampleShot(rule, d.value, day ?? '', shots.current);
+    setUploading(k);
+    const proof = await (backend.host
+      ? day
+        ? backend.host.pickProof(day)
+        : null
+      : sampleShot(rule, d.value, day ?? '', shots.current));
+    setUploading((u) => (u === k ? null : u));
     if (!proof) return;
-    const k = key(rule),
-      base = draftFrom(entryOf(rule));
+    const base = draftFrom(entryOf(rule));
     setDrafts((all) => {
       const was = all[k] ?? base;
       return { ...all, [k]: { ...was, proofs: [...was.proofs, proof] } };
@@ -439,6 +473,7 @@ export function useCheckin({ top, heading }: Anchors) {
     canSave,
     blocked,
     change,
+    answer,
     save,
     trySave,
     skip,
@@ -447,6 +482,8 @@ export function useCheckin({ top, heading }: Anchors) {
     pickDay,
     showCurrent,
     addProof,
+    /** True while `rule`'s screenshot uploads. */
+    uploadingFor: (rule: Rule) => uploading === key(rule),
     removeProof,
     lockLabel,
     /** Time left to answer the day on screen, as "4h 29m" that never breaks across lines. */

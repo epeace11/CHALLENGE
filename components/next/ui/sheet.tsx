@@ -11,6 +11,35 @@ import { cn } from '@/lib/utils';
 import { usePortalContainer } from './root';
 
 /**
+ * While a sheet is open, how much of the screen a phone's keyboard covers, as --nx-keyboard on
+ * <html>: the sheet sits above it, so its buttons stay in reach while its field is focused. iOS
+ * doesn't shrink the page for the keyboard (Android does, with the viewport's resizes-content), so
+ * it's measured from the visual viewport; it's 0 wherever the page already fits the keyboard.
+ */
+function useKeyboardInset(open: boolean) {
+  useEffect(() => {
+    const view = window.visualViewport;
+    if (!open || !view) return;
+    const root = document.documentElement;
+    const measure = () => {
+      const covered = window.innerHeight - view.height - view.offsetTop;
+      root.style.setProperty(
+        '--nx-keyboard',
+        `${Math.max(0, Math.round(covered))}px`,
+      );
+    };
+    measure();
+    view.addEventListener('resize', measure);
+    view.addEventListener('scroll', measure);
+    return () => {
+      view.removeEventListener('resize', measure);
+      view.removeEventListener('scroll', measure);
+      root.style.removeProperty('--nx-keyboard');
+    };
+  }, [open]);
+}
+
+/**
  * Details one tap away: a bottom sheet on phones that rises from the bottom, and a centred dialog
  * from 640px. It traps focus (Tab wraps inside it, and the page behind is inert), closes on Escape,
  * on the backdrop and on its close button, and returns focus to what opened it.
@@ -27,6 +56,7 @@ export function Sheet({
   description,
   footer,
   initialFocus,
+  finalFocus,
   back,
   className,
   children,
@@ -40,6 +70,11 @@ export function Sheet({
   footer?: ReactNode;
   /** What to focus when it opens (a text field); by default the first focusable element. */
   initialFocus?: RefObject<HTMLElement | null>;
+  /**
+   * Where focus goes when it closes, when what opened it is gone (it changed into something else);
+   * by default back to what opened it.
+   */
+  finalFocus?: () => HTMLElement | null;
   /** A way back to the view this one came from: a Back arrow named "Back to {label}". */
   back?: { label: string; onClick: () => void };
   className?: string;
@@ -47,6 +82,7 @@ export function Sheet({
 }) {
   const container = usePortalContainer();
   useInertBehind(open, container);
+  useKeyboardInset(open);
   return (
     <Dialog.Root open={open} onOpenChange={(next) => onOpenChange(next)}>
       <Dialog.Portal container={container}>
@@ -54,6 +90,7 @@ export function Sheet({
         <Dialog.Popup
           className={cn('nx-sheet', className)}
           initialFocus={initialFocus}
+          finalFocus={finalFocus}
           onKeyDown={wrapTab}
         >
           <div className="nx-sheet-grabber" aria-hidden="true" />

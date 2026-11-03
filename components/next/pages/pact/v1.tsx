@@ -18,6 +18,7 @@ import { afterSheets } from './after-sheets';
 import { PactSheets } from './sheets';
 import { RuleList } from './rows';
 import { SignatureLine } from './signature-line';
+import { forgetPactFromInvite, pactFromInvite } from './entry';
 import { usePact, type PactFlow } from './use-pact';
 
 const STEPS = 3;
@@ -27,7 +28,9 @@ export default function PactV1() {
   const flow = usePact();
   const { live } = useBackend();
   const signed = !!flow.yours.signedAt;
-  const [step, setStep] = useState(0);
+  // Straight from Invite's Accept, it opens on the signature (see entry.ts).
+  const [step, setStep] = useState(() => (pactFromInvite() ? STEPS - 1 : 0));
+  useEffect(forgetPactFromInvite, []);
   const [direction, setDirection] = useState<1 | -1>(1);
   // Once someone moves between steps, each new step's title takes focus (not on first load).
   const [moved, setMoved] = useState(false);

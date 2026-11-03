@@ -22,7 +22,7 @@
     border: 1.5px solid var(--nx-line-strong);
     background: var(--nx-surface);
     color: var(--nx-ink);
-    /* touch.css sets 16px !important on every select; a layered !important wins over it. */
+    /* 17px, as every field; the !important stays ahead of the native select's own font. */
     font: 17px/1.4 var(--nx-font-sans) !important;
     cursor: pointer;
     transition:

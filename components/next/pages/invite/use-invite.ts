@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
+import { openPactAtSignature } from '../pact/entry';
+import { setSignupMode } from '../signup/mode';
 import { inviteView, topicLabel, type Topic } from './invite-data';
 
 /** The sheets an invite can open. Only one is open at a time. */
@@ -75,7 +77,20 @@ export function useInvite() {
       if (sent) setDraft(sent.text);
       setSent(null);
     },
-    accept: () => (host ? void host.acceptInvite() : navigate('pact')),
+    accept: () => {
+      openPactAtSignature();
+      if (host) void host.acceptInvite();
+      else navigate('pact');
+    },
+    /**
+     * Opened the link without an account: the live app names them from the invite and has no email
+     * for them yet, so the top bar offers Sign in instead of an account menu.
+     */
+    signedOut: !world.me.email,
+    signIn: () => {
+      setSignupMode('signin');
+      navigate('signup');
+    },
     switchAccount: () => (host ? void host.signOut() : navigate('signup')),
     signOut: () => (host ? void host.signOut() : navigate('landing')),
   };

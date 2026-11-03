@@ -24,7 +24,7 @@ import { LOOKS } from '@/lib/next/selectors';
 import { updateChallenge } from '@/lib/next/actions';
 import { KitGallery } from './kit-gallery';
 import { NavContext, isPageId, type Nav, type PageId } from './nav';
-import { PAGES, PAGE_GROUPS, pageById } from './pages/registry';
+import { PAGES, PAGE_GROUPS, pageById, preloadPages } from './pages/registry';
 import { WorldProvider, useDemo } from './world';
 import {
   Button,
@@ -180,6 +180,12 @@ function PreviewShell({ initial }: { initial: View }) {
       }),
     [],
   );
+
+  // As in the live app: once the first page is up, every other page's code is fetched.
+  useEffect(() => {
+    const later = setTimeout(preloadPages, 1500);
+    return () => clearTimeout(later);
+  }, []);
 
   // Remember whichever version is on screen, and name the tab after it.
   useEffect(() => {

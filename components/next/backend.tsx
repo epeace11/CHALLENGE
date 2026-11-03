@@ -128,6 +128,14 @@ type Backend = {
   live: boolean;
   /** Applies a change on screen and, in the live app, saves it. */
   act: (command: Command | Command[], change: (w: World) => World) => void;
+  /**
+   * As `act`, and resolves true once saved (at once in the preview) or false when the write failed
+   * (the host has said so), so a page can keep what was typed until it is saved.
+   */
+  save: (
+    command: Command | Command[],
+    change: (w: World) => World,
+  ) => Promise<boolean>;
   /** Takes back the last change; only in the preview (check `canUndo`). */
   undo: () => void;
   canUndo: boolean;
@@ -143,22 +151,32 @@ export const HostContext = createContext<{
 export function useBackend(): Backend {
   const live = useContext(HostContext);
   const { update, undo } = useDemo();
-  const act = useCallback(
+  const save = useCallback(
     (command: Command | Command[], change: (w: World) => World) => {
-      if (!live) return update(change);
+      if (!live) {
+        update(change);
+        return Promise.resolve(true);
+      }
       live.apply(change);
-      void live.host.send(Array.isArray(command) ? command : [command]);
+      return live.host.send(Array.isArray(command) ? command : [command]);
     },
     [live, update],
+  );
+  const act = useCallback(
+    (command: Command | Command[], change: (w: World) => World) => {
+      void save(command, change);
+    },
+    [save],
   );
   return useMemo(
     () => ({
       live: !!live,
       act,
+      save,
       undo: live ? () => {} : undo,
       canUndo: !live,
       host: live?.host ?? null,
     }),
-    [live, act, undo],
+    [live, act, save, undo],
   );
 }

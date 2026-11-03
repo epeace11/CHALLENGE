@@ -122,6 +122,31 @@ function Running() {
                   </Button>
                 </GlassCard>
               </>
+            ) : o.firstDay ? (
+              <>
+                {/* Day 1: nothing can be logged until tomorrow, so the card says when, and what. */}
+                <GlassCard className="flex flex-col gap-2">
+                  <p className="font-nx-serif text-nx-h3">Nothing to log yet</p>
+                  <p className="text-nx-body text-nx-ink">{o.answerToday}</p>
+                  <p className="text-nx-2 text-nx-ink-2">
+                    {o.todayRules.map((r, i) => (
+                      <Fragment key={r.id}>
+                        {i > 0 && '\u00a0· '}
+                        <span className="inline-block">{shortTitle(r)}</span>
+                      </Fragment>
+                    ))}
+                  </p>
+                </GlassCard>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  full
+                  iconEnd={ArrowRight}
+                  onClick={() => navigate('practice')}
+                >
+                  Try a practice day
+                </Button>
+              </>
             ) : (
               <>
                 <GlassCard className="flex items-center gap-4">
@@ -168,42 +193,47 @@ function Running() {
           </Enter>
 
           <div className="-mt-5 flex flex-col gap-8">
-            <Section title="Gifts" index={2}>
-              {/* The hints say whose points set each gift; the line under them gives both counts. */}
-              <div className="grid grid-cols-2 gap-3">
-                <StatButton
-                  label="You get"
-                  value={o.mine.gets}
-                  format={formatMoney}
-                  hint={`From ${partner}’s points`}
+            {/* On Day 1 nobody has a point or anything to review yet, so those numbers wait. */}
+            {!o.firstDay && (
+              <Section title="Gifts" index={2}>
+                {/* The hints say whose points set each gift; the line under them gives both counts. */}
+                <div className="grid grid-cols-2 gap-3">
+                  <StatButton
+                    label="You get"
+                    value={o.mine.gets}
+                    format={formatMoney}
+                    hint={`From ${partner}’s points`}
+                    onClick={() => navigate('gifts')}
+                  />
+                  <StatButton
+                    label={`${partner} gets`}
+                    value={o.theirs.gets}
+                    format={formatMoney}
+                    hint="From your points"
+                    onClick={() => navigate('gifts')}
+                  />
+                </div>
+                {/* Both numbers and who's ahead (fewer points is ahead); it wraps on narrow phones. */}
+                <Button
+                  variant="quiet"
+                  className="-ml-3 self-start text-left whitespace-normal"
                   onClick={() => navigate('gifts')}
-                />
-                <StatButton
-                  label={`${partner} gets`}
-                  value={o.theirs.gets}
-                  format={formatMoney}
-                  hint="From your points"
-                  onClick={() => navigate('gifts')}
-                />
-              </div>
-              {/* Both numbers and who's ahead (fewer points is ahead); it wraps on narrow phones. */}
-              <Button
-                variant="quiet"
-                className="-ml-3 self-start text-left whitespace-normal"
-                onClick={() => navigate('gifts')}
-              >
-                {o.aheadLine}
-              </Button>
-            </Section>
+                >
+                  {o.aheadLine}
+                </Button>
+              </Section>
+            )}
 
             <Enter index={3} className="grid gap-3 sm:grid-cols-2">
-              <StatButton
-                label="Waiting for you"
-                value={o.waiting}
-                tone={o.waiting > 0 ? 'wait' : 'default'}
-                hint={o.waiting > 0 ? o.waitingSummary : 'Nothing to review'}
-                onClick={() => navigate('review')}
-              />
+              {!o.firstDay && (
+                <StatButton
+                  label="Waiting for you"
+                  value={o.waiting}
+                  tone={o.waiting > 0 ? 'wait' : 'default'}
+                  hint={o.waiting > 0 ? o.waitingSummary : 'Nothing to review'}
+                  onClick={() => navigate('review')}
+                />
+              )}
               {gym ? (
                 <StatButton
                   label={`${gym.name} this week`}

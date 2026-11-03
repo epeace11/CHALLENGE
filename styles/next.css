@@ -1,15 +1,13 @@
 /* ── The new UI (components/next) ──────────────────────────────────────────
-   Everything here is scoped under the .nx root (NxRoot in components/next/ui/root.tsx), so today's
-   app at / is unaffected. Imported last from app/globals.css.
+   Everything here is scoped under the .nx root (NxRoot in components/next/ui/root.tsx). Imported
+   last from app/globals.css, after shell.css and touch.css (the old app's stylesheets aren't loaded
+   on this branch).
 
    How it layers:
    1. Tokens: custom properties on .nx, per look ([data-look]) and per theme ([data-theme='dark'] on
       <html>, as today). Tailwind gets them as nx-* utilities through @theme inline below.
-   2. Legacy resets: base.css, touch.css and dark.css style bare elements (button, input, h1, p, main…)
-      without a cascade layer, which would beat every Tailwind utility. base.css keeps its padding,
-      margin and border rules out of .nx; inside .nx the rest are set to revert-layer, which hands
-      them back to the layered styles: Tailwind's preflight, then the kit (@layer components), then
-      utilities. So utilities always win in .nx.
+   2. Bare elements (button, input, h1, p, main…) get Tailwind's preflight, then the base layer below;
+      touch.css adds only the app-like touch rules. So utilities always win in .nx.
    3. The kit's own classes (.nx-btn, .nx-glass…) live in @layer components; pass Tailwind classes to
       a kit component to adjust it.
    Motion: 150 / 220 / 300 ms, ease-out, and none at all under prefers-reduced-motion. */
@@ -420,62 +418,6 @@
   }
 }
 
-/* ── Legacy resets (unlayered on purpose; see the header) ────────────────────
-   base.css keeps its padding, margin and border rules for bare elements out of .nx with
-   :where(:not(.nx *)): Tailwind writes px-/py-/mx-/my- as logical properties with var(), and Safari
-   loses those values when an unlayered revert-layer hands the physical property back. What base.css
-   still styles inside .nx is handed back here: each selector matches the specificity of its legacy
-   twin through :where(.nx) and wins by coming later, so kit and utility styles apply as if the
-   legacy rules did not exist. `font` goes back as a whole, or `button, input, textarea { font:
-   inherit }` would keep the kit's buttons at the page's weight and drop font-semibold on buttons. */
-:where(.nx) button {
-  display: revert-layer;
-  align-items: revert-layer;
-  justify-content: revert-layer;
-  gap: revert-layer;
-  font: revert-layer;
-  color: revert-layer;
-}
-:where(.nx) button:hover:not(:disabled) {
-  background: revert-layer;
-}
-:where(.nx) button:disabled {
-  opacity: revert-layer;
-  cursor: revert-layer;
-}
-:where(.nx) button:focus-visible,
-:where(.nx) a:focus-visible,
-:where(.nx) input:focus-visible {
-  outline: revert-layer;
-  outline-offset: revert-layer;
-}
-:where(.nx) a {
-  color: revert-layer;
-  text-decoration: revert-layer;
-}
-:where(.nx) a:hover {
-  text-decoration: revert-layer;
-}
-:where(.nx) input,
-:where(.nx) textarea {
-  font: revert-layer;
-}
-[data-theme='dark'] :where(.nx) input::placeholder,
-[data-theme='dark'] :where(.nx) textarea::placeholder {
-  color: revert-layer;
-}
-:where(.nx) h1,
-:where(.nx) h2,
-:where(.nx) h3 {
-  font-family: revert-layer;
-  font-weight: revert-layer;
-  letter-spacing: revert-layer;
-  font-size: revert-layer;
-}
-:where(.nx) h1 span {
-  color: revert-layer;
-}
-
 /* ── Base: the root and bare elements inside it ──────────────────────────── */
 @layer base {
   .nx {
@@ -541,7 +483,6 @@
   }
   .nx :where(input, textarea)::placeholder {
     color: var(--nx-ink-2);
-    opacity: 0.8;
   }
   .nx ::selection {
     background: var(--nx-accent-soft);
@@ -1010,10 +951,13 @@
     z-index: 81;
     left: 0;
     right: 0;
-    bottom: 0;
+    /* Above a phone's keyboard while it's up (--nx-keyboard, set by Sheet), so its buttons stay in reach. */
+    bottom: var(--nx-keyboard, 0px);
     display: flex;
     flex-direction: column;
-    max-height: calc(100dvh - var(--nx-top-inset) - 24px);
+    max-height: calc(
+      100dvh - var(--nx-top-inset) - 24px - var(--nx-keyboard, 0px)
+    );
     border-radius: 28px 28px 0 0;
     border: 1px solid var(--nx-glass-border);
     border-bottom: 0;
@@ -1667,14 +1611,25 @@
     z-index: 100;
     display: flex;
     flex-direction: column;
-    background: #07060bf2;
     color: #fff;
     outline: none;
+    /* Every touch in the viewer is its own: the page behind never scrolls or zooms. */
+    touch-action: none;
+    overscroll-behavior: contain;
     transition: opacity var(--nx-base) var(--nx-ease);
   }
   .nx-viewer[data-starting-style],
   .nx-viewer[data-ending-style] {
     opacity: 0;
+  }
+  /* The backdrop; pulling the screenshot down (--pull, set by use-zoom.ts) lets the page show through. */
+  .nx-viewer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #07060b;
+    opacity: calc(0.95 - var(--pull, 0));
   }
   .nx-viewer-bar {
     display: flex;
@@ -1688,14 +1643,31 @@
     flex: 1;
     min-height: 0;
     display: grid;
+    /* One cell the stage's own size, so the image's max-height has something to fit: a tall
+       screenshot shows whole, never cut off below the screen. */
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
     place-items: center;
     padding: 0 12px;
+    /* Pinch, double-tap, drags and the wheel are handled by use-zoom.ts, so the browser takes none of
+       them; a zoomed screenshot stays between the bar and the foot. */
+    overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .nx-viewer-stage[data-zoomed] {
+    cursor: grab;
+  }
+  .nx-viewer-stage[data-zoomed]:active {
+    cursor: grabbing;
   }
   .nx-viewer-stage > img {
     max-width: 100%;
     max-height: 100%;
     border-radius: 18px;
     object-fit: contain;
+    -webkit-user-drag: none;
     animation: nx-fade var(--nx-base) var(--nx-ease) both;
   }
   .nx-viewer-foot {

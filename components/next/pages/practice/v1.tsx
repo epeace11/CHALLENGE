@@ -1,4 +1,4 @@
-// The whole day on one page. Your answers, Jordan's review and the gift appear one under the other as a timeline, with the next action pinned at the bottom.
+// The whole day as a timeline: your answers, Jordan's review, your review of Jordan's answers and the gift. Only the step under way is open, so each fits a phone; the next action is pinned at the bottom.
 'use client';
 import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { ArrowRight, Check, RotateCcw, UserPlus } from 'lucide-react';
@@ -9,12 +9,14 @@ import {
   ActionBar,
   Button,
   GlassCard,
-  Item,
-  Presence,
+  ProgressBar,
+  ReasonSheet,
+  StatusPill,
   useReducedMotion,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import {
+  AnswerToReview,
   GiftSteps,
   HowPointsSheet,
   MissLine,
@@ -23,9 +25,10 @@ import {
   Question,
 } from './parts';
 import {
-  answerText,
-  costButton,
+  capital,
   isAnswered,
+  needsShot,
+  partnerAnswerText,
   shortTitle,
   usePractice,
   type Phase,
@@ -34,11 +37,14 @@ import styles from './practice.module.css';
 
 type State = 'done' | 'now' | 'next';
 
-/** One part of the day on the timeline: a node on the rail, a title, and what happened in it. */
+/**
+ * One part of the day on the timeline: a node on the rail, a title, and while it is under way what
+ * happens in it. A part still ahead is only its title, so the part under way fits a phone.
+ */
 function Step({
   state,
   title,
-  preview,
+  aside,
   last,
   anchor,
   headingId,
@@ -46,8 +52,8 @@ function Step({
 }: {
   state: State;
   title: string;
-  /** What this part will show, while it is still ahead. */
-  preview?: string;
+  /** Something small on the title's row (how many are saved). */
+  aside?: ReactNode;
   last?: boolean;
   anchor?: Ref<HTMLLIElement>;
   /** Lets the page move focus to this part's title when it starts. */
@@ -82,13 +88,13 @@ function Step({
           <span className="size-3 rounded-full bg-nx-accent" />
         ) : null}
       </span>
-      <div className="flex min-w-0 flex-col gap-4">
-        <div>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex items-center gap-3">
           <h2
             id={headingId}
             tabIndex={headingId ? -1 : undefined}
             className={cn(
-              'font-nx-serif text-nx-h3 leading-8',
+              'min-w-0 flex-1 font-nx-serif text-nx-h3 leading-8',
               state === 'next' ? 'text-nx-ink-2' : 'text-nx-ink',
             )}
           >
@@ -96,9 +102,7 @@ function Step({
             {/* The current part is announced by aria-current on the item, so only a finished one says so here. */}
             {state === 'done' && <span className="sr-only">, done</span>}
           </h2>
-          {state === 'next' && preview && (
-            <p className="text-nx-2 text-nx-ink-2">{preview}</p>
-          )}
+          {aside}
         </div>
         {children}
       </div>
@@ -106,18 +110,29 @@ function Step({
   );
 }
 
-const ORDER: Phase[] = ['answer', 'review', 'gift'];
+const ORDER: Phase[] = ['answer', 'review', 'yours', 'gift'];
 
-/** Practice day, version 2. */
-export default function PracticeV2() {
+/** Practice day. */
+export default function PracticeV1() {
   const p = usePractice();
   const { navigate } = useNav();
   const reduced = useReducedMotion();
+  const toReview = p.world.practice.partnerAnswers;
+  const reviewing = toReview[p.decided.length];
   const [how, setHow] = useState(false);
+  /** The partner's answer being disputed: kept while its sheet closes, so the sheet slides away. */
+  const [disputed, setDisputed] = useState<(typeof toReview)[number] | null>(
+    null,
+  );
+  const [disputing, setDisputing] = useState(false);
+  /** Save pressed before the question was answered: what's missing, said beside Save. */
+  const [early, setEarly] = useState<number | null>(null);
   const review = useRef<HTMLLIElement>(null);
+  const yours = useRef<HTMLLIElement>(null);
   const gift = useRef<HTMLLIElement>(null);
   const question = useRef<HTMLDivElement>(null);
-  const partner = p.world.partner.name;
+  const partner = p.world.partner.name,
+    Partner = capital(partner);
   // In the live app the partner may already be in; the button then goes back to the challenge.
   const { live } = useBackend();
   const joined = live && !p.world.partnerPending;
@@ -127,15 +142,33 @@ export default function PracticeV2() {
     return i < at ? 'done' : i === at ? 'now' : 'next';
   };
 
-  // Bring whatever just appeared into view (the next question, the review, the gift) and move
-  // focus to its heading, so keyboard and screen reader users follow along.
+  // Bring whatever just appeared into view (the next question, the review, the partner's next
+  // answer, the gift) and move focus to its heading, so keyboard and screen reader users follow.
   useEffect(() => {
     const behavior = reduced ? 'auto' : 'smooth';
-    const focus = (id: string) =>
-      document.getElementById(id)?.focus({ preventScroll: true });
+    // A closing sheet (the dispute) hands focus back as it goes, so focus waits until it's gone.
+    let frame = 0,
+      frames = 90;
+    const focus = (id: string) => {
+      const step = () => {
+        if (document.querySelector('.nx-sheet') && frames-- > 0) {
+          frame = requestAnimationFrame(step);
+          return;
+        }
+        document.getElementById(id)?.focus({ preventScroll: true });
+      };
+      frame = requestAnimationFrame(step);
+    };
     if (p.phase === 'review') {
       review.current?.scrollIntoView({ behavior });
       focus('practice-review');
+    } else if (p.phase === 'yours') {
+      yours.current?.scrollIntoView({ behavior });
+      focus(
+        p.decided.length
+          ? `practice-yours-${p.decided.length}`
+          : 'practice-yours',
+      );
     } else if (p.phase === 'gift') {
       gift.current?.scrollIntoView({ behavior });
       focus('practice-gift');
@@ -146,30 +179,80 @@ export default function PracticeV2() {
       window.scrollTo({ top: 0, behavior });
       focus('practice-question-0');
     }
-  }, [p.phase, p.saved, p.run, reduced]);
+    return () => cancelAnimationFrame(frame);
+  }, [p.phase, p.saved, p.run, p.decided.length, reduced]);
 
   const i = p.current;
+  const answered = isAnswered(p.questions[i].rule, p.answers[i]);
+  // As Check in's Save: it stays filled, and pressed early it says why and goes to what's missing.
+  const missing =
+    early === i && !answered && !needsShot(p.questions[i].rule, p.answers[i])
+      ? p.questions[i].rule.kind === 'number'
+        ? 'Enter a number to save.'
+        : 'Choose Yes or No.'
+      : null;
   const action =
     p.phase === 'answer' ? (
-      <Button
-        variant="primary"
-        size="lg"
-        full
-        disabled={!isAnswered(p.questions[i].rule, p.answers[i])}
-        onClick={p.save}
-      >
-        Save
-      </Button>
+      <>
+        {missing && (
+          <output className="block text-center text-nx-2 text-nx-ink-2">
+            {missing}
+          </output>
+        )}
+        <Button
+          variant="primary"
+          size="lg"
+          full
+          onClick={() => {
+            if (answered) return p.save();
+            setEarly(i);
+            question.current
+              ?.querySelector<HTMLElement>(
+                needsShot(p.questions[i].rule, p.answers[i])
+                  ? '.nx-proofs button:last-child'
+                  : 'input',
+              )
+              ?.focus();
+          }}
+        >
+          Save
+        </Button>
+      </>
     ) : p.phase === 'review' ? (
+      // The next step's title, just under the review, says what comes next.
       <Button
         variant="primary"
         size="lg"
         full
         iconEnd={ArrowRight}
-        onClick={p.toGift}
+        onClick={p.toYours}
       >
-        {costButton(p.result.misses.length)}
+        Next
       </Button>
+    ) : p.phase === 'yours' ? (
+      // As on Review: Dispute and Approve side by side, Approve the filled one.
+      <>
+        <Button
+          variant="secondary"
+          size="lg"
+          className="flex-1 px-3"
+          onClick={() => {
+            setDisputed(reviewing ?? null);
+            setDisputing(true);
+          }}
+        >
+          Dispute
+        </Button>
+        <Button
+          variant="primary"
+          size="lg"
+          icon={Check}
+          className="flex-1 px-3"
+          onClick={() => p.decide({ decision: 'approve' })}
+        >
+          Approve
+        </Button>
+      </>
     ) : (
       <>
         <Button
@@ -188,50 +271,33 @@ export default function PracticeV2() {
     );
 
   return (
-    <PlainFrame back={{ to: 'setup' }}>
+    // The marker sits in the top bar beside Back, so each step fits under it.
+    <PlainFrame back={{ to: 'setup' }} aside={<PracticeBanner />}>
       <div className="flex flex-col gap-6">
-        {/* The banner says what this is; the title is for screen readers, so the first question fits. */}
+        {/* The marker says what this is; the title is for screen readers. */}
         <h1 className="sr-only">Practice day</h1>
-        {/* Pinned on a page-coloured backing, so nothing scrolling under it shows above or around it. */}
-        <div className={styles.sticky}>
-          <PracticeBanner />
-        </div>
 
-        <ol className="flex flex-col gap-6" key={p.run}>
-          <Step state={state('answer')} title="Answer three check-ins">
-            {/* Once Jordan reviews, each answer is on its review card, so the list here goes. */}
-            {p.saved > 0 && p.phase === 'answer' && (
-              <div className="relative flex flex-col gap-2">
-                <Presence mode="popLayout" initial={false}>
-                  {p.questions.slice(0, p.saved).map((q, n) => (
-                    <Item key={q.rule.id}>
-                      <div className="flex items-center gap-3 rounded-nx border border-nx-line bg-nx-surface-2 px-4 py-3">
-                        <Check
-                          size={18}
-                          strokeWidth={2.6}
-                          className="shrink-0 text-nx-done"
-                          aria-hidden="true"
-                        />
-                        <span className="min-w-0 flex-1 text-nx-body text-nx-ink">
-                          {shortTitle(q.rule)}
-                        </span>
-                        <span className="shrink-0 text-nx-2 text-nx-ink-2">
-                          {answerText(q.rule, p.answers[n])}
-                        </span>
-                      </div>
-                    </Item>
-                  ))}
-                </Presence>
-              </div>
-            )}
+        <ol className="flex flex-col gap-4" key={p.run}>
+          <Step
+            state={state('answer')}
+            title="Answer three check-ins"
+            // How many are saved, as Check in shows it; each answer is on Jordan's review next.
+            aside={
+              p.phase === 'answer' && (
+                <ProgressBar
+                  value={p.saved}
+                  max={p.questions.length}
+                  segments
+                  size="sm"
+                  label={`${p.saved} of ${p.questions.length} saved`}
+                  className="w-16 shrink-0"
+                />
+              )
+            }
+          >
             {p.phase === 'answer' && (
               <div ref={question} className="scroll-mb-40">
-                {p.saved === 0 && (
-                  <p className="mb-3 text-nx-2 text-nx-ink-2">
-                    Sample answers are filled in. Change any of them.
-                  </p>
-                )}
-                <GlassCard key={i} pad="lg" className="nx-enter">
+                <GlassCard key={i} className="nx-enter">
                   <Question
                     p={p}
                     index={i}
@@ -244,12 +310,12 @@ export default function PracticeV2() {
 
           <Step
             state={state('review')}
-            title={`${partner} reviews them`}
-            preview="They approve or dispute each answer. A miss needs no review."
+            title={`${Partner} reviews them`}
             anchor={review}
             headingId="practice-review"
           >
-            {p.phase !== 'answer' && (
+            {/* Only the step under way is open; a finished one keeps its title and check. */}
+            {p.phase === 'review' && (
               <div className="nx-enter">
                 <PartnerReview p={p} />
               </div>
@@ -257,9 +323,58 @@ export default function PracticeV2() {
           </Step>
 
           <Step
+            state={state('yours')}
+            title={`Review ${partner}’s answers`}
+            anchor={yours}
+            headingId="practice-yours"
+          >
+            {p.phase === 'yours' && (
+              <div className="flex flex-col gap-2">
+                {p.decided.map((d, n) => (
+                  <div
+                    key={toReview[n].rule.id}
+                    className="nx-enter flex items-center gap-3 rounded-nx border border-nx-line bg-nx-surface-2 px-4 py-3"
+                  >
+                    <span className="min-w-0 flex-1 text-nx-body text-nx-ink">
+                      {shortTitle(toReview[n].rule)}
+                      <span className="text-nx-ink-2">
+                        {' · '}
+                        {partnerAnswerText(
+                          toReview[n].rule,
+                          toReview[n].answer,
+                        )}
+                      </span>
+                    </span>
+                    <StatusPill
+                      className="shrink-0"
+                      status={d.decision === 'approve' ? 'done' : 'disputed'}
+                      label={d.decision === 'approve' ? 'Approved' : 'Disputed'}
+                    />
+                  </div>
+                ))}
+                {reviewing && (
+                  <GlassCard
+                    key={reviewing.rule.id}
+                    pad="lg"
+                    className={cn('nx-enter', p.decided.length && 'mt-1')}
+                  >
+                    <AnswerToReview
+                      item={reviewing}
+                      headingId={
+                        p.decided.length
+                          ? `practice-yours-${p.decided.length}`
+                          : undefined
+                      }
+                    />
+                  </GlassCard>
+                )}
+              </div>
+            )}
+          </Step>
+
+          <Step
             state={state('gift')}
             title="What a point costs"
-            preview={`Each miss is a point, and your points set the gift you give ${partner}.`}
             anchor={gift}
             headingId="practice-gift"
             last
@@ -273,9 +388,37 @@ export default function PracticeV2() {
           </Step>
         </ol>
 
-        <ActionBar>{action}</ActionBar>
+        <ActionBar
+          className={cn(p.phase === 'yours' && 'flex-row items-stretch')}
+        >
+          {action}
+        </ActionBar>
       </div>
       <HowPointsSheet open={how} onOpenChange={setHow} />
+      <ReasonSheet
+        key={`practice-dispute:${p.run}:${disputed?.rule.id}`}
+        open={disputing}
+        onOpenChange={setDisputing}
+        title={`Dispute ${partner}’s answer`}
+        description={`No point unless ${partner} concedes it.`}
+        label="Your reason"
+        placeholder="What looks off to you?"
+        submit="Dispute"
+        missing={`Write a reason so ${partner} knows what to look at.`}
+        onSubmit={(reason) => {
+          setDisputing(false);
+          p.decide({ decision: 'dispute', reason });
+        }}
+      >
+        {disputed && (
+          <div className="rounded-nx bg-nx-sunken px-4 py-3">
+            <p className="text-nx-body font-semibold">{disputed.rule.title}</p>
+            <p className="text-nx-2 text-nx-ink-2">
+              {Partner} said {partnerAnswerText(disputed.rule, disputed.answer)}
+            </p>
+          </div>
+        )}
+      </ReasonSheet>
     </PlainFrame>
   );
 }

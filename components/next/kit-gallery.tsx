@@ -49,6 +49,7 @@ import {
   RowButton,
   Section,
   SegmentedControl,
+  ReasonSheet,
   Sheet,
   StackedBar,
   StatButton,
@@ -70,6 +71,7 @@ export function KitGallery() {
   const toast = useToast();
   const me = world.me.id;
   const [sheet, setSheet] = useState(false);
+  const [reason, setReason] = useState(false);
   const [saving, setSaving] = useState(false);
   const [answer, setAnswer] = useState<boolean | null>(null);
   const [steps, setSteps] = useState<number | null>(11240);
@@ -327,11 +329,12 @@ export function KitGallery() {
         </GlassCard>
       </Section>
 
-      <Section id="overlays" title="Sheet, toast and menu" index={7}>
+      <Section id="overlays" title="Sheets, toast and menu" index={7}>
         <div className="flex flex-wrap gap-3">
           <Button icon={CircleHelp} onClick={() => setSheet(true)}>
             How it works
           </Button>
+          <Button onClick={() => setReason(true)}>Dispute</Button>
           {/* The one message the app shows: a write that failed. Never a confirmation. */}
           <Button
             icon={WifiOff}
@@ -369,6 +372,18 @@ export function KitGallery() {
             miss adds $10.
           </p>
         </Sheet>
+        {/* A few words before acting: required, focused when it opens. */}
+        <ReasonSheet
+          open={reason}
+          onOpenChange={setReason}
+          title="Dispute Jordan’s answer"
+          description="No point unless Jordan concedes it."
+          label="Your reason"
+          placeholder="What looks off to you?"
+          submit="Dispute"
+          missing="Write a reason so Jordan knows what to look at."
+          onSubmit={() => setReason(false)}
+        />
       </Section>
 
       <Section id="motion" title="Motion" index={8}>

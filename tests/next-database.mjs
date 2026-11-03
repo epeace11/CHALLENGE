@@ -3,7 +3,13 @@
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { buildWorld, verdictFor, withShared } from '../lib/live/world.ts';
+import {
+  buildWorld,
+  nextLock,
+  personOf,
+  verdictFor,
+  withShared,
+} from '../lib/live/world.ts';
 import { activePoints, owes, reviewQueue } from '../lib/next/selectors.ts';
 
 const db = new PGlite();
@@ -916,5 +922,37 @@ assert.equal(
   alex,
   "Alex's own steps rule stays Alex's when Blake starts it",
 );
+
+// A tab left open reloads when the oldest open day locks: 11:59 pm the next day, Toronto time.
+const lockC = {
+  start: '2026-11-01',
+  days: 30,
+  timeZone: 'America/Toronto',
+  deadline: { daysAfter: 1, time: '23:59' },
+};
+const at = (iso) => Date.parse(iso);
+assert.equal(
+  nextLock(lockC, at('2026-11-05T12:00:00-05:00')),
+  at('2026-11-05T23:59:00-05:00'),
+  'midday Nov 5: Nov 4 locks tonight',
+);
+assert.equal(
+  nextLock(lockC, at('2026-11-06T00:30:00-05:00')),
+  at('2026-11-06T23:59:00-05:00'),
+  'just after midnight: Nov 5 locks next',
+);
+assert.equal(
+  nextLock(lockC, at('2026-10-20T12:00:00-04:00')),
+  at('2026-11-02T23:59:00-05:00'),
+  'before Day 1: Day 1 locks first',
+);
+assert.equal(
+  nextLock(lockC, at('2026-12-02T00:00:00-05:00')),
+  null,
+  'after the last day locked: nothing left',
+);
+// A name that starts with an emoji keeps the whole emoji as its initial.
+assert.equal(personOf({ id: 'x', name: '🌸 Maya', hue: 0 }).initial, '🌸');
+assert.equal(personOf({ id: 'x', name: '  ', hue: 0 }).initial, '?');
 
 console.log('next database: ok');

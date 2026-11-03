@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowRight, Mail } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
+import { useWorld } from '@/components/next/world';
 import {
   Button,
   DURATION,
@@ -30,6 +31,9 @@ const METHODS: { value: Method; label: string }[] = [
 /** Sign up and sign in, version 2. */
 export default function SignupV2() {
   const f = useSignupForm();
+  const world = useWorld();
+  // The live app names someone who opened an invite from it, with no email until they sign up.
+  const invited = !world.me.email;
   const still = useReducedMotion();
   const [method, setMethod] = useState<Method>('password');
   const [resetting, setResettingState] = useState(false);
@@ -90,7 +94,10 @@ export default function SignupV2() {
                 </h1>
                 {signup && (
                   <p className="text-nx-body text-nx-ink-2">
-                    Then pick a challenge and invite your partner.
+                    {/* Someone who opened an invite has their challenge already: the pact is next. */}
+                    {invited
+                      ? `Then sign the pact with ${world.partner.name}.`
+                      : 'Then pick a challenge and invite your partner.'}
                   </p>
                 )}
               </header>

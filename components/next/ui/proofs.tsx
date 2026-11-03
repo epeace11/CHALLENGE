@@ -6,10 +6,12 @@ import type { Proof } from '@/lib/next/model';
 import { cn } from '@/lib/utils';
 import { IconButton } from './button';
 import { usePortalContainer } from './root';
+import { useZoom } from './use-zoom';
 
 /**
  * Screenshot thumbnails. Tapping one opens every screenshot full screen, with arrows (and ←/→) to
- * move between them. `onAdd` shows an "Add screenshot" tile; `onRemove` puts a remove button on each.
+ * move between them. `onAdd` shows an "Add screenshot" tile, until there are `max`; `busy` turns it
+ * into a spinner while one uploads. `onRemove` puts a remove button on each.
  * In the preview, add sample screenshots with stepsShot() or screenTimeShot() from lib/next/shots.
  */
 export function ProofStrip({
@@ -17,12 +19,16 @@ export function ProofStrip({
   onAdd,
   onRemove,
   addLabel = 'Add screenshot',
+  max = Infinity,
+  busy,
   className,
 }: {
   proofs: Proof[];
   onAdd?: () => void;
   onRemove?: (proofId: string) => void;
   addLabel?: string;
+  max?: number;
+  busy?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState<number | null>(null);
@@ -60,18 +66,21 @@ export function ProofStrip({
       ))}
       {/* Before the first screenshot, a wide drop-zone with the whole label; after it, a tile the
           size of a screenshot with only the icon (screen readers hear the label). */}
-      {onAdd && (
+      {onAdd && (busy || proofs.length < max) && (
         <button
           type="button"
           className="nx-proof-add"
           data-wide={proofs.length === 0 || undefined}
-          aria-label={proofs.length ? addLabel : undefined}
-          onClick={onAdd}
+          aria-label={
+            busy ? 'Uploading screenshot' : proofs.length ? addLabel : undefined
+          }
+          aria-busy={busy || undefined}
+          onClick={busy ? undefined : onAdd}
         >
           <span className="nx-proof-add-icon" aria-hidden="true">
-            <ImagePlus size={22} />
+            {busy ? <span className="nx-spinner" /> : <ImagePlus size={22} />}
           </span>
-          {proofs.length ? null : addLabel}
+          {proofs.length ? null : busy ? 'Uploading…' : addLabel}
         </button>
       )}
       <ProofViewer
@@ -84,7 +93,11 @@ export function ProofStrip({
   );
 }
 
-/** Full-screen screenshots. Open by passing an index; null closes it. */
+/**
+ * Full-screen screenshots. Open by passing an index; null closes it. Arrows, swipes and ←/→ move
+ * between them; pinch, double-tap, the wheel and + − 0 zoom, and a drag pans while zoomed (see
+ * use-zoom.ts). Pulling the screenshot down or tapping beside it closes the viewer.
+ */
 export function ProofViewer({
   proofs,
   index,
@@ -105,6 +118,10 @@ export function ProofViewer({
     many = proofs.length > 1;
   const go = (step: number) =>
     onIndex((i + step + proofs.length) % proofs.length);
+  const { stage, img, onKey } = useZoom({
+    onPage: many ? go : undefined,
+    onClose,
+  });
   return (
     <Dialog.Root
       open={index !== null && !!proof}
@@ -116,9 +133,9 @@ export function ProofViewer({
         <Dialog.Popup
           className="nx-viewer"
           onKeyDown={(e) => {
-            if (!many) return;
-            if (e.key === 'ArrowRight') go(1);
-            if (e.key === 'ArrowLeft') go(-1);
+            if (many && e.key === 'ArrowRight') go(1);
+            else if (many && e.key === 'ArrowLeft') go(-1);
+            else onKey(e.key);
           }}
         >
           <div className="nx-viewer-bar">
@@ -129,8 +146,16 @@ export function ProofViewer({
               <X size={20} aria-hidden="true" />
             </Dialog.Close>
           </div>
-          <div className="nx-viewer-stage">
-            {proof && <img key={proof.id} src={proof.src} alt={proof.alt} />}
+          <div className="nx-viewer-stage" {...stage}>
+            {proof && (
+              <img
+                key={proof.id}
+                ref={img}
+                src={proof.src}
+                alt={proof.alt}
+                draggable={false}
+              />
+            )}
           </div>
           <div className="nx-viewer-foot">
             {many && (

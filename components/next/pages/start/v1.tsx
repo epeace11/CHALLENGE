@@ -19,6 +19,7 @@ import { savedChoices, themeChoices, type Choice } from './choices';
 import { ChoiceRow } from './parts';
 import styles from './start.module.css';
 import { cx } from './cx';
+import { forgetWantedTheme, wantedTheme } from './wanted';
 
 type Step = 'how' | 'themes' | 'saved';
 
@@ -31,12 +32,16 @@ export default function Start() {
   const world = useWorld();
   const { navigate } = useNav();
   const { host } = useBackend();
-  const sheet = useChoiceSheet();
-  const [step, setStep] = useState<Step>('how');
+  const themes = themeChoices(world);
+  // A theme tapped on the landing page before signing up opens here, on its sheet over the themes.
+  const [wanted] = useState(
+    () => themes.find((t) => t.id === wantedTheme()) ?? null,
+  );
+  const sheet = useChoiceSheet(wanted);
+  const [step, setStep] = useState<Step>(wanted ? 'themes' : 'how');
   const [direction, setDirection] = useState<1 | -1>(1);
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
-  const themes = themeChoices(world);
   const saved = savedChoices(world);
 
   const go = (next: Step) => {
@@ -44,6 +49,7 @@ export default function Start() {
     setDirection(next === 'how' ? -1 : 1);
     setStep(next);
   };
+  useEffect(forgetWantedTheme, []);
   // After moving between steps, keyboard and screen reader users land on the new step's heading.
   useEffect(() => {
     if (moved.current) heading.current?.focus({ preventScroll: true });
@@ -69,42 +75,51 @@ export default function Start() {
         />
         <Glide id={step} direction={direction}>
           {step === 'how' ? (
-            <Stagger as="ul" className="flex flex-col gap-3">
-              <StartRow
-                filled
-                title="Create new challenge"
-                detail="Pick each rule yourself"
-                icon={Plus}
-                onClick={() =>
-                  host
-                    ? void host.startFrom({ kind: 'blank' })
-                    : navigate('setup')
-                }
-              />
-              {/* Say your rules needs the AI step, which the live app adds later. */}
-              {!host && (
+            <div className="flex flex-col gap-4">
+              <Stagger as="ul" className="flex flex-col gap-3">
                 <StartRow
-                  title="Say your rules"
-                  detail="Type or dictate them in a sentence"
-                  icon={MessageSquareText}
-                  onClick={() => navigate('say')}
+                  filled
+                  title="Create new challenge"
+                  detail="Pick each rule yourself"
+                  icon={Plus}
+                  onClick={() =>
+                    host
+                      ? void host.startFrom({ kind: 'blank' })
+                      : navigate('setup')
+                  }
                 />
-              )}
-              {saved.length > 0 && (
+                {/* Say your rules needs the AI step, which the live app adds later. */}
+                {!host && (
+                  <StartRow
+                    title="Say your rules"
+                    detail="Type or dictate them in a sentence"
+                    icon={MessageSquareText}
+                    onClick={() => navigate('say')}
+                  />
+                )}
+                {saved.length > 0 && (
+                  <StartRow
+                    title="Saved challenges"
+                    detail={saved.map((s) => s.name).join(' or ')}
+                    icon={Bookmark}
+                    onClick={() => go('saved')}
+                  />
+                )}
                 <StartRow
-                  title="Saved challenges"
-                  detail={saved.map((s) => s.name).join(' or ')}
-                  icon={Bookmark}
-                  onClick={() => go('saved')}
+                  title="Themes"
+                  detail={`${countWord(themes.length)} ready-made challenges`}
+                  art={<ThemeDots choices={themes} />}
+                  onClick={() => go('themes')}
                 />
+              </Stagger>
+              {/* A brand-new account may belong to a partner who registered before opening the link. */}
+              {host && !world.challenge.id && (
+                <p className="text-nx-2 text-nx-ink-2">
+                  Joining your partner’s challenge? Open the invite link they
+                  sent you.
+                </p>
               )}
-              <StartRow
-                title="Themes"
-                detail={`${countWord(themes.length)} ready-made challenges`}
-                art={<ThemeDots choices={themes} />}
-                onClick={() => go('themes')}
-              />
-            </Stagger>
+            </div>
           ) : (
             <div className="flex flex-col gap-4">
               <h2

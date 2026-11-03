@@ -2,13 +2,13 @@
 import { ArrowRight, BookOpen } from 'lucide-react';
 import type { World } from '@/lib/next/model';
 import { daysBetween } from '@/lib/next/calendar';
-import { formatDay, plural } from '@/lib/next/selectors';
+import { answerLine, formatDay } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
-import { Button, Enter, PageTitle, StatButton } from '@/components/next/ui';
+import { Button, Enter, PageTitle } from '@/components/next/ui';
 
 /**
- * Overview before Day 1, once both have signed: how long until it starts, a practice day to try the
- * check-in, and the rules. Nothing counts yet.
+ * Overview before Day 1, once both have signed: when it starts and when its first check-in is
+ * answered, a practice day to try the check-in, and the rules. The top bar already says "Starts…".
  */
 export function BeforeStart({ world }: { world: World }) {
   const { navigate } = useNav();
@@ -20,17 +20,9 @@ export function BeforeStart({ world }: { world: World }) {
         title={
           days === 1 ? 'Day 1 is tomorrow' : `Day 1 is ${formatDay(c.start)}`
         }
-        detail={`You’ve both signed. Nothing counts until then.`}
+        detail={`You’ve both signed. ${answerLine(world, c.start)}`}
       />
       <Enter index={1} className="flex flex-col gap-3">
-        <StatButton
-          size="lg"
-          tone="accent"
-          label="Day 1 starts in"
-          value={plural(days, 'day')}
-          hint={`${formatDay(c.start)}. See what happens that day.`}
-          onClick={() => navigate('rules')}
-        />
         <Button
           variant="primary"
           size="lg"

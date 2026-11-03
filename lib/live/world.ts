@@ -20,13 +20,14 @@ import type {
   World,
 } from '../next/model.ts';
 import { BLANK_NAME, LIBRARY, THEMES } from '../next/catalog.ts';
-import { dateIn, lastDay, shift } from '../next/calendar.ts';
+import { dateIn, lastDay, lockTime, shift } from '../next/calendar.ts';
 import { world as sample } from '../next/demo.ts';
 import {
   activePoints,
   badges,
   calendar,
   forgivenPoints,
+  initialOf,
   owes,
   streaks,
 } from '../next/selectors.ts';
@@ -225,7 +226,7 @@ export const PENDING_PARTNER = 'pending-partner';
 export const personOf = (p: ProfileRow, email = ''): Person => ({
   id: p.id,
   name: p.name,
-  initial: (p.name.trim()[0] ?? '?').toUpperCase(),
+  initial: initialOf(p.name),
   email,
   hue: p.hue,
 });
@@ -511,7 +512,7 @@ export function buildWorld(
     : {
         id: PENDING_PARTNER,
         name: invite?.to_name || 'your partner',
-        initial: (invite?.to_name?.trim()[0] ?? '?').toUpperCase(),
+        initial: initialOf(invite?.to_name ?? ''),
         email: invite?.to_email ?? '',
         hue: (rows.me.hue + 180) % 360,
       };
@@ -641,6 +642,25 @@ export function pactTerms(c: Challenge) {
   ];
 }
 
+/**
+ * When the next day that can still be logged locks, after `after` (epoch ms): the moment a tab left
+ * open reloads, so the day shows as closed and the database has marked what wasn't logged. Before
+ * Day 1 that is Day 1's lock; null once the last day has locked.
+ */
+export function nextLock(
+  c: Pick<Challenge, 'start' | 'days' | 'deadline' | 'timeZone'>,
+  after: number,
+): number | null {
+  // A day still open ended at most `daysAfter + 1` days ago, and the oldest open day locks first.
+  let day = shift(dateIn(c.timeZone, after), -(c.deadline.daysAfter + 1));
+  if (day < c.start) day = c.start;
+  for (const last = lastDay(c); day <= last; day = shift(day, 1)) {
+    const at = lockTime(c, day);
+    if (at > after) return at;
+  }
+  return null;
+}
+
 /** The practice day uses the sample script, on this challenge's step when it has one. */
 function practiceFor(c: Challenge) {
   return {
@@ -672,7 +692,7 @@ export function inviteWorld(
     : {
         id: 'invitee',
         name,
-        initial: (name[0] ?? '?').toUpperCase(),
+        initial: initialOf(name),
         email: '',
         hue: (preview.from.hue + 180) % 360,
       };
