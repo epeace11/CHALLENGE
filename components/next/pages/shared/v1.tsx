@@ -84,7 +84,7 @@ export default function SharedV1() {
             iconEnd={ArrowRight}
             onClick={start}
           >
-            Start this challenge
+            Use this challenge
           </Button>
           <SaveButton saved={saved} onClick={toggle} size="lg" />
         </ActionBar>

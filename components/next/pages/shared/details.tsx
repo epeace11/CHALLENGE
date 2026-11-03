@@ -208,7 +208,7 @@ export function SharedSheets({
   const startButton = (
     <InLook look={look}>
       <Button variant="primary" iconEnd={ArrowRight} onClick={onStart}>
-        Start this challenge
+        Use this challenge
       </Button>
     </InLook>
   );

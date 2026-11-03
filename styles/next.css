@@ -148,6 +148,8 @@
   /* Lines and surfaces */
   --nx-line: #e1e5ee;
   --nx-line-strong: #ccd3e0;
+  /* The edge of something you type in or switch: 3:1 against the surface. */
+  --nx-field-line: #7d869b;
   --nx-surface: #ffffff;
   --nx-surface-2: #ffffffb3;
   --nx-sunken: #e9ecf3;
@@ -216,7 +218,9 @@
   --nx-ink-2: #a9a5be;
   --nx-line: #ffffff17;
   --nx-line-strong: #ffffff2b;
-  --nx-surface: #17131f;
+  --nx-field-line: #7d788f;
+  /* Each look's own dark page, lifted, so sheets and bars match the look. */
+  --nx-surface: color-mix(in oklab, var(--nx-page), white 6%);
   --nx-surface-2: #ffffff0d;
   --nx-sunken: #ffffff12;
   --nx-glass: linear-gradient(125deg, #ffffff14, #ffffff06);
@@ -290,29 +294,30 @@
 .nx[data-look='seventy-five'],
 .nx [data-look='seventy-five'] {
   --nx-page: #f8f7fa;
-  --nx-glow-a: #f6e1eb;
+  --nx-glow-a: #f1e2f3;
   --nx-glow-b: #efe6f6;
   --nx-glow-c: #fbece3;
-  --nx-accent: #a3326a;
-  --nx-accent-strong: #8c2659;
-  --nx-accent-soft: #f8e4ee;
-  --nx-accent-line: #e8b8cf;
-  --nx-fill: linear-gradient(135deg, #b23c78, #8f2a5c);
-  --nx-fill-hover: linear-gradient(135deg, #a53570, #822452);
+  /* Plum, not berry: a berry accent sat too close to missed red, so good news read as a miss. */
+  --nx-accent: #7c3a8f;
+  --nx-accent-strong: #682c79;
+  --nx-accent-soft: #f3e6f6;
+  --nx-accent-line: #dcbfe5;
+  --nx-fill: linear-gradient(135deg, #8a429e, #6a2c7c);
+  --nx-fill-hover: linear-gradient(135deg, #7e3a92, #5e2670);
   --nx-fill-shadow: 0 1px 2px #1e2a5a1f;
 }
 [data-theme='dark'] .nx[data-look='seventy-five'],
 [data-theme='dark'] .nx [data-look='seventy-five'] {
-  --nx-page: #120a10;
-  --nx-glow-a: #4a1a35a6;
+  --nx-page: #110a13;
+  --nx-glow-a: #42194aa6;
   --nx-glow-b: #2a1a3acc;
-  --nx-glow-c: #2b1210;
-  --nx-accent: #ffa3cf;
-  --nx-accent-strong: #ffc2df;
-  --nx-accent-soft: #3a1a2c;
-  --nx-accent-line: #7a3558;
-  --nx-fill: linear-gradient(135deg, #b03a74, #8a2f86);
-  --nx-fill-hover: linear-gradient(135deg, #bd4580, #963a92);
+  --nx-glow-c: #2a1226;
+  --nx-accent: #e3a6f0;
+  --nx-accent-strong: #efc6f6;
+  --nx-accent-soft: #33183c;
+  --nx-accent-line: #6e3a7e;
+  --nx-fill: linear-gradient(135deg, #8e3fa3, #6b2e86);
+  --nx-fill-hover: linear-gradient(135deg, #9a4aaf, #773892);
   --nx-fill-shadow: 0 4px 14px -6px #00000099;
 }
 .nx[data-look='sleep'],
@@ -377,8 +382,8 @@
   --nx-glow-a: #fbe6d6;
   --nx-glow-b: #edf3e2;
   --nx-glow-c: #fdf0dc;
-  --nx-accent: #b4501a;
-  --nx-accent-strong: #9a4211;
+  --nx-accent: #a4470f;
+  --nx-accent-strong: #8c3a0b;
   --nx-accent-soft: #fbe9dc;
   --nx-accent-line: #efc2a3;
   --nx-fill: linear-gradient(135deg, #b8531a, #9a410f);
@@ -1105,7 +1110,11 @@
     }
   }
   [data-theme='dark'] .nx-sheet {
-    background: linear-gradient(160deg, #1d1829, #141019);
+    background: linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--nx-page), white 9%),
+      color-mix(in oklab, var(--nx-page), white 4%)
+    );
   }
 
   /* ── Menu ───────────────────────────────────────────────────────────────── */
@@ -1132,7 +1141,7 @@
     transform: scale(0.96);
   }
   [data-theme='dark'] .nx-menu {
-    background: #1b1724;
+    background: color-mix(in oklab, var(--nx-page), white 8%);
   }
   .nx-menu-item {
     display: flex;
@@ -1298,6 +1307,7 @@
     inset: 0;
     z-index: 0;
     border-radius: 12px;
+    border: 1px solid var(--nx-field-line);
     background: var(--nx-surface);
     box-shadow:
       0 1px 3px #1e2a5a1f,
@@ -1326,7 +1336,7 @@
     width: 52px;
     height: 32px;
     border-radius: 999px;
-    background: var(--nx-line-strong);
+    background: var(--nx-field-line);
     transition: background var(--nx-base) var(--nx-ease);
   }
   .nx-switch::after {
@@ -1379,7 +1389,7 @@
     min-height: 48px;
     padding: 10px 14px;
     border-radius: var(--nx-r-btn);
-    border: 1px solid var(--nx-line-strong);
+    border: 1px solid var(--nx-field-line);
     background: var(--nx-surface);
     color: var(--nx-ink);
     font: 17px/1.4 var(--nx-font-sans) !important;
@@ -1422,7 +1432,7 @@
     padding: 0 14px 0 16px;
     cursor: text;
     border-radius: var(--nx-r);
-    border: 1.5px solid var(--nx-line-strong);
+    border: 1.5px solid var(--nx-field-line);
     background: var(--nx-surface);
     transition:
       border-color var(--nx-base) var(--nx-ease),
@@ -1486,10 +1496,17 @@
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.35),
       0 6px 14px -8px color-mix(in srgb, var(--sq) 70%, transparent);
-    -webkit-backdrop-filter: blur(10px) saturate(140%);
-    backdrop-filter: blur(10px) saturate(140%);
     color: var(--nx-day-ink);
     font-variant-numeric: tabular-nums;
+  }
+  /* On the dark page a see-through end turns the square muddy and its mark unreadable, so in dark
+     it ends on the colour itself: the squares look as they do in light. */
+  [data-theme='dark'] .nx-day {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--sq), white 14%),
+      var(--sq)
+    );
   }
   .nx-day[data-tone='done'] {
     --sq: var(--nx-day-done);
@@ -1534,11 +1551,13 @@
   button.nx-day {
     transition:
       transform var(--nx-fast) var(--nx-ease),
-      box-shadow var(--nx-base) var(--nx-ease),
-      filter var(--nx-base) var(--nx-ease);
+      box-shadow var(--nx-base) var(--nx-ease);
   }
   button.nx-day:hover {
-    filter: brightness(1.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      inset 0 0 0 1.5px rgb(255 255 255 / 0.55),
+      0 8px 16px -8px color-mix(in srgb, var(--sq) 80%, transparent);
   }
   button.nx-day:active {
     transform: scale(0.93);
@@ -1734,14 +1753,61 @@
     /* Opaque: the page's text scrolls under this bar and must never show through its buttons. */
     background: var(--nx-surface);
     box-shadow: var(--nx-lift-shadow);
-    -webkit-backdrop-filter: blur(22px) saturate(1.2);
-    backdrop-filter: blur(22px) saturate(1.2);
   }
   @media (min-width: 640px) {
     .nx-action-bar {
       flex-direction: row-reverse;
       align-items: center;
     }
+  }
+
+  /* Whatever gets focus scrolls clear of the fixed tab bar, the pinned action bar and the sticky
+     header (AppFrame measures them), so it is never hidden under them. */
+  .nx :where(a[href], button, input, select, textarea, [tabindex]) {
+    scroll-margin-top: calc(
+      var(--nx-top-inset) + var(--nx-header-h, 0px) + 12px
+    );
+    scroll-margin-bottom: calc(
+      var(--nx-nav-h) + var(--nx-action-h, 0px) + 12px
+    );
+  }
+  .nx
+    :where(
+      .nx-action-bar,
+      .nx-tabbar,
+      .nx-app-header,
+      .nx-sheet,
+      .nx-menu,
+      .nx-preview-bar
+    )
+    :where(a[href], button, input, select, textarea, [tabindex]) {
+    scroll-margin: 0;
+  }
+
+  /* "Skip to content", first in the top bar: hidden until it has keyboard focus. */
+  .nx-skip {
+    position: absolute;
+    left: var(--nx-gutter);
+    top: 8px;
+    z-index: 50;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: var(--nx-r-btn);
+    background: var(--nx-surface);
+    box-shadow: var(--nx-lift-shadow);
+    color: var(--nx-ink);
+    font-weight: 600;
+    transform: translateY(-200%);
+  }
+  .nx-skip:focus-visible {
+    transform: none;
+  }
+  /* A page's title takes focus on arrival (use-arrival-focus.ts) as a starting point, not a control. */
+  .nx-main h1:focus,
+  .nx-main:focus {
+    outline: none;
   }
 
   /* ── Frames ─────────────────────────────────────────────────────────────── */
@@ -1854,6 +1920,10 @@
   }
   .nx-tab:active {
     transform: scale(0.94);
+  }
+  /* A two-word label ("Check in") wraps at large text sizes instead of running into its neighbour. */
+  .nx-tab > span:not(.nx-tab-icon, .sr-only) {
+    text-align: center;
   }
   .nx-tab[aria-current='page'],
   .nx-tab[data-active] {

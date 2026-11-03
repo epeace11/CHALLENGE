@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Bookmark,
-  ChevronLeft,
   ChevronRight,
   MessageSquareText,
   Plus,
@@ -13,7 +12,7 @@ import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
-import { Button, Glide, PageTitle, Stagger } from '@/components/next/ui';
+import { Glide, PageTitle, Stagger } from '@/components/next/ui';
 import { ChoiceSheet } from './choice-sheet';
 import { useChoiceSheet } from './use-choice-sheet';
 import { savedChoices, themeChoices, type Choice } from './choices';
@@ -52,11 +51,14 @@ export default function Start() {
 
   return (
     <PlainFrame
-      // A new account has no challenges yet (the live app's blank one has no id), so no way back.
+      // In a list, the one back goes to all ways to start. A new account has no challenges yet (the
+      // live app's blank one has no id), so the ways to start have no way back.
       back={
-        host && !world.challenge.id
-          ? undefined
-          : { to: 'home', label: 'Your challenges' }
+        step !== 'how'
+          ? { label: 'All ways to start', onClick: () => go('how') }
+          : host && !world.challenge.id
+            ? undefined
+            : { to: 'home', label: 'Your challenges' }
       }
       aside={<AccountMenu />}
     >
@@ -105,26 +107,15 @@ export default function Start() {
             </Stagger>
           ) : (
             <div className="flex flex-col gap-4">
-              <div>
-                <Button
-                  variant="quiet"
-                  icon={ChevronLeft}
-                  className="-ml-3"
-                  onClick={() => go('how')}
-                >
-                  All ways to start
-                </Button>
-                <h2
-                  ref={heading}
-                  tabIndex={-1}
-                  className="nx-section-title mt-1 outline-none"
-                >
-                  {step === 'themes'
-                    ? 'Pick a theme'
-                    : 'Pick a saved challenge'}
-                </h2>
-              </div>
-              <Stagger as="ul" className="flex flex-col gap-3">
+              <h2
+                ref={heading}
+                tabIndex={-1}
+                className="nx-section-title outline-none"
+              >
+                {step === 'themes' ? 'Pick a theme' : 'Pick a saved challenge'}
+              </h2>
+              {/* Two to a row from 640px, so four themes fit a short laptop window. */}
+              <Stagger as="ul" className="grid gap-3 sm:grid-cols-2">
                 {(step === 'themes' ? themes : saved).map((c) => (
                   <ChoiceRow
                     key={c.id}

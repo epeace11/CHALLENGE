@@ -27,6 +27,12 @@
     /* Tight on phones, so each day is at least a 44px target. */
     gap: 2px;
   }
+  /* Under 360px seven days can't reach 44px inside the 20px gutters; 1px gaps get them closest. */
+  @media (max-width: 359.98px) {
+    .grid {
+      gap: 1px;
+    }
+  }
   @media (min-width: 640px) {
     .grid {
       gap: 6px;
@@ -95,6 +101,11 @@
   }
   .compact .grid {
     gap: 3px;
+  }
+  @media (max-width: 359.98px) {
+    .compact .grid {
+      gap: 1px;
+    }
   }
   .compact .weekday {
     min-height: 22px;

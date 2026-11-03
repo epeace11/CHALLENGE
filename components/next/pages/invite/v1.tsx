@@ -48,7 +48,7 @@ export default function InviteV2() {
             <StatButton
               label="At stake"
               value={`~${flow.stakes}`}
-              hint="Each gift, if you miss 1 in 10"
+              hint={`Each gift, if you miss 1 in ${flow.missEvery}`}
               onClick={() => flow.open('gift')}
             />
           </div>

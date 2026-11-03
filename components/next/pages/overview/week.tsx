@@ -1,33 +1,19 @@
 'use client';
-import { useState, type CSSProperties } from 'react';
-import type { DateString, DayColor, World } from '@/lib/next/model';
-import {
-  dayColor,
-  dayMisses,
-  formatDay,
-  formatRange,
-  missesLine,
-  weekOf,
-  weekProgress,
-} from '@/lib/next/selectors';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import type { DateString, DayColor } from '@/lib/next/model';
+import { formatDay, ruleById } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
+import { Avatar, DayIcon, Glide, Sheet } from '@/components/next/ui';
 import {
-  Avatar,
-  Button,
-  DayIcon,
-  PersonChip,
-  Sheet,
-  StatusPill,
-} from '@/components/next/ui';
+  CheckinDetail,
+  DayCheckins,
+  checkinLine,
+  dayFooter,
+  type DayPage,
+} from '@/components/next/ui/day-sheet';
 import { cn } from '@/lib/utils';
-import {
-  COLOR_WORDS,
-  dayActions,
-  dayRows,
-  type DayRow,
-  type WeekDay,
-} from './data';
+import { COLOR_WORDS, type WeekDay } from './data';
 
 /**
  * This week as a strip: a column per day (Monday to Sunday), with a day square for each person
@@ -79,8 +65,9 @@ export function WeekStrip({
   return (
     <div
       className={cn(
-        // On phones the strip spans the card's padding and the days touch, so each day is a 44px target.
-        'grid grid-cols-[24px_repeat(7,minmax(0,1fr))] sm:grid-cols-[32px_repeat(7,minmax(0,1fr))] sm:gap-x-2',
+        // On phones the strip spans the card's padding and the days touch, so each day is a 44px
+        // target; under 360px, where seven can't be, the avatars shrink to give the days the room.
+        'grid grid-cols-[24px_repeat(7,minmax(0,1fr))] max-[360px]:grid-cols-[20px_repeat(7,minmax(0,1fr))] sm:grid-cols-[32px_repeat(7,minmax(0,1fr))] sm:gap-x-2',
         className,
       )}
     >
@@ -97,7 +84,7 @@ export function WeekStrip({
               person={p}
               size="sm"
               decorative
-              className="[--nx-avatar:24px] sm:[--nx-avatar:32px]"
+              className="[--nx-avatar:24px] max-[360px]:[--nx-avatar:20px] sm:[--nx-avatar:32px]"
             />
           </span>
         ))}
@@ -192,9 +179,10 @@ export function WeekLegend({
 }
 
 /**
- * Both people's answers on one day, one tap from the week strip, one person at a time (a chip for
- * each). Its one main action is what Maya can do about that day: log it while it is open, or review
- * what waits from it.
+ * Both people's check-ins on one day, one tap from the week strip, one person at a time (a chip for
+ * each). It is the same day sheet as Progress's: a row opens that check-in (with Back), or leads to
+ * Check in or Review when that is where it is acted on. Its buttons are what Maya can do about the
+ * day: log it while it is open, or review what waits from it.
  */
 export function DaySheet({
   day,
@@ -205,44 +193,35 @@ export function DaySheet({
 }) {
   const world = useWorld();
   const { navigate } = useNav();
-  // Keep showing the last day while the sheet slides away.
+  // Keep showing the last day while the sheet slides away; each opening starts on the day itself.
   const [shown, setShown] = useState<DateString | null>(day);
-  if (day && day !== shown) setShown(day);
-  const d = day ?? shown;
-  const acts = d ? dayActions(world, d) : { open: 0, review: 0 };
-  const people = [world.me, world.partner];
+  const [last, setLast] = useState<DateString | null>(day);
+  const [ruleId, setRuleId] = useState<string | null>(null);
+  const [dir, setDir] = useState<1 | -1>(1);
   const [whose, setWhose] = useState(world.me.id);
-  const p = people.find((x) => x.id === whose) ?? world.me;
-  const rows = d ? dayRows(world, p.id, d) : [];
-  // Daily check-ins first (the missed count counts these), then weekly ones by the week.
-  const daily = rows.filter((r) => r.rule.kind !== 'weekly');
-  const weekly = rows.filter((r) => r.rule.kind === 'weekly');
-  const misses =
-    d && dayColor(world, p.id, d) === 'missed'
-      ? dayMisses(world, p.id, d)
-      : null;
+  // Counts steps in and back, so focus moves to the new view after each.
+  const [steps, setSteps] = useState(0);
+  if (day !== last) {
+    setLast(day);
+    if (day) {
+      setShown(day);
+      setRuleId(null);
+      setDir(1);
+    }
+  }
+  const d = day ?? shown;
+  const rule = ruleId ? ruleById(world.challenge, ruleId) : undefined;
+  const body = useRef<HTMLDivElement>(null);
 
-  const footer =
-    acts.open > 0 || acts.review > 0 ? (
-      <>
-        {acts.review > 0 && (
-          <Button
-            variant={acts.open > 0 ? 'secondary' : 'primary'}
-            onClick={() => navigate('review')}
-          >
-            Review
-          </Button>
-        )}
-        {/* The sheet's title names the day, so the button doesn't again (as on Progress). */}
-        {acts.open > 0 && (
-          <Button variant="primary" onClick={() => navigate('log')}>
-            Log this day
-          </Button>
-        )}
-      </>
-    ) : (
-      <Button onClick={onClose}>Close</Button>
-    );
+  // After stepping into a check-in or back, put focus at the top of the new view.
+  useEffect(() => {
+    if (steps > 0) body.current?.focus({ preventScroll: true });
+  }, [steps]);
+
+  const go = (page: DayPage) => {
+    onClose();
+    navigate(page);
+  };
 
   return (
     <Sheet
@@ -250,156 +229,59 @@ export function DaySheet({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={d ? formatDay(d) : 'Day'}
-      footer={footer}
+      title={rule ? rule.title : d ? formatDay(d) : 'Day'}
+      description={rule && d ? checkinLine(world, whose, d) : undefined}
+      back={
+        rule && d
+          ? {
+              label: formatDay(d),
+              onClick: () => {
+                setDir(-1);
+                setRuleId(null);
+                setSteps((n) => n + 1);
+              },
+            }
+          : undefined
+      }
+      footer={
+        d
+          ? dayFooter(
+              world,
+              d,
+              go,
+              rule ? { personId: whose, ruleId: rule.id } : undefined,
+            )
+          : undefined
+      }
     >
       {d && (
-        <div className="flex flex-col gap-3">
-          {/* One person at a time, as on Progress: each chip shows how that person's day went, so
-              both are still seen at a glance, and the sheet fits without scrolling. */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <fieldset className="flex gap-2">
-              <legend className="sr-only">Whose answers</legend>
-              {people.map((x) => {
-                const tone = dayColor(world, x.id, d);
-                return (
-                  <PersonChip
-                    key={x.id}
-                    person={x}
-                    pressed={x.id === p.id}
-                    onClick={() => setWhose(x.id)}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      {x.id === world.me.id ? 'You' : x.name}
-                      <span
-                        className="nx-day size-5 rounded-md"
-                        data-tone={tone}
-                        aria-hidden="true"
-                      >
-                        <DayIcon tone={tone} size={12} />
-                      </span>
-                      <span className="sr-only">
-                        {`: ${COLOR_WORDS[tone].toLowerCase()}`}
-                      </span>
-                    </span>
-                  </PersonChip>
-                );
-              })}
-            </fieldset>
-            {misses && (
-              <p className="text-nx-2 font-semibold text-nx-missed sm:ml-auto">
-                {missesLine(misses)}
-              </p>
+        <div ref={body} tabIndex={-1} className="outline-none">
+          <Glide id={rule ? `checkin-${rule.id}` : 'day'} direction={dir}>
+            {rule ? (
+              <CheckinDetail
+                world={world}
+                personId={whose}
+                ruleId={rule.id}
+                day={d}
+              />
+            ) : (
+              <DayCheckins
+                world={world}
+                day={d}
+                personId={whose}
+                onPerson={setWhose}
+                onOpen={(personId, id) => {
+                  setWhose(personId);
+                  setDir(1);
+                  setRuleId(id);
+                  setSteps((n) => n + 1);
+                }}
+                onGo={go}
+              />
             )}
-          </div>
-          <ul className="divide-y divide-nx-line">
-            {daily.map((r) => (
-              <li
-                key={r.rule.id}
-                className="flex flex-col gap-2 py-2.5 sm:gap-1.5 sm:py-2"
-              >
-                <div className="flex items-start gap-3">
-                  {/* From 640px the answer ("39 min") follows the name on its line. */}
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
-                    <p className="text-nx-body text-nx-ink">{r.title}</p>
-                    {r.answer && (
-                      <p className="text-nx-2 text-nx-ink-2">{r.answer}</p>
-                    )}
-                  </div>
-                  <StatusPill
-                    status={r.pill.status}
-                    label={r.pill.label}
-                    className="mt-0.5"
-                  />
-                </div>
-                {r.said ? (
-                  <p className="rounded-nx-sm bg-nx-sunken px-3 py-1.5 text-nx-2 text-nx-ink">
-                    {r.said.by && `${r.said.by}: `}“{r.said.text}”
-                  </p>
-                ) : (
-                  r.note && (
-                    <p className="text-nx-2 text-nx-ink-2">Note: {r.note}</p>
-                  )
-                )}
-              </li>
-            ))}
-          </ul>
-          {weekly.length > 0 && (
-            <WeeklyRows personId={p.id} day={d} rows={weekly} />
-          )}
+          </Glide>
         </div>
       )}
     </Sheet>
-  );
-}
-
-/** "This week", or the week's dates when the day is in an earlier one: "Nov 9 – 15". */
-function weekName(world: World, day: DateString) {
-  const week = weekOf(world.challenge, day);
-  if (!week) return 'That week';
-  return world.today >= week.start && world.today <= week.end
-    ? 'This week'
-    : formatRange(week.start, week.end);
-}
-
-/**
- * A day's weekly check-ins (gym), in their own small group under the daily ones: the week's count
- * ("2 of 4") and that day's answer (Went, No visit).
- */
-function WeeklyRows({
-  personId,
-  day,
-  rows,
-}: {
-  personId: string;
-  day: DateString;
-  rows: DayRow[];
-}) {
-  const world = useWorld();
-  const name = weekName(world, day);
-  return (
-    <div className="mt-1 flex flex-col">
-      <h4 className="pt-1 font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
-        {name}
-      </h4>
-      <ul className="divide-y divide-nx-line">
-        {rows.map((r) => {
-          const week = weekProgress(world, personId, r.rule.id, day);
-          const label =
-            r.pill.status === 'done'
-              ? 'Went'
-              : r.pill.status === 'none'
-                ? 'No visit'
-                : r.pill.label;
-          return (
-            <li
-              key={r.rule.id}
-              className="flex flex-col gap-2 py-2.5 sm:gap-1.5 sm:py-2"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
-                  <p className="text-nx-body text-nx-ink">{r.title}</p>
-                  {week && (
-                    <p className="text-nx-2 text-nx-ink-2">
-                      {week.have} of {week.need}
-                    </p>
-                  )}
-                </div>
-                <StatusPill
-                  status={r.pill.status}
-                  label={label}
-                  className="mt-0.5"
-                />
-              </div>
-              {r.said && (
-                <p className="rounded-nx-sm bg-nx-sunken px-3 py-1.5 text-nx-2 text-nx-ink">
-                  {r.said.by && `${r.said.by}: `}“{r.said.text}”
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
   );
 }

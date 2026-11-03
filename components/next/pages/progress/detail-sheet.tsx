@@ -1,60 +1,49 @@
 'use client';
-import { createElement, useEffect, useRef, type ReactNode } from 'react';
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { ArrowRight } from 'lucide-react';
 import type { DateString, Rule, World } from '@/lib/next/model';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
   Button,
-  Card,
   DayIcon,
   Glide,
   PersonChip,
   ProgressBar,
-  ProofStrip,
   RowButton,
   Sheet,
-  StatusPill,
   type DayTone,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import {
   badges,
-  dateIn,
-  formatAnswer,
   formatDate,
   formatDay,
   formatRange,
-  formatTime,
   formatWhen,
   isClosed,
   nameOf,
-  openDay,
   ruleById,
   rulesFor,
   streaks,
-  weekOf,
-  weekProgress,
   weekTarget,
   weeksOf,
   countsForWeek,
-  dayColor,
-  dayMisses,
-  missesLine,
 } from '@/lib/next/selectors';
 import { Medal } from './medal';
 import { SimpleLegend, SimpleMonth, type SquareTone } from './simple-month';
 import styles from './progress.module.css';
 import type { Detail, DetailView } from './detail';
 import {
+  CheckinDetail,
+  DayCheckins,
+  dayFooter,
+} from '@/components/next/ui/day-sheet';
+import {
   DOT,
-  dayCheckins,
   habitDays,
-  habitIcon,
   habitStats,
   habitTally,
-  lockWords,
-  notesOn,
   pointsLine,
   runLength,
   sheetAction,
@@ -115,10 +104,8 @@ function describe(w: World, view: DetailView, bothPeople?: boolean) {
       );
     }
     case 'day':
-      return line(
-        whose && `${whose}’s check-ins`,
-        openDay(w) === view.day ? `Open ${lockWords(w, view.day)}` : null,
-      );
+      // The chips say whose check-ins these are, and the line beside them until when it is open.
+      return undefined;
     case 'checkin':
       return line(whose, formatDay(view.day));
     case 'badge':
@@ -128,22 +115,31 @@ function describe(w: World, view: DetailView, bothPeople?: boolean) {
   }
 }
 
-function actionOf(w: World, view: DetailView): MainAction | null {
-  if (view.kind === 'habit')
-    return sheetAction(w, view.personId, { ruleId: view.ruleId });
-  // A day's sheet names the day in its title (a check-in's, under it), so its button doesn't again.
-  const thisDay = (a: MainAction | null) =>
-    a?.page === 'log' ? { ...a, label: 'Log this day' } : a;
-  if (view.kind === 'day')
-    return thisDay(sheetAction(w, view.personId, { day: view.day }));
+/** The footer: a day and a check-in have the day sheet's buttons (as on Overview), a habit its one action. */
+function footerOf(
+  w: World,
+  view: DetailView,
+  go: (page: MainAction['page']) => void,
+): ReactNode {
+  if (view.kind === 'day') return dayFooter(w, view.day, go);
   if (view.kind === 'checkin')
-    return thisDay(
-      sheetAction(w, view.personId, {
-        day: view.day,
-        ruleId: view.ruleId,
-      }),
-    );
-  return null;
+    return dayFooter(w, view.day, go, {
+      personId: view.personId,
+      ruleId: view.ruleId,
+    });
+  const action =
+    view.kind === 'habit'
+      ? sheetAction(w, view.personId, { ruleId: view.ruleId })
+      : null;
+  return action ? (
+    <Button
+      variant="primary"
+      iconEnd={ArrowRight}
+      onClick={() => go(action.page)}
+    >
+      {action.label}
+    </Button>
+  ) : undefined;
 }
 
 /**
@@ -172,7 +168,6 @@ export function DetailSheet({
   }, [depth]);
 
   if (!top) return null;
-  const action = actionOf(world, top);
   const go = (page: MainAction['page']) => {
     detail.close();
     navigate(page);
@@ -191,20 +186,14 @@ export function DetailSheet({
           ? { label: backLabel(world, prev), onClick: detail.back }
           : undefined
       }
-      footer={
-        action ? (
-          <Button
-            variant="primary"
-            iconEnd={ArrowRight}
-            onClick={() => go(action.page)}
-          >
-            {action.label}
-          </Button>
-        ) : undefined
-      }
+      footer={footerOf(world, top, go)}
     >
       <div ref={body} tabIndex={-1} className="outline-none">
-        <Glide id={`${depth}-${JSON.stringify(top)}`} direction={detail.dir}>
+        {/* A day's chips switch whose check-ins show in place, so they don't glide. */}
+        <Glide
+          id={`${depth}-${JSON.stringify(top.kind === 'day' ? { ...top, personId: '' } : top)}`}
+          direction={detail.dir}
+        >
           <ViewBody
             world={world}
             view={top}
@@ -214,6 +203,8 @@ export function DetailSheet({
                 : undefined
             }
             push={detail.push}
+            replace={detail.replace}
+            go={go}
             swap={bothPeople ? detail.replace : undefined}
           />
         </Glide>
@@ -227,6 +218,8 @@ function ViewBody({
   view,
   from,
   push,
+  replace,
+  go,
   swap,
 }: {
   world: World;
@@ -234,6 +227,9 @@ function ViewBody({
   /** The day this view was opened from, if it was a day. */
   from?: DateString;
   push: (v: DetailView) => void;
+  /** Swaps this view for another in place (a day's chips switch whose check-ins show). */
+  replace: (v: DetailView) => void;
+  go: (page: MainAction['page']) => void;
   swap?: (v: DetailView) => void;
 }) {
   switch (view.kind) {
@@ -248,9 +244,34 @@ function ViewBody({
         />
       );
     case 'day':
-      return <DayBody world={world} view={view} push={push} />;
+      return (
+        <DayCheckins
+          world={world}
+          day={view.day}
+          personId={view.personId}
+          onPerson={(personId) => replace({ ...view, personId })}
+          onOpen={(personId, ruleId) =>
+            push({ kind: 'checkin', personId, ruleId, day: view.day })
+          }
+          onGo={go}
+        />
+      );
     case 'checkin':
-      return <CheckinBody world={world} view={view} push={push} />;
+      return (
+        <CheckinDetail
+          world={world}
+          personId={view.personId}
+          ruleId={view.ruleId}
+          day={view.day}
+          onHabit={() =>
+            push({
+              kind: 'habit',
+              personId: view.personId,
+              ruleId: view.ruleId,
+            })
+          }
+        />
+      );
     case 'badge':
       return <BadgeBody world={world} view={view} push={push} />;
     case 'badges':
@@ -442,287 +463,6 @@ function WeekSquares({
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function DayBody({
-  world,
-  view,
-  push,
-}: {
-  world: World;
-  view: Extract<DetailView, { kind: 'day' }>;
-  push: (v: DetailView) => void;
-}) {
-  const rows = dayCheckins(world, view.personId, view.day);
-  // Daily check-ins first, which the missed count counts; weekly ones after, by the week.
-  const daily = rows.filter((r) => r.rule.kind !== 'weekly');
-  const weekly = rows.filter((r) => r.rule.kind === 'weekly');
-  const notes = notesOn(world, view.day);
-  const misses =
-    dayColor(world, view.personId, view.day) === 'missed'
-      ? dayMisses(world, view.personId, view.day)
-      : null;
-  const open = (ruleId: string) =>
-    push({ kind: 'checkin', personId: view.personId, ruleId, day: view.day });
-  return (
-    <div className="flex flex-col gap-4">
-      {misses && (
-        <p className="text-nx-body font-semibold text-nx-missed">
-          {missesLine(misses)}
-        </p>
-      )}
-      <ul className="flex flex-col divide-y divide-nx-line">
-        {daily.map(({ rule, entry, pill }) => {
-          // An open or unlogged check-in has no answer; its pill says so. A Yes beside Done (or a
-          // No beside Missed) would say the same thing twice.
-          const answer =
-            pill.status === 'open' || !entry ? null : formatAnswer(rule, entry);
-          const plain =
-            rule.kind === 'yesno' &&
-            (pill.status === 'done' || pill.status === 'missed');
-          const shown =
-            answer && answer !== pill.label && !plain ? answer : null;
-          return (
-            <CheckinRow
-              key={rule.id}
-              rule={rule}
-              sub={[shown, entry?.note ? `“${entry.note}”` : null]
-                .filter(Boolean)
-                .join(DOT)}
-              pill={
-                (pill.status !== 'none' || !shown) && (
-                  <StatusPill status={pill.status} label={pill.label} />
-                )
-              }
-              onClick={() => open(rule.id)}
-            />
-          );
-        })}
-      </ul>
-      {weekly.length > 0 && (
-        <WeeklyGroup
-          world={world}
-          personId={view.personId}
-          day={view.day}
-          rows={weekly}
-          onOpen={open}
-        />
-      )}
-      {notes.length > 0 && (
-        <section className="flex flex-col gap-1.5" aria-label="Notes">
-          <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
-            Notes
-          </h3>
-          {notes.map((n) => (
-            <p key={n.id} className="text-pretty text-nx-body">
-              {n.text}{' '}
-              <span className="text-nx-2 text-nx-ink-2">
-                {n.personId === world.me.id ? 'You' : nameOf(world, n.personId)}
-                {DOT}
-                {formatTime(n.createdAt, world.challenge.timeZone)}
-              </span>
-            </p>
-          ))}
-        </section>
-      )}
-    </div>
-  );
-}
-
-/**
- * One check-in in a day's list, a single line where it fits: the habit's icon and name (a number
- * answer or the note under it), how it stands, and a chevron. The rows share one divided list.
- */
-function CheckinRow({
-  rule,
-  sub,
-  pill,
-  label,
-  onClick,
-}: {
-  rule: Rule;
-  sub?: ReactNode;
-  pill: ReactNode;
-  label?: string;
-  onClick: () => void;
-}) {
-  return (
-    <li>
-      <button
-        type="button"
-        className="nx-press flex min-h-14 w-full items-center gap-3 py-2 text-left"
-        aria-label={label}
-        onClick={onClick}
-      >
-        <span className="shrink-0 text-nx-accent">
-          {createElement(habitIcon(rule), { size: 20, 'aria-hidden': true })}
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-pretty text-nx-body font-semibold text-nx-ink">
-            {rule.title}
-          </span>
-          {sub && (
-            <span className="text-pretty text-nx-2 text-nx-ink-2">{sub}</span>
-          )}
-        </span>
-        {pill}
-        <ChevronRight
-          size={20}
-          aria-hidden="true"
-          className="shrink-0 text-nx-accent"
-        />
-      </button>
-    </li>
-  );
-}
-
-/** "This week", or the week's dates when it is an earlier one: "Nov 9 – 15". */
-function weekName(world: World, day: DateString) {
-  const week = weekOf(world.challenge, day);
-  if (!week) return 'That week';
-  return world.today >= week.start && world.today <= week.end
-    ? 'This week'
-    : formatRange(week.start, week.end);
-}
-
-/**
- * Weekly check-ins on a day, in their own small group under the daily ones: the week's count
- * ("2 of 4") and that day's answer (Went, No visit). A row opens that check-in.
- */
-function WeeklyGroup({
-  world,
-  personId,
-  day,
-  rows,
-  onOpen,
-}: {
-  world: World;
-  personId: string;
-  day: DateString;
-  rows: ReturnType<typeof dayCheckins>;
-  onOpen: (ruleId: string) => void;
-}) {
-  const name = weekName(world, day);
-  return (
-    <section className="flex flex-col" aria-label={name}>
-      <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
-        {name}
-      </h3>
-      <ul className="flex flex-col divide-y divide-nx-line">
-        {rows.map(({ rule, pill }) => {
-          const week = weekProgress(world, personId, rule.id, day);
-          const label =
-            pill.status === 'done'
-              ? 'Went'
-              : pill.status === 'none'
-                ? 'No visit'
-                : pill.label;
-          return (
-            <CheckinRow
-              key={rule.id}
-              rule={rule}
-              sub={week ? `${week.have} of ${week.need}` : undefined}
-              pill={<StatusPill status={pill.status} label={label} />}
-              label={`${rule.title}: ${week ? `${week.have} of ${week.need} ${name === 'This week' ? 'this week' : `the week of ${name}`}` : ''}, ${formatDay(day)}: ${label}`}
-              onClick={() => onOpen(rule.id)}
-            />
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-/**
- * One check-in on one day: the answer and how it stands, its screenshots (tap for full screen), the
- * note, a correction or dispute on it, and a way on to every day of that habit.
- */
-function CheckinBody({
-  world,
-  view,
-  push,
-}: {
-  world: World;
-  view: Extract<DetailView, { kind: 'checkin' }>;
-  push: (v: DetailView) => void;
-}) {
-  const row = dayCheckins(world, view.personId, view.day).find(
-    (r) => r.rule.id === view.ruleId,
-  );
-  if (!row) return null;
-  const { rule, entry, pill } = row;
-  const answer =
-    pill.status === 'open' || !entry ? null : formatAnswer(rule, entry);
-  // As in the day's list: a Yes beside Done (or a No beside Missed) says the same thing twice.
-  const plain =
-    rule.kind === 'yesno' &&
-    (pill.status === 'done' || pill.status === 'missed');
-  const shown = answer && answer !== pill.label && !plain ? answer : null;
-  const disputes = entry
-    ? world.disputes.filter((d) => d.entryId === entry.id)
-    : [];
-  const tz = world.challenge.timeZone;
-  const who = (id: string) => (id === world.me.id ? 'You' : nameOf(world, id));
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {shown && <span className="text-nx-lead font-semibold">{shown}</span>}
-        <StatusPill status={pill.status} label={pill.label} />
-      </div>
-      {entry && entry.proofs.length > 0 && <ProofStrip proofs={entry.proofs} />}
-      {entry?.note ? (
-        <Card pad="sm">
-          <p className="text-nx-body">{entry.note}</p>
-        </Card>
-      ) : null}
-      {entry?.correction && (
-        <Card pad="sm" className="flex flex-col gap-2">
-          <p className="text-nx-2 font-semibold text-nx-ink-2">
-            Late correction, waiting for review
-          </p>
-          <p className="text-nx-body">
-            {formatAnswer(rule, { ...entry, ...entry.correction })}
-            {entry.correction.note ? ` · ${entry.correction.note}` : ''}
-          </p>
-          {entry.correction.proofs.length > 0 && (
-            <ProofStrip proofs={entry.correction.proofs} />
-          )}
-        </Card>
-      )}
-      {disputes.map((d) => (
-        <Card key={d.id} pad="sm" className="flex flex-col gap-1.5">
-          <p className="text-nx-2 font-semibold text-nx-ink-2">
-            {who(d.raisedBy)} disputed it
-            {d.status === 'conceded'
-              ? ' · conceded'
-              : d.status === 'withdrawn'
-                ? ' · withdrawn'
-                : ''}
-          </p>
-          <p className="text-nx-body">“{d.comment}”</p>
-          {d.reply && (
-            <p className="text-nx-body text-nx-ink-2">Reply: “{d.reply}”</p>
-          )}
-        </Card>
-      ))}
-      {entry?.loggedAt && (
-        <p className="text-nx-2 text-nx-ink-2">
-          Logged {formatDate(dateIn(tz, entry.loggedAt))} at{' '}
-          {formatTime(entry.loggedAt, tz)}
-        </p>
-      )}
-      <Button
-        variant="quiet"
-        iconEnd={ChevronRight}
-        className="-ml-3 self-start"
-        onClick={() =>
-          push({ kind: 'habit', personId: view.personId, ruleId: rule.id })
-        }
-      >
-        Every day of this habit
-      </Button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 import { ChevronRight } from 'lucide-react';
-import { GROUP_ICON, keepTogether, type Choice } from './choices';
+import { RULE_ICON, iconOf, keepTogether, type Choice } from './choices';
 import styles from './start.module.css';
 import { cx } from './cx';
 
@@ -45,7 +45,7 @@ export function Facts({
   );
 }
 
-/** The sample rule a card shows, with its group's icon. */
+/** The sample rule a card shows, with its icon. */
 export function SampleRule({
   choice,
   className,
@@ -53,7 +53,7 @@ export function SampleRule({
   choice: Choice;
   className?: string;
 }) {
-  const Icon = GROUP_ICON[choice.sample.group];
+  const Icon = RULE_ICON[iconOf(choice.sample)];
   return (
     <span
       className={cx(

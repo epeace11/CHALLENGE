@@ -13,7 +13,7 @@ const PAD: Record<Pad, string> = {
 };
 
 type CardProps = HTMLAttributes<HTMLElement> & {
-  /** Inner padding: sm 14/16px, md 20px (24px from 640px), lg 24px (32px). Default md. */
+  /** Inner padding: sm 14/16px, md 18px (20px from 640px), lg 20px (26px from 640px). Default md. */
   pad?: Pad;
   /** Render as a section, article or list item instead of a div. */
   as?: 'div' | 'section' | 'article' | 'li';

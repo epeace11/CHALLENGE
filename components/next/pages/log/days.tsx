@@ -1,5 +1,5 @@
 'use client';
-import { CalendarDays, Check, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { DateString, DayColor, Rule, World } from '@/lib/next/model';
 import {
   dayColor,
@@ -14,7 +14,13 @@ import {
   type PillStatus,
 } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
-import { DayIcon, RowButton, Sheet, StatusPill } from '@/components/next/ui';
+import {
+  DayIcon,
+  RowButton,
+  Sheet,
+  StatusPill,
+  type DayTone,
+} from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import type { Checkin } from './use-checkin';
 import styles from './log.module.css';
@@ -45,19 +51,18 @@ const DAY_PILL: Record<DayColor, { status: PillStatus; label: string }> = {
 export const leftText = (left: number) =>
   left > 0 ? `${left} left` : 'All answered';
 
-function DayMark({ on }: { on: boolean }) {
+/**
+ * A day still open, drawn as a day square like everywhere else: open while something is left, else
+ * how it stands. The one on screen has the accent ring, like the closed days below it.
+ */
+function DayMark({ tone, on }: { tone: DayTone; on: boolean }) {
   return (
     <span
-      className={cn(
-        'grid size-10 place-items-center rounded-nx-sm',
-        on ? 'bg-nx-accent-soft text-nx-accent' : 'bg-nx-sunken text-nx-ink-2',
-      )}
+      className="nx-day size-10 shrink-0"
+      data-tone={tone}
+      data-today={on || undefined}
     >
-      {on ? (
-        <Check size={20} strokeWidth={2.4} aria-hidden="true" />
-      ) : (
-        <CalendarDays size={20} aria-hidden="true" />
-      )}
+      <DayIcon tone={tone} size={18} />
     </span>
   );
 }
@@ -89,17 +94,25 @@ export function DaySheet({
             <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
               Still open
             </h3>
-            {ci.loggable.map((d) => (
-              <RowButton
-                key={d}
-                glass={false}
-                leading={<DayMark on={d === ci.day} />}
-                title={formatDay(d)}
-                detail={`${leftText(openCheckins(world, me, d).length)} · until ${ci.lockLabel(d)}`}
-                aria-current={d === ci.day ? 'true' : undefined}
-                onClick={() => pick(d)}
-              />
-            ))}
+            {ci.loggable.map((d) => {
+              const left = openCheckins(world, me, d).length;
+              return (
+                <RowButton
+                  key={d}
+                  glass={false}
+                  leading={
+                    <DayMark
+                      tone={left > 0 ? 'open' : dayColor(world, me, d)}
+                      on={d === ci.day}
+                    />
+                  }
+                  title={formatDay(d)}
+                  detail={`${leftText(left)} · until ${ci.lockLabel(d)}`}
+                  aria-current={d === ci.day ? 'true' : undefined}
+                  onClick={() => pick(d)}
+                />
+              );
+            })}
           </section>
         )}
         {closed.length > 0 && (

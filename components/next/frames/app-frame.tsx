@@ -1,5 +1,5 @@
 'use client';
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import {
   BookOpen,
   CalendarCheck,
@@ -18,6 +18,7 @@ import { dayNumber, formatDayShort, reviewQueue } from '@/lib/next/selectors';
 import { useNav, type PageId } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Menu } from '@/components/next/ui/menu';
+import { useArrivalFocus } from './use-arrival-focus';
 import { useFit } from './use-fit';
 
 const TABS: { id: PageId; label: string; icon: LucideIcon }[] = [
@@ -46,6 +47,10 @@ export const MORE_PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
  */
 export function AppFrame({ children }: { children: ReactNode }) {
   const fit = useFit<HTMLDivElement>();
+  const header = useRef<HTMLElement>(null);
+  const tabbar = useRef<HTMLElement>(null);
+  useChromeHeights(header, tabbar);
+  const main = useArrivalFocus();
   const world = useWorld();
   const { page, navigate } = useNav();
   const c = world.challenge;
@@ -108,7 +113,18 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   return (
     <div ref={fit} className="nx-frame" data-frame="app">
-      <header className="nx-app-header">
+      <header ref={header} className="nx-app-header">
+        <a
+          className="nx-skip"
+          href="#nx-main"
+          onClick={(e) => {
+            // Focus the page without adding #nx-main to the address.
+            e.preventDefault();
+            main.current?.focus();
+          }}
+        >
+          Skip to content
+        </a>
         <div className="nx-main nx-topbar">
           {page === 'home' ? (
             // Your challenges lists this challenge right below, so the top bar names the product.
@@ -140,10 +156,53 @@ export function AppFrame({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      <main className="nx-main nx-fade-in pt-2">{children}</main>
-      <nav className="nx-tabbar" aria-label="Main">
+      <main
+        ref={main}
+        id="nx-main"
+        tabIndex={-1}
+        className="nx-main nx-fade-in pt-2 outline-none"
+      >
+        {children}
+      </main>
+      <nav ref={tabbar} className="nx-tabbar" aria-label="Main">
         {tabs('bottom')}
       </nav>
     </div>
   );
+}
+
+/**
+ * Tells the root how tall the phone tab bar (`--nx-nav-h`) and the sticky laptop header
+ * (`--nx-header-h`) really are, so the action bar, sheets and toasts sit above the tab bar and focus
+ * scrolls clear of both, even when large text makes them taller.
+ */
+function useChromeHeights(
+  header: RefObject<HTMLElement | null>,
+  tabbar: RefObject<HTMLElement | null>,
+) {
+  useLayoutEffect(() => {
+    const top = header.current,
+      bottom = tabbar.current,
+      root = bottom?.closest<HTMLElement>('.nx');
+    if (!top || !bottom || !root) return;
+    const measure = () => {
+      root.style.setProperty('--nx-nav-h', `${bottom.offsetHeight}px`);
+      const sticky = getComputedStyle(top).position === 'sticky';
+      root.style.setProperty(
+        '--nx-header-h',
+        `${sticky ? top.offsetHeight : 0}px`,
+      );
+    };
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(top);
+    watch.observe(bottom);
+    window.addEventListener('resize', measure);
+    return () => {
+      watch.disconnect();
+      window.removeEventListener('resize', measure);
+      root.style.removeProperty('--nx-nav-h');
+      root.style.removeProperty('--nx-header-h');
+    };
+  }, [header, tabbar]);
 }

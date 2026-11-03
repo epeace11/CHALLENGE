@@ -33,6 +33,7 @@ import {
   NxRoot,
   RowButton,
   Section,
+  syncThemeColor,
   usePortalContainer,
 } from './ui';
 
@@ -343,9 +344,7 @@ function ThemeButton({ className }: { className: string }) {
       title={`Switch to ${next} mode`}
       onClick={() => {
         document.documentElement.dataset.theme = next;
-        document
-          .querySelector('meta[name=theme-color]')
-          ?.setAttribute('content', next === 'dark' ? '#0d0b14' : '#f6f8fb');
+        syncThemeColor();
         try {
           localStorage.setItem('theme', next);
         } catch {}

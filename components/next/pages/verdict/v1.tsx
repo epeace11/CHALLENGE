@@ -156,7 +156,7 @@ export default function VerdictV1() {
             className="self-center sm:self-auto"
             onClick={() => navigate('start')}
           >
-            Start something new
+            Start a new challenge
           </Button>
         </div>
       </div>

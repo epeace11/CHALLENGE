@@ -163,7 +163,7 @@ function StartsAndStakes({ flow, focus }: { flow: PactFlow; focus: boolean }) {
           tone="accent"
           label="At stake"
           value={`~${flow.stakes}`}
-          hint="Each gift, if you miss 1 in 10 check-ins"
+          hint={`Each gift, if you miss 1 in ${flow.missEvery} check-ins`}
           onClick={() => flow.open('step')}
         />
         <StatButton

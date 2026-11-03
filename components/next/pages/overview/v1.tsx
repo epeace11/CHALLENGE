@@ -83,7 +83,7 @@ function Running() {
                 {/* What is left and the button that logs it, as one: the card itself does
                     nothing, so there is one thing to tap. */}
                 <GlassCard className="flex flex-col gap-5">
-                  {/* The day is named once, on the button; the title is today. */}
+                  {/* The day is named once, on the button ("Log yesterday" under today's date). */}
                   <div className="flex flex-col gap-2">
                     <p className="flex flex-wrap items-baseline gap-x-3">
                       <span className="font-nx-serif text-nx-num-lg leading-none text-nx-accent tabular-nums">
@@ -130,7 +130,9 @@ function Running() {
                   </span>
                   <div className="min-w-0">
                     <p className="font-nx-serif text-nx-h3">
-                      {o.day ? `${o.dayName} is logged` : 'Nothing to log'}
+                      {o.day
+                        ? `${o.dayName[0].toUpperCase()}${o.dayName.slice(1)} is logged`
+                        : 'Nothing to log'}
                     </p>
                     {/* With something to review, the button under the card says what is next. */}
                     {o.waiting === 0 && (

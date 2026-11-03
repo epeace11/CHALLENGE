@@ -2,6 +2,54 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 2, 2026 (fifth design critique and audit)
+
+Impeccable's remaining steps ran for the first time: `PRODUCT.md` (from Erin's answers: couples she shares it with register themselves; success is finishing together, having fun and starting another; they open it on a phone whenever they remember) and `DESIGN.md` (the Calm style as built). Then a technical audit scored 14/20 and a fifth critique 29/40 (26, 28, 26, 27, 29). Erin's answers: fix everything both found, keep pinch-zoom blocked, and take the recommendation on the 75-Day colour and on Overview's day.
+
+Erin's calls:
+
+- **Pinch-zoom stays blocked** in the app, as before.
+- **The 75-Day look is plum** (`#7c3a8f`, light `#e3a6f0` in dark), not berry: berry sat next to missed red, so "you're ahead" and "Won the week" read like misses.
+- **Overview keeps today's date as its title,** and its button says "Log yesterday" (an older open day keeps its weekday); the logged card says "Yesterday is logged".
+
+Keyboard and screen readers (the audit's P1s):
+
+- **A sheet keeps focus inside it:** Tab wraps from its last control to its first, and the page behind it is inert while it's open.
+- **Focus never hides under the tab bar, the pinned action bar or the laptop's sticky header:** the frame measures them (`--nx-nav-h`, `--nx-header-h`) and whatever gets focus scrolls clear.
+- **After moving to another page, focus starts at its title,** and the live app names the browser tab after the page ("Check in · The Challenge"). Laptops get "Skip to content".
+- **A failed write's message is announced at once and stays 8 seconds.** The kit gallery shows that message, not an Undo toast.
+
+Colour and contrast:
+
+- **Day squares look the same in dark as in light:** they end on their own colour instead of fading, so a missed or open square's date and "×1" keep 4.5:1.
+- **Inputs, number boxes, the switch when off and the selected segment have a 3:1 edge** (`--nx-field-line`).
+- **Fitness's accent is a little deeper** (`#a4470f`), so its text passes on its soft fill.
+- **In dark, sheets, menus and bars take the look's own page colour** instead of the classic violet, and the browser's bar colour follows the look and theme.
+- **Hold to sign shows its fill** (a light wash over the slate button); with reduced motion it fills in three steps.
+
+The critique's issues:
+
+- **Review's Undo line stays on screen** after a decision made while scrolled: the page scrolls so the line and the next card are both in view, and focus still moves to the next card. Undo's 5 seconds pause while it has focus or the pointer is on it. On phones a card's note comes before its screenshot, so the pinned bar no longer covers it.
+- **Check in fits in its common states** (a screenshot added, the "Enter a number" message, a miss): from 640px the screenshot, the week and the miss card sit beside the answer; on phones the screenshot's label hides once one is added; "Changing your saved answer" replaces the group line. Still scrolling: a miss with the forgiveness reason box, and Social media's miss with its screenshot strip (each several fields). The message under Save is now tied to its field for screen readers. "Choose a day" draws the open day as an open square. The journal's Add note stays filled and says why when there is nothing to add.
+- **One day sheet on Overview and Progress** (the kit's `DayCheckins`): You and Jordan chips with each person's square and a steady height; each row leads where it can be acted on (your open check-in to Check in, anything waiting on you to Review, your miss to Review with "Ask Jordan to forgive it", the rest to the check-in itself). "1 of 6 missed" is gone (each miss has its pill), and the gym week is the last row of the list ("2 of 4 this week").
+- **Money words:** the pact's and Invite's stake sheet is "What a point costs" and ends with how the ~$150 is reached ("If you each miss 1 in 10 check-ins (about 17 points), each gift comes to about $150."). Recap's gifts say "$15 of it last week" (was "Now, up $15 last week") and its notification "This week's plan: gym 4 times each." Progress says "Only Jordan".
+- **Start words:** "Run it again" repeats a finished challenge, "Start a new challenge" starts anything new, and a challenge another couple shared says "Use this challenge" (as on Start). Your challenges keeps "Open challenge" for the running one.
+- **Smaller fixes:**
+  - Badge rows give their total's unit ("18 of 30 days", "10 of 22 Sun–Thu days").
+  - Practice's banner has a backing, and its sample dispute matches the screenshot ("social 47m, games 25m. That's 1h 12m.").
+  - Start's theme list has one Back ("‹ All ways to start") and sits two to a row from 640px.
+  - Progress photo has a camera icon.
+  - The verdict's Save for later becomes just its icon when the top bar is too narrow.
+
+Not changed, on purpose or for later:
+
+- **Day squares at 320px** are 37–39px wide; seven across can't reach 44px inside the page margins.
+- **The app still loads every page and the old app's styles on first load;** splitting them is left for a performance pass, since it touches how the live app is built.
+- **For Erin, from the critique:**
+  - Each Yes/No needs its own Save (about 14 taps for 7 rules). Should a plain Yes save on tap?
+  - Practice never rehearses reviewing. Should it?
+  - Nothing tells the person behind on points that they can still catch up. Should Progress say so?
+
 ## Decisions, November 2, 2026 (nothing said twice)
 
 Erin, on Check in's end of the day ("Sunday is logged" under the "Sun, Nov 1" button, and a clock icon on the square and again in the legend): "too much information on this page, the icon should not be there twice, sunday should not be there twice. review the whole app for duplicate information". Every page and sheet was reviewed. Where a screen said the same thing twice, the clearer one stays. It's rule 12 in `README.md`'s checklist.

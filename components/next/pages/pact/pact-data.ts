@@ -16,6 +16,9 @@ import {
   zonedTime,
 } from '@/lib/next/selectors';
 
+/** What the stakes assume: each of you misses 1 check-in in 10. */
+const MISS_RATE = 0.1;
+
 /**
  * The pact from one person's side, `you`: in the live app always the viewer (`world.me`); in the
  * preview, Jordan, who was invited and hasn't signed (Maya, the preview's `world.me`, signed when
@@ -103,7 +106,7 @@ export function pactView(world: World, you: Person) {
   const moment = pactMoment(world, other.id);
   const left = Math.max(0, zonedTime(c.start, '00:00', c.timeZone) - moment);
   const firstLock = lockTime(c, c.start);
-  const step = (n: number) => formatMoney(c.step * n);
+  const stakes = stakesPreview(c, MISS_RATE, [you.id, other.id]);
   const groups: RuleGroupView[] = (
     [
       {
@@ -151,10 +154,15 @@ export function pactView(world: World, you: Person) {
     startWeekday: formatWeekday(c.start),
     end: formatDay(lastDay(c)),
     place: (c.timeZone.split('/').pop() ?? c.timeZone).replace(/_/g, ' '),
-    step: step(1),
     /** What a gift comes to if each of you misses 1 check-in in 10: what signing puts at stake. */
-    stakes: formatMoney(stakesPreview(c, 0.1, [you.id, other.id]).gift),
-    steps: [step(1), step(2), step(3)] as const,
+    stakes: formatMoney(stakes.gift),
+    /** The 10 of "1 in 10". */
+    missEvery: Math.round(1 / MISS_RATE),
+    /** About how many points each of you has at that rate, which is what sets that gift. */
+    stakesPoints: Math.round(
+      stakes.perPerson.reduce((sum, p) => sum + p.misses, 0) /
+        Math.max(1, stakes.perPerson.length),
+    ),
     deadlineClock: clock(c.deadline.time),
     firstCheckin: {
       until: dayAndTime(firstLock, c.timeZone),

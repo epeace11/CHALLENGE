@@ -3,14 +3,20 @@ import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Button, Sheet } from '@/components/next/ui';
-import { GROUP_ICON, keepTogether, ruleDetail, type Choice } from './choices';
+import {
+  RULE_ICON,
+  iconOf,
+  keepTogether,
+  ruleDetail,
+  type Choice,
+} from './choices';
 import { Facts } from './parts';
 import styles from './start.module.css';
 
 /**
  * A theme or saved challenge in full: every rule with who it is for, when it is asked, how it is
  * answered and whether it needs a screenshot. The main action takes it to setup; a saved challenge
- * the couple already ran can also open how it ended.
+ * the couple already ran says Run it again, and can also open how it ended.
  */
 export function ChoiceSheet({
   open,
@@ -50,7 +56,9 @@ export function ChoiceSheet({
             <Button variant="primary" onClick={use}>
               {choice.kind === 'theme'
                 ? 'Use this theme'
-                : 'Use this challenge'}
+                : choice.ran
+                  ? 'Run it again'
+                  : 'Use this challenge'}
             </Button>
           </div>
         </>
@@ -62,7 +70,7 @@ export function ChoiceSheet({
         className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-6"
       >
         {choice.rules.map((rule, i) => {
-          const Icon = GROUP_ICON[rule.group];
+          const Icon = RULE_ICON[iconOf(rule)];
           const optional = choice.optionalIds.includes(rule.id);
           return (
             <li

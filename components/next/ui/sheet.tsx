@@ -1,5 +1,10 @@
 'use client';
-import type { ReactNode, RefObject } from 'react';
+import {
+  useEffect,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { ChevronLeft, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -7,8 +12,8 @@ import { usePortalContainer } from './root';
 
 /**
  * Details one tap away: a bottom sheet on phones that rises from the bottom, and a centred dialog
- * from 640px. It traps focus, closes on Escape, on the backdrop and on its close button, and returns
- * focus to what opened it.
+ * from 640px. It traps focus (Tab wraps inside it, and the page behind is inert), closes on Escape,
+ * on the backdrop and on its close button, and returns focus to what opened it.
  *
  * Put the actions in `footer`, the main action last (it shows first on phones and rightmost on wide
  * screens). "How it works" explanations belong here rather than on the page. A sheet that steps
@@ -41,6 +46,7 @@ export function Sheet({
   children?: ReactNode;
 }) {
   const container = usePortalContainer();
+  useInertBehind(open, container);
   return (
     <Dialog.Root open={open} onOpenChange={(next) => onOpenChange(next)}>
       <Dialog.Portal container={container}>
@@ -48,6 +54,7 @@ export function Sheet({
         <Dialog.Popup
           className={cn('nx-sheet', className)}
           initialFocus={initialFocus}
+          onKeyDown={wrapTab}
         >
           <div className="nx-sheet-grabber" aria-hidden="true" />
           <div className="nx-sheet-head">
@@ -77,4 +84,49 @@ export function Sheet({
       </Dialog.Portal>
     </Dialog.Root>
   );
+}
+
+/** Sheets open now, so the page stays inert until the last one closes. */
+let openSheets = 0;
+
+/**
+ * While a sheet is open, everything beside the sheets' container (the page, its top bar and tab
+ * bar, the preview's bar) is `inert`, so neither Tab nor a screen reader can reach what the scrim
+ * covers.
+ */
+function useInertBehind(open: boolean, container: HTMLElement | null) {
+  useEffect(() => {
+    if (!open || !container?.parentElement) return;
+    openSheets++;
+    const behind = [...container.parentElement.children].filter(
+      (el) => el !== container,
+    );
+    for (const el of behind) el.setAttribute('inert', '');
+    return () => {
+      if (--openSheets > 0) return;
+      for (const el of behind) el.removeAttribute('inert');
+    };
+  }, [open, container]);
+}
+
+const TABBABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Tab from the sheet's last control goes to its first, and Shift+Tab from the first to the last. */
+function wrapTab(e: KeyboardEvent<HTMLDivElement>) {
+  if (e.key !== 'Tab') return;
+  const items = [
+    ...e.currentTarget.querySelectorAll<HTMLElement>(TABBABLE),
+  ].filter((el) => el.getClientRects().length > 0 && !el.closest('[inert]'));
+  const first = items[0],
+    last = items[items.length - 1];
+  if (!first || !last) return;
+  const at = document.activeElement;
+  if (e.shiftKey && (at === first || at === e.currentTarget)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && at === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }

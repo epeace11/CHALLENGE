@@ -259,13 +259,21 @@ function Focus({
       aria-labelledby={id}
       className="flex flex-col gap-5 pt-1 sm:gap-6 sm:pt-2 lg:gap-8"
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        {/* Changing an answer, this line takes the place of the rule's group and days: one line
+            above the question, so a miss's card still fits. */}
         {ci.changing && (
           <p className="text-nx-2 font-semibold text-nx-ink-2">
             Changing your saved answer
           </p>
         )}
-        <QuestionHead rule={rule} headingRef={headingRef} id={id} size="lg" />
+        <QuestionHead
+          rule={rule}
+          headingRef={headingRef}
+          id={id}
+          size="lg"
+          eyebrow={!ci.changing}
+        />
       </div>
       <QuestionFields ci={ci} rule={rule} />
     </section>

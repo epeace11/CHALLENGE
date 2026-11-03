@@ -6,6 +6,7 @@ import {
   formatTarget,
   formatWhen,
   giftTotal,
+  plural,
   titleSays,
 } from '@/lib/next/selectors';
 import { Avatar, Button, PairAvatars, Sheet } from '@/components/next/ui';
@@ -75,8 +76,12 @@ function FirstDaySheet({ flow }: { flow: PactFlow }) {
   );
 }
 
-/* ── The dollar step ────────────────────────────────────────────────────── */
+/* ── What a point costs ─────────────────────────────────────────────────── */
 
+/**
+ * Opened by "At stake": how a gift is built, ending with how that number comes about. Invite's
+ * sheet says the same in the same words.
+ */
 function StepSheet({ flow }: { flow: PactFlow }) {
   const { step } = flow.challenge;
   const n = 6;
@@ -84,8 +89,9 @@ function StepSheet({ flow }: { flow: PactFlow }) {
     <Sheet
       open={flow.sheet === 'step'}
       onOpenChange={onOpenChange(flow)}
-      title={`The ${flow.step} step`}
-      description="Each miss is a point, and each point costs one step more than the one before."
+      title="What a point costs"
+      // The bars under it show what each point costs.
+      description="Each miss is a point."
       footer={
         <Button variant="primary" onClick={flow.close}>
           Close
@@ -95,12 +101,15 @@ function StepSheet({ flow }: { flow: PactFlow }) {
       <div className="flex flex-col gap-5">
         <StepBars step={step} count={n} />
         <p className="text-nx-body text-nx-ink">
-          So {n} misses cost {formatMoney(giftTotal(n, step, null))} in all.
-          When it ends, your points set the gift you give {flow.other.name}, and{' '}
-          {flow.other.name}’s points set the gift you get.
+          So {n} points cost {formatMoney(giftTotal(n, step, null))} in all.
+          Your points set the gift you give {flow.other.name}, and{' '}
+          {flow.other.name}’s points set the gift you get. A point{' '}
+          {flow.other.name} forgives costs nothing.
         </p>
-        <p className="text-nx-body text-nx-ink-2">
-          A point {flow.other.name} forgives costs nothing.
+        <p className="text-nx-body text-nx-ink">
+          If you each miss 1 in {flow.missEvery} check-ins (about{' '}
+          {plural(flow.stakesPoints, 'point')}), each gift comes to about{' '}
+          {flow.stakes}.
         </p>
       </div>
     </Sheet>
@@ -176,7 +185,7 @@ function SignSheet({ flow, onSign }: { flow: PactFlow; onSign: () => void }) {
       open={flow.sheet === 'sign'}
       onOpenChange={onOpenChange(flow)}
       title={`Sign ${c.name}?`}
-      description={`Day 1 is ${flow.start}. At stake: about ${flow.stakes} for each gift, if you miss 1 in 10.`}
+      description={`Day 1 is ${flow.start}. At stake: about ${flow.stakes} for each gift, if you miss 1 in ${flow.missEvery}.`}
       footer={
         <>
           <Button onClick={flow.close}>Cancel</Button>

@@ -18,7 +18,7 @@ type ToastInput =
       text: ReactNode;
       /** One action, such as Undo. */
       action?: { label: string; onClick: () => void };
-      /** Milliseconds on screen; 4 s, or 6 s with an action. */
+      /** Milliseconds on screen; 8 s by default. */
       duration?: number;
     };
 
@@ -32,9 +32,10 @@ type Toast = {
 const ToastContext = createContext<(t: ToastInput) => void>(() => {});
 
 /**
- * Shows a short confirmation above the tab bar: `toast('Saved')`, or
- * `toast({ text: 'Approved', action: { label: 'Undo', onClick: undo } })`. Toasts confirm; they
- * never carry information that is not also on the page.
+ * Shows that a write failed, above the tab bar: `toast('Couldn’t save. Check your connection.')`.
+ * The live app's host already does this for every failed write. Never use it to confirm an action:
+ * no "Saved", "Sent" or Undo pop-ups; the page shows what changed instead. It is announced at once
+ * (role="alert") and stays 8 seconds, so there is time to read it.
  */
 export const useToast = () => useContext(ToastContext);
 
@@ -50,7 +51,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       id: ++nextId,
       text: t.text,
       action: t.action,
-      duration: t.duration ?? (t.action ? 6000 : 4000),
+      duration: t.duration ?? 8000,
     };
     // One at a time: a newer toast replaces the older one, so an older Undo can never take back a
     // later change (useDemo's undo always reverts the latest).
@@ -65,7 +66,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {container &&
         createPortal(
-          <div className="nx-toasts" aria-live="polite">
+          <div className="nx-toasts" role="alert">
             <AnimatePresence initial={false}>
               {toasts.map((t) => (
                 <ToastItem key={t.id} toast={t} dismiss={dismiss} />

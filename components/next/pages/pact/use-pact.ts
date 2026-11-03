@@ -5,7 +5,7 @@ import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 import { pactView, pactViewer, signPactAt } from './pact-data';
 
-/** The sheets the pact opens: Day 1 and the first check-in, the dollar step, one rule, the whole pact, and Sign without holding. */
+/** The sheets the pact opens: Day 1 and the first check-in, what a point costs, one rule, the whole pact, and Sign without holding. */
 export type PactSheet = 'first' | 'step' | 'rule' | 'pact' | 'sign';
 
 /**

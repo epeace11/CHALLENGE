@@ -741,7 +741,7 @@ const PRACTICE: PracticeScript = {
     {
       ruleId: 'social',
       decision: 'dispute',
-      comment: 'The screenshot says 1h 12m.',
+      comment: 'Your screenshot: social 47m, games 25m. That’s 1h 12m.',
     },
   ],
   miss: { ruleId: 'eating-out', cost: FALL_RESET.step },

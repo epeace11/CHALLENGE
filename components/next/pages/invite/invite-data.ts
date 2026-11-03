@@ -53,6 +53,9 @@ export function ruleDetail(rule: Rule) {
     .join(' · ');
 }
 
+/** What the stakes assume: each of you misses 1 check-in in 10. */
+const MISS_RATE = 0.1;
+
 /** "Toronto" from "America/Toronto". */
 const placeOf = (timeZone: string) =>
   (timeZone.split('/').pop() ?? timeZone).replace(/_/g, ' ');
@@ -89,6 +92,7 @@ export function inviteView(world: World) {
   const step = (n: number) => formatMoney(c.step * n);
   // The first day's check-in locks at the deadline ("Tuesday, Nov 3 at 11:59 pm").
   const firstLock = lockTime(c, c.start);
+  const stakes = stakesPreview(c, MISS_RATE, [you.id, inviter.id]);
   return {
     challenge: c,
     inviter,
@@ -100,7 +104,14 @@ export function inviteView(world: World) {
     step: step(1),
     steps: [step(1), step(2), step(3)] as const,
     /** About what each gift comes to if each of you misses 1 in 10, as the pact says it. */
-    stakes: formatMoney(stakesPreview(c, 0.1, [you.id, inviter.id]).gift),
+    stakes: formatMoney(stakes.gift),
+    /** The 10 of "1 in 10". */
+    missEvery: Math.round(1 / MISS_RATE),
+    /** About how many points each of you has at that rate, which is what sets that gift. */
+    stakesPoints: Math.round(
+      stakes.perPerson.reduce((sum, p) => sum + p.misses, 0) /
+        Math.max(1, stakes.perPerson.length),
+    ),
     deadline: formatDeadline(c.deadline),
     firstCheckin: {
       until: `${formatDay(dateIn(c.timeZone, firstLock))} at ${formatTime(firstLock, c.timeZone)}`,

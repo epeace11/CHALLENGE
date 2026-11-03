@@ -29,14 +29,18 @@ export type Phase = 'answer' | 'review' | 'gift';
 export const shortTitle = (rule: Pick<Rule, 'title'>) =>
   rule.title.split(', ')[0];
 
-/** The pretend partner's dispute says the screenshot shows 1h 12m, so the sample screenshot does. */
+/**
+ * The sample screenshot: 1h 12m of social and games, drawn as Social 47m and Games 25m (with
+ * Productivity, 2h 1m in all). The pretend partner's dispute of the 45 min sample answer quotes
+ * those two rows, so keep them in step with `practice.partnerReview` in lib/next/demo.ts.
+ */
 const SHOT_MINUTES = 72;
 
 export function sampleShot(w: World): Proof {
   return {
     id: 'practice-screen-time',
     src: screenTimeShot(SHOT_MINUTES, shift(w.today, -1)),
-    alt: 'Screen Time screenshot: 1h 12m of social media and games',
+    alt: 'Screen Time screenshot: 2h 1m in all, with social 47m and games 25m',
   };
 }
 

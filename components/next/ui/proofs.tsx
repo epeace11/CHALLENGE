@@ -36,7 +36,13 @@ export function ProofStrip({
             aria-label={`Open screenshot ${i + 1} of ${proofs.length}: ${p.alt}`}
             onClick={() => setOpen(i)}
           >
-            <img src={p.src} alt="" draggable={false} />
+            <img
+              src={p.src}
+              alt=""
+              draggable={false}
+              loading="lazy"
+              decoding="async"
+            />
           </button>
           {onRemove && (
             <button

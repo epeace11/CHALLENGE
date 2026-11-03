@@ -14,6 +14,7 @@ import {
   formatTarget,
   formatWhen,
   giftTotal,
+  plural,
   titleSays,
 } from '@/lib/next/selectors';
 import { Button, Sheet, TextField } from '@/components/next/ui';
@@ -151,8 +152,12 @@ function DatesSheet({ flow }: { flow: InviteFlow }) {
   );
 }
 
-/* ── The dollar step ────────────────────────────────────────────────────── */
+/* ── What a point costs ─────────────────────────────────────────────────── */
 
+/**
+ * Opened by "At stake" and the gift line: how a gift is built, ending with how that number comes
+ * about. The pact's sheet says the same in the same words.
+ */
 function StepSheet({ flow }: { flow: InviteFlow }) {
   const { step } = flow.challenge;
   const n = 6;
@@ -181,10 +186,13 @@ function StepSheet({ flow }: { flow: InviteFlow }) {
         <p className="text-nx-body text-nx-ink">
           So {n} points cost {formatMoney(giftTotal(n, step, null))} in all.
           Your points set the gift you give {flow.inviter.name}, and{' '}
-          {flow.inviter.name}’s points set the gift you get.
+          {flow.inviter.name}’s points set the gift you get. A point{' '}
+          {flow.inviter.name} forgives costs nothing.
         </p>
-        <p className="text-nx-body text-nx-ink-2">
-          A point {flow.inviter.name} forgives costs nothing.
+        <p className="text-nx-body text-nx-ink">
+          If you each miss 1 in {flow.missEvery} check-ins (about{' '}
+          {plural(flow.stakesPoints, 'point')}), each gift comes to about{' '}
+          {flow.stakes}.
         </p>
       </div>
     </Sheet>

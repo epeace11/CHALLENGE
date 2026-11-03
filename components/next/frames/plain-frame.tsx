@@ -4,6 +4,7 @@ import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNav, type PageId } from '@/components/next/nav';
 import { Button } from '@/components/next/ui/button';
+import { useArrivalFocus } from './use-arrival-focus';
 import { useFit } from './use-fit';
 
 /**
@@ -31,6 +32,7 @@ export function PlainFrame({
 }) {
   const { navigate } = useNav();
   const fit = useFit<HTMLDivElement>();
+  const main = useArrivalFocus();
   return (
     <div ref={fit} className="nx-frame" data-frame="plain">
       <header className="nx-main nx-topbar">
@@ -57,8 +59,10 @@ export function PlainFrame({
         )}
       </header>
       <main
+        ref={main}
+        tabIndex={-1}
         className={cn(
-          'nx-main nx-fade-in pt-2',
+          'nx-main nx-fade-in pt-2 outline-none',
           center &&
             'flex min-h-[calc(100dvh-var(--nx-top-inset)-92px)] flex-col justify-center',
         )}

@@ -68,6 +68,11 @@ export default function RecapV2() {
   const action = recapAction(world);
   const note = notification(world, v);
   const points = (n: number) => plural(Math.round(n), 'point');
+  // The amount above is the gift as it is now, so the hint says only what last week added to it.
+  const lastWeek = (dollars: number) =>
+    dollars > 0
+      ? `${formatMoney(dollars)} of it last week`
+      : 'None of it last week';
   const wonHint = (
     <span className="inline-flex items-center gap-1.5 font-semibold text-nx-accent">
       <Trophy size={16} className={styles.pop} aria-hidden="true" />
@@ -109,19 +114,19 @@ export default function RecapV2() {
               hint={v.winner === world.partner.id ? wonHint : undefined}
               onClick={() => navigate('gifts')}
             />
-            {/* The gifts as they are now (what Gifts shows), and what last week added to them. */}
+            {/* The gifts as they are now (what Gifts shows), and how much of each last week added. */}
             <StatButton
               label="You get"
               value={v.gifts.me}
               format={formatMoney}
-              hint={`Now, up ${formatMoney(v.theirs.dollars)} last week`}
+              hint={lastWeek(v.theirs.dollars)}
               onClick={() => navigate('gifts')}
             />
             <StatButton
               label={`${partner} gets`}
               value={v.gifts.partner}
               format={formatMoney}
-              hint={`Now, up ${formatMoney(v.mine.dollars)} last week`}
+              hint={lastWeek(v.mine.dollars)}
               onClick={() => navigate('gifts')}
             />
           </div>

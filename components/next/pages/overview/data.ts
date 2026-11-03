@@ -4,26 +4,18 @@ import {
   dateRange,
   dayColor,
   dayMisses,
-  entryFor,
-  entryPill,
-  formatAnswer,
   formatDay,
   formatTime,
   formatWeekday,
-  isClosed,
   lastDay,
   leader,
   lockTime,
-  nameOf,
   openCheckins,
   openDay,
-  pendingRequestFor,
   plural,
-  pointOfEntry,
   reviewQueue,
   ruleIsFor,
   rulesFor,
-  rulesOn,
   shift,
   standings,
   streakToProtect,
@@ -31,7 +23,6 @@ import {
   waitingOnPartner,
   weekday,
   weekProgress,
-  type PillStatus,
   type ReviewItem,
 } from '@/lib/next/selectors';
 
@@ -69,10 +60,6 @@ export function reviewSummary(items: ReviewItem[]) {
     .map(([n, word]) => plural(n as number, word as string))
     .join(', ');
 }
-
-/** The day an item waiting for review is about. */
-export const reviewDay = (item: ReviewItem) =>
-  item.kind === 'forgiveness' ? item.point.day : item.entry.day;
 
 export type WeekDay = {
   day: DateString;
@@ -129,6 +116,17 @@ function gymWeek(w: World) {
     : null;
 }
 
+/**
+ * A day as Overview names it under today's date: "yesterday" (or "today"), otherwise its weekday
+ * ("Wednesday"), so the title and the button never name the same day two ways.
+ */
+const relativeDay = (w: World, day: DateString) =>
+  day === shift(w.today, -1)
+    ? 'yesterday'
+    : day === w.today
+      ? 'today'
+      : formatWeekday(day);
+
 export function overviewOf(w: World) {
   const c = w.challenge,
     day = openDay(w);
@@ -139,10 +137,9 @@ export function overviewOf(w: World) {
   const partnerOpen = openCheckins(w, w.partner.id);
   return {
     today: formatDay(w.today),
-    /** The day being logged, "Thursday", and "Thursday, Nov 19". */
+    /** The day being logged, and its name to someone reading today's date: "yesterday" or "Wednesday". */
     day,
-    dayName: day ? formatWeekday(day) : '',
-    dayLong: day ? formatDay(day) : '',
+    dayName: day ? relativeDay(w, day) : '',
     /** Check-ins Maya still has to answer for it. */
     open,
     left: open.length,
@@ -177,74 +174,6 @@ export function overviewOf(w: World) {
 }
 
 export type Overview = ReturnType<typeof overviewOf>;
-
-/* ── One day, for the day sheet ─────────────────────────────────────────── */
-
-export type DayRow = {
-  rule: Rule;
-  title: string;
-  /** "Yes", "No", "11,240 steps", or '' when nothing was logged. */
-  answer: string;
-  pill: { status: PillStatus; label: string };
-  note: string;
-  /**
-   * A dispute or a forgiveness request on this answer, in the other person's words or the owner's.
-   * `by` is empty for the owner: the sheet's chip already says whose answers these are.
-   */
-  said?: { by: string; text: string };
-};
-
-export function dayRows(w: World, personId: string, day: DateString) {
-  const mine = personId === w.me.id;
-  const who = (id: string) =>
-    id === personId ? '' : id === w.me.id ? 'You' : nameOf(w, id);
-  return rulesOn(w.challenge, personId, day).map((rule): DayRow => {
-    const e = entryFor(w, personId, rule.id, day);
-    const pill = entryPill(w, rule, e, day);
-    const dispute = e
-      ? w.disputes.find((d) => d.entryId === e.id && d.status === 'open')
-      : undefined;
-    const point = e ? pointOfEntry(w, e.id) : undefined;
-    const request = point ? pendingRequestFor(w, point.id) : undefined;
-    // "Waiting for review" says who it waits for.
-    const label =
-      pill.label === 'Waiting for review'
-        ? mine
-          ? `Waiting for ${w.partner.name}`
-          : 'Waiting for you'
-        : pill.label;
-    // A plain Yes or No only matters while someone still has to look at it; "Done" and "Missed" say the rest.
-    const showAnswer =
-      !!e &&
-      e.done !== null &&
-      (rule.kind === 'number' ||
-        pill.status === 'review' ||
-        pill.status === 'disputed');
-    return {
-      rule,
-      title: shortTitle(rule),
-      answer: showAnswer && e ? formatAnswer(rule, e) : '',
-      pill: { status: pill.status, label },
-      note: e?.note ?? '',
-      said: dispute
-        ? { by: who(dispute.raisedBy), text: dispute.comment }
-        : request
-          ? { by: who(request.from), text: request.reason }
-          : undefined,
-    };
-  });
-}
-
-/** What Maya can do about one day: log it (still open) and review what waits from it. */
-export function dayActions(w: World, day: DateString) {
-  const open = isClosed(w.challenge, day, w.now)
-    ? 0
-    : openCheckins(w, w.me.id, day).length;
-  const review = reviewQueue(w, w.me.id).items.filter(
-    (i) => reviewDay(i) === day,
-  ).length;
-  return { open, review };
-}
 
 /** Words for a day colour, for screen readers and the legend. */
 export const COLOR_WORDS: Record<DayColor, string> = {

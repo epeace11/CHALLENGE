@@ -17,6 +17,10 @@ import {
 } from '@/components/next/ui';
 import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
+import { useWhy, WhyLine } from './why';
+
+/** Why Add note can't add yet. */
+const EMPTY_NOTE = 'Write a note to add.';
 
 /**
  * The day's notes by both people, oldest first, and adding, changing or removing one. No toast:
@@ -63,7 +67,14 @@ function NoteItem({
     mine = note.personId === world.me.id;
   const [draft, setDraft] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  // Save note stays filled while the words are unchanged; pressed then, it says so.
   const box = useRef<HTMLDivElement>(null);
+  const why = useWhy(
+    draft !== null && draft.trim() === note.text
+      ? 'Change the note to save.'
+      : null,
+    box,
+  );
   if (asking)
     return (
       <Card pad="sm" className="flex flex-col gap-3">
@@ -101,18 +112,28 @@ function NoteItem({
             value={draft}
             onChange={setDraft}
           />
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="quiet" onClick={() => setDraft(null)}>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <WhyLine id={why.id} className="w-full">
+              {why.why}
+            </WhyLine>
+            <Button
+              variant="quiet"
+              onClick={() => {
+                setDraft(null);
+                why.reset();
+              }}
+            >
               Cancel
             </Button>
             <Button
-              disabled={draft.trim() === note.text}
-              onClick={() => {
-                // An emptied note would be removed: ask first, as Remove does.
-                if (!draft.trim()) setAsking(true);
-                else actions.edit(note.id, draft);
-                setDraft(null);
-              }}
+              onClick={() =>
+                why.press(() => {
+                  // An emptied note would be removed: ask first, as Remove does.
+                  if (!draft.trim()) setAsking(true);
+                  else actions.edit(note.id, draft);
+                  setDraft(null);
+                })
+              }
             >
               Save note
             </Button>
@@ -201,6 +222,7 @@ export function DayJournal({
   const [writing, setWriting] = useState(false);
   const [text, setText] = useState('');
   const box = useRef<HTMLDivElement>(null);
+  const why = useWhy(text.trim() ? null : EMPTY_NOTE, box);
   const start = () => {
     setWriting(true);
     requestAnimationFrame(() =>
@@ -210,6 +232,7 @@ export function DayJournal({
   const stop = () => {
     setWriting(false);
     setText('');
+    why.reset();
   };
   return (
     <Section
@@ -235,15 +258,19 @@ export function DayJournal({
               onChange={setText}
               hint={`${partner} can read it. Notes never change points.`}
             />
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <WhyLine id={why.id} className="w-full">
+                {why.why}
+              </WhyLine>
               <Button variant="quiet" onClick={stop}>
                 Cancel
               </Button>
               <Button
-                disabled={!text.trim()}
-                onClick={() => {
-                  if (add(text)) stop();
-                }}
+                onClick={() =>
+                  why.press(() => {
+                    if (add(text)) stop();
+                  })
+                }
               >
                 Add note
               </Button>
@@ -268,36 +295,53 @@ export function JournalSheet({
   const { notes, add, ...actions } = useNotes(day);
   const partner = useWorld().partner.name;
   const [text, setText] = useState('');
+  // Add note stays filled like Check in's Save; pressed with nothing written, it says so.
+  const box = useRef<HTMLDivElement>(null);
+  const why = useWhy(text.trim() ? null : EMPTY_NOTE, box);
+  const close = (next: boolean) => {
+    if (!next) why.reset();
+    onOpenChange(next);
+  };
   return (
     <Sheet
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={close}
       title={`${formatWeekday(day)}’s journal`}
       description={`${partner} can read it. Notes never change points.`}
       footer={
         <>
-          <Button onClick={() => onOpenChange(false)}>Close</Button>
+          <Button onClick={() => close(false)}>Close</Button>
           <Button
             variant="primary"
-            disabled={!text.trim()}
-            onClick={() => {
-              if (add(text)) setText('');
-            }}
+            onClick={() =>
+              why.press(() => {
+                if (add(text)) setText('');
+              })
+            }
           >
             Add note
           </Button>
+          {/* Next to the button, like Save's: above it on phones, to its left from 640px. */}
+          <WhyLine
+            id={why.id}
+            className="text-center sm:order-first sm:mr-auto sm:self-center sm:text-left"
+          >
+            {why.why}
+          </WhyLine>
         </>
       }
     >
       <div className="flex flex-col gap-5">
         <NoteList notes={notes} actions={actions} empty="No notes yet." />
-        <TextField
-          label="New note"
-          multiline
-          maxLength={1000}
-          value={text}
-          onChange={setText}
-        />
+        <div ref={box}>
+          <TextField
+            label="New note"
+            multiline
+            maxLength={1000}
+            value={text}
+            onChange={setText}
+          />
+        </div>
       </div>
     </Sheet>
   );

@@ -7,7 +7,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger';
 
 export type ButtonProps = ComponentProps<'button'> & {
   /**
-   * - `primary`: the one main action on a screen (filled accent). Use it once per screen.
+   * - `primary`: the one main action on a screen (filled slate, in every look). Use it once per screen.
    * - `secondary` (default): outlined, for other actions.
    * - `quiet`: accent text, for small or third-level actions.
    * - `danger`: filled red, for destructive confirmations.

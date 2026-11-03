@@ -1,5 +1,5 @@
 /** The kit for the new UI. Import from '@/components/next/ui'. See components/next/README.md. */
-export { NxRoot, usePortalContainer } from './root';
+export { NxRoot, syncThemeColor, usePortalContainer } from './root';
 export {
   Button,
   IconButton,
@@ -19,6 +19,17 @@ export { YesNo, SegmentedControl, Toggle } from './choice';
 export { TextField, NumberField } from './fields';
 export { ProofStrip, ProofViewer } from './proofs';
 export { DayIcon, type DayTone } from './day';
+export {
+  DayCheckins,
+  CheckinDetail,
+  dayFooter,
+  dayCheckins,
+  habitIcon,
+  waitingOn,
+  rowLeadsTo,
+  checkinLine,
+  type DayPage,
+} from './day-sheet';
 export { EmptyState } from './empty';
 export { ActionBar } from './action-bar';
 export {

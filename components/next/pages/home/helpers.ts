@@ -36,11 +36,12 @@ export const sizeLine = (s: Pick<SavedChallenge, 'days' | 'rules'>) =>
   `${plural(s.days, 'day')}, ${plural(s.rules.length, 'rule')}`;
 
 /**
- * What the start button says: "Start again" for one of ours, "Start this challenge" for one we have
- * not run (its name is the title right above).
+ * What the start button says, in the app's start words: "Run it again" for one of ours (it has
+ * run before), "Use this challenge" for one another couple shared, as on Start ("Start a new
+ * challenge" is the page's own button). A running challenge's button is "Open challenge".
  */
 export const startLabel = (s: SavedChallenge) =>
-  s.source === 'mine' ? 'Start again' : 'Start this challenge';
+  s.source === 'mine' ? 'Run it again' : 'Use this challenge';
 
 /** "You won, 4 points to Jordan's 7", "Jordan won, 3 points to your 5", "A tie, 4 points each". Fewer wins. */
 export function verdictLine(w: World, past: PastChallenge) {

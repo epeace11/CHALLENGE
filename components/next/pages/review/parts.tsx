@@ -47,7 +47,7 @@ import {
   type ReviewItem,
   type Shown,
 } from './queue';
-import type { Held, Review } from './use-review';
+import type { Held, Pause, Review } from './use-review';
 
 /* ── Hooks ─────────────────────────────────────────────────────────────── */
 
@@ -105,6 +105,31 @@ export const cardHeading = (root: HTMLElement | null) =>
     (h) => !h.closest('[inert]'),
   );
 
+/**
+ * Focuses `heading` and scrolls just enough that everything from the top of `stack` (the Undo line
+ * over the card, else the card's top) down to the heading shows. `stack`'s scroll margins say how
+ * much of the screen is covered: the preview's bar and the sticky header above, the pinned buttons
+ * and the tab bar below. The heading's own focus scroll can't do it: it knows nothing of the line
+ * above the card, which is the only way back from a decision and would be left off the top.
+ */
+export function showCard(
+  stack: HTMLElement | null,
+  heading: HTMLElement | undefined,
+) {
+  if (!heading) return;
+  heading.focus({ preventScroll: true });
+  if (!stack) return;
+  const margin = getComputedStyle(stack);
+  const above =
+    stack.getBoundingClientRect().top - parseFloat(margin.scrollMarginTop);
+  const below =
+    heading.getBoundingClientRect().bottom +
+    parseFloat(margin.scrollMarginBottom) -
+    window.innerHeight;
+  const by = above < 0 ? above : below > 0 ? Math.min(below, above) : 0;
+  if (by) window.scrollBy(0, by);
+}
+
 /* ── Small pieces ──────────────────────────────────────────────────────── */
 
 /** Something a person wrote (a note, a reason, a dispute), as a speech bubble under their avatar. */
@@ -136,14 +161,19 @@ const SHOT_SIZE = {
   lg: 'h-[clamp(260px,80vw,340px)] w-full rounded-nx sm:h-[400px] sm:w-[236px]',
 } as const;
 
-/** A screenshot as a tile that opens it full screen (arrows move between several). */
+/**
+ * A screenshot as a tile that opens it full screen (arrows move between several). It loads lazily
+ * unless `eager` (the first card's, the biggest thing on the screen as Review opens).
+ */
 export function Shot({
   proofs,
   size = 'md',
+  eager,
   className,
 }: {
   proofs: Proof[];
   size?: keyof typeof SHOT_SIZE;
+  eager?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState<number | null>(null);
@@ -164,6 +194,8 @@ export function Shot({
         <img
           src={first.src}
           alt=""
+          decoding="async"
+          loading={eager ? 'eager' : 'lazy'}
           draggable={false}
           className="size-full object-cover object-top"
         />
@@ -203,21 +235,13 @@ const titleClass = (size: Size) =>
 
 /**
  * An item's rule as its heading: the page's card is under the page title (h2), a sheet's body under
- * the sheet's (h3). The card's heading takes focus after each decision, so it's focusable by script.
+ * the sheet's (h3). The card's heading takes focus after each decision, so it's focusable by script
+ * (`showCard` scrolls it into view with the card's top and any Undo line above it).
  */
 function Title({ size, children }: { size: Size; children: ReactNode }) {
   if (size === 'lg')
     return (
-      <h2
-        tabIndex={-1}
-        data-card-heading
-        // Focus scrolls it into view with the card's top (its kicker) showing, below the sticky
-        // header from 1024px and the preview's bar (--nx-top-inset).
-        className={cn(
-          titleClass(size),
-          'scroll-mt-[calc(var(--nx-top-inset)_+_4rem)] lg:scroll-mt-[calc(var(--nx-top-inset)_+_8.25rem)]',
-        )}
-      >
+      <h2 tabIndex={-1} data-card-heading className={titleClass(size)}>
         {children}
       </h2>
     );
@@ -301,15 +325,18 @@ type BodyProps = {
   hideTitle?: boolean;
   /** Show whose answer it is and its day above the title. */
   showDay?: boolean;
+  /** Load the screenshot straight away (the first card's); others load lazily. */
+  eager?: boolean;
 };
 
-/** The partner's answer (or late answer): the rule, the answer, whether it meets the target, the screenshot and the note. */
+/** The partner's answer (or late answer): the rule, the answer, whether it meets the target, the note and the screenshot. */
 export function AnswerBody({
   world,
   item,
   size = 'md',
   hideTitle,
   showDay,
+  eager,
 }: BodyProps & { item: AnswerItem | LateItem }) {
   const { rule, entry } = item;
   const shown = shownAnswer(item);
@@ -333,8 +360,9 @@ export function AnswerBody({
   const note = shown.note ? (
     <Quote person={world.partner}>{shown.note}</Quote>
   ) : null;
-  // On the page's card the screenshot is the biggest thing: under the answer on phones, a tall
-  // tile on the left with the answer and note beside it on wider screens.
+  // On the page's card the screenshot is the biggest thing: under the answer and the note on
+  // phones (the note first, so the pinned Approve and Dispute never cover it before a scroll), a
+  // tall tile on the left with the answer and note beside it on wider screens.
   const beside = size === 'lg' && shown.proofs.length > 0;
   return (
     <div className="flex flex-col gap-4">
@@ -360,11 +388,6 @@ export function AnswerBody({
           >
             {answer}
           </div>
-          <Shot
-            proofs={shown.proofs}
-            size="lg"
-            className="sm:col-start-1 sm:row-span-2 sm:row-start-1"
-          />
           {note && (
             <div
               className={cn(
@@ -374,6 +397,12 @@ export function AnswerBody({
               {note}
             </div>
           )}
+          <Shot
+            proofs={shown.proofs}
+            size="lg"
+            eager={eager}
+            className="sm:col-start-1 sm:row-span-2 sm:row-start-1"
+          />
         </div>
       ) : (
         <>
@@ -496,21 +525,32 @@ export function AnswerSummary({ item }: { item: AnswerItem | LateItem }) {
 
 /**
  * The decision just made, with Undo while it waits to be sent: on the page where it was made, never
- * a pop-up. A screen reader hears the decision.
+ * a pop-up. A screen reader hears the decision. Its clock stands still while a pointer or finger is
+ * on Undo or focus is (`onPause`, the review's `pause`).
  */
 export function UndoLine({
   held,
   onUndo,
+  onPause,
   ref,
   className,
 }: {
   held: Held;
   onUndo: () => void;
+  onPause: (why: Pause, on: boolean) => void;
   ref?: Ref<HTMLDivElement>;
   className?: string;
 }) {
   const s = STAMP[held.outcome];
   const Icon = s.icon;
+  // Gone with a pointer or focus still on Undo (a sheet closing under it): its clock runs on.
+  useEffect(
+    () => () => {
+      onPause('pointer', false);
+      onPause('focus', false);
+    },
+    [onPause],
+  );
   return (
     <div
       ref={ref}
@@ -531,7 +571,15 @@ export function UndoLine({
         <span className={cn('font-semibold', s.ink)}>{s.label}</span> ·{' '}
         {held.about}
       </output>
-      <Button variant="quiet" onClick={onUndo}>
+      <Button
+        variant="quiet"
+        onClick={onUndo}
+        // A pointer is on it from before a press until after it lifts, a finger's too.
+        onPointerEnter={() => onPause('pointer', true)}
+        onPointerLeave={() => onPause('pointer', false)}
+        onFocus={() => onPause('focus', true)}
+        onBlur={() => onPause('focus', false)}
+      >
         Undo
       </Button>
     </div>
@@ -842,6 +890,7 @@ export function WaitingForPartner({
             ref={line}
             held={held}
             onUndo={undo}
+            onPause={review.pause}
             className={state.waiting > 0 ? 'mb-3' : undefined}
           />
         )}
@@ -936,11 +985,11 @@ export function CaughtUp({ world }: { world: World }) {
         >
           <CheckCheck size={30} strokeWidth={2.2} aria-hidden="true" />
         </motion.span>
+        {/* Focused after the last decision; `showCard` brings the card's top, its check included, into view. */}
         <h2
           tabIndex={-1}
           data-card-heading
-          // Focus brings the whole card, its check included, into view (see Title).
-          className="scroll-mt-[calc(var(--nx-top-inset)_+_8.5rem)] font-nx-serif text-nx-h2 lg:scroll-mt-[calc(var(--nx-top-inset)_+_12.5rem)]"
+          className="font-nx-serif text-nx-h2"
         >
           All caught up
         </h2>

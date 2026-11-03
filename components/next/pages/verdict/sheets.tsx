@@ -206,7 +206,7 @@ export function SaveSheet({
       >
         <p className="flex min-h-12 items-center gap-3 rounded-nx-sm bg-nx-done-soft px-3 py-2 text-nx-body font-semibold text-nx-done">
           <Check size={20} strokeWidth={2.6} aria-hidden="true" />
-          {saved} is in Your challenges, ready to start again.
+          {saved} is in Your challenges, ready to run again.
         </p>
       </Sheet>
     );
@@ -215,7 +215,7 @@ export function SaveSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Save for later"
-      description="Same rules and stakes, ready to start again from Your challenges."
+      description="Same rules and stakes, ready to run again from Your challenges."
       footer={
         <>
           <Button onClick={() => onOpenChange(false)}>Cancel</Button>

@@ -72,7 +72,7 @@ export function NotificationSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Monday notification"
-      description="Last week’s results and what this week needs."
+      description="Last week’s results and this week’s plan."
       footer={
         <>
           <Button onClick={() => navigate('settings')}>Open Settings</Button>

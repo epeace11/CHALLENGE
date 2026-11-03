@@ -43,6 +43,9 @@ export type Held = {
   change: (w: World) => World;
 };
 
+/** Why the Undo window's clock is stopped: a pointer or finger is on Undo, or focus is. */
+export type Pause = 'pointer' | 'focus';
+
 /** A point in an Undo line: "No eating out, Nov 18" (one rule can have several points). */
 const pointAbout = (point: Point, rule: Rule) =>
   `${shortTitle(rule)}, ${formatDate(point.day)}`;
@@ -51,7 +54,7 @@ const pointAbout = (point: Point, rule: Rule) =>
  * Everything a Review version does. Each decision shows at once (the item leaves with its stamp)
  * but waits UNDO_MS before it is sent, so Undo can take it back without a pop-up and without the
  * database having to reverse anything. The next decision, leaving the page or hiding the app sends
- * the one waiting straight away.
+ * the one waiting straight away. The 5 seconds stand still while the viewer is on Undo (`pause`).
  */
 export function useReview() {
   const world = useWorld();
@@ -60,6 +63,10 @@ export function useReview() {
   const [held, setHeld] = useState<Held | null>(null);
   const heldRef = useRef<Held | null>(null);
   const timer = useRef<number | null>(null);
+  // When the decision waiting is sent, the time it still had while its clock is stopped, and why.
+  const due = useRef(0);
+  const left = useRef(0);
+  const pauses = useRef(new Set<Pause>());
   const send = useRef(backend.act);
   useEffect(() => {
     send.current = backend.act;
@@ -69,6 +76,7 @@ export function useReview() {
   const flush = useCallback(() => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = null;
+    pauses.current.clear();
     const h = heldRef.current;
     heldRef.current = null;
     setHeld(null);
@@ -98,13 +106,39 @@ export function useReview() {
     });
     heldRef.current = h;
     setHeld(h);
+    due.current = performance.now() + UNDO_MS;
     timer.current = window.setTimeout(flush, UNDO_MS);
   }
+
+  /**
+   * Stops the Undo window's clock while a pointer or finger is on Undo, or focus is, so nobody has
+   * to beat the 5 seconds (WCAG 2.2.1); once both are off it, it runs on with the time it had left.
+   * Hiding the app or leaving the page still sends it.
+   */
+  const pause = useCallback(
+    (why: Pause, on: boolean) => {
+      if (!heldRef.current) return;
+      const reasons = pauses.current;
+      const was = reasons.size > 0;
+      if (on) reasons.add(why);
+      else reasons.delete(why);
+      if (!was && reasons.size > 0) {
+        if (timer.current !== null) window.clearTimeout(timer.current);
+        timer.current = null;
+        left.current = Math.max(0, due.current - performance.now());
+      } else if (was && reasons.size === 0) {
+        due.current = performance.now() + left.current;
+        timer.current = window.setTimeout(flush, left.current);
+      }
+    },
+    [flush],
+  );
 
   /** Takes back the decision waiting: nothing was sent, and its item comes back without its stamp. */
   const undo = () => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = null;
+    pauses.current.clear();
     const h = heldRef.current;
     heldRef.current = null;
     setHeld(null);
@@ -129,6 +163,7 @@ export function useReview() {
     outcomes,
     held,
     undo,
+    pause,
     approve: (item: AnswerItem | LateItem) =>
       act({
         ids: [item.id],

@@ -86,8 +86,8 @@ export function headline(w: World, v: RecapView) {
 }
 
 /**
- * How the Monday notification reads: its title and one short paragraph, last week's points and what
- * this week needs. No gift totals: they move during the week, and the page shows them as they are now.
+ * How the Monday notification reads: its title and one short paragraph, last week's points and
+ * this week's plan. No gift totals: they move during the week, and the page shows them as they are now.
  */
 export function notification(w: World, v: RecapView) {
   const title = `${w.challenge.name}: ${lower(headline(w, v))}`;
@@ -98,7 +98,7 @@ export function notification(w: World, v: RecapView) {
   );
   const body = [
     `You ${plural(v.mine.points, 'point')}, ${w.partner.name} ${v.theirs.points}.`,
-    needs.length ? `This week: ${needs.join(', ')}.` : '',
+    needs.length ? `This week’s plan: ${needs.join(', ')}.` : '',
   ]
     .filter(Boolean)
     .join(' ');

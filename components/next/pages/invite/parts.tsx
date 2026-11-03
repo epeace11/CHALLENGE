@@ -66,7 +66,7 @@ export function RuleIcon({ rule }: { rule: Rule }) {
 
 /**
  * The two short lines on how it works. Each is a row that opens its details: checking in and
- * reviewing opens How it works, the gift opens the dollar step.
+ * reviewing opens How it works, the gift opens What a point costs.
  */
 export function HowLines({
   flow,

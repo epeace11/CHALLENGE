@@ -1,6 +1,6 @@
 // The verdict's state (marking gifts, Run it again, Save for later), its wording, and the pieces it shows.
 'use client';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import {
   BookmarkPlus,
   Gift as GiftIcon,
@@ -171,10 +171,59 @@ export function NoVerdict() {
   );
 }
 
-/** Save for later, in the top bar: keeps the challenge in Your challenges to start again. */
+/**
+ * Save for later, in the top bar: keeps the challenge in Your challenges to run again. When its
+ * words don't fit beside Back (a narrow phone, larger text, wider letter spacing) it shows only the
+ * bookmark, a 44px square, and keeps "Save for later" as its name for screen readers.
+ */
 export function SaveAsButton({ onClick }: { onClick: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    const button = ref.current;
+    const bar = button?.closest('header');
+    // The bar's other side: Back, before the aside that holds this button.
+    const before = button?.parentElement?.previousElementSibling;
+    const label = button?.querySelector<HTMLElement>('.nx-btn-label');
+    if (!button || !bar || !before || !label) return;
+    const px = (value: string) => parseFloat(value) || 0;
+    const check = () => {
+      const b = getComputedStyle(button),
+        h = getComputedStyle(bar);
+      const icon = button.querySelector('svg')?.getBoundingClientRect().width;
+      // The button with its words (a hidden label still reports their width as scrollWidth, which
+      // rounds, hence the extra pixel).
+      const full =
+        px(b.borderLeftWidth) +
+        px(b.paddingLeft) +
+        (icon ?? 20) +
+        px(b.columnGap) +
+        label.scrollWidth +
+        1 +
+        px(b.paddingRight) +
+        px(b.borderRightWidth);
+      const room =
+        bar.getBoundingClientRect().right -
+        px(h.paddingRight) -
+        before.getBoundingClientRect().right -
+        px(h.columnGap);
+      button.toggleAttribute('data-compact', full > room);
+    };
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(bar);
+    observer.observe(before);
+    observer.observe(label);
+    return () => observer.disconnect();
+  }, []);
   return (
-    <Button variant="quiet" icon={BookmarkPlus} onClick={onClick}>
+    <Button
+      ref={ref}
+      variant="quiet"
+      icon={BookmarkPlus}
+      aria-label="Save for later"
+      className="[&[data-compact]>.nx-btn-label]:sr-only"
+      onClick={onClick}
+    >
       Save for later
     </Button>
   );

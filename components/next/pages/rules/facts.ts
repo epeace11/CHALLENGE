@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Camera,
   Dumbbell,
   House,
   Moon,
@@ -45,6 +46,16 @@ export const GROUP_ICON: Record<RuleGroup, LucideIcon> = {
   Money: PiggyBank,
   Home: House,
 };
+
+/** Each rule's icon: its group's, and a camera for a photo rule. Look one up with `iconOf`. */
+export const RULE_ICON: Record<RuleGroup | 'Photo', LucideIcon> = {
+  ...GROUP_ICON,
+  Photo: Camera,
+};
+
+/** Which icon a rule shows: "Photo" for a photo rule ("Progress photo"), otherwise its group. */
+export const iconOf = (rule: Rule): keyof typeof RULE_ICON =>
+  /\bphoto\b/i.test(rule.title) ? 'Photo' : rule.group;
 
 export const whoLabel = (world: World, who: string) =>
   who === 'both' ? 'Both of you' : nameOf(world, who);

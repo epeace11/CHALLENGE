@@ -17,9 +17,11 @@ import {
 import {
   badges,
   calendar,
+  formatWeekdays,
   keepNumbersWithWords,
   nextBadge,
   openDay,
+  streaks,
 } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import type { Detail } from './detail';
@@ -140,8 +142,9 @@ export function CalendarCard({
     <div id={cal.anchor} tabIndex={-1} className="scroll-mt-24 outline-none">
       <GlassCard pad="sm" className="flex flex-col gap-4 sm:p-5">
         {top}
-        {/* On phones the month spans most of the card's padding, so each day is a 44px target. */}
-        <div className="-mx-3 sm:mx-0">
+        {/* On phones the month spans most of the card's padding, so each day is a 44px target;
+            under 360px all of it, to come as close as seven days can. */}
+        <div className="-mx-3 max-[360px]:-mx-4 sm:mx-0">
           <SimpleMonth
             key={cal.personId}
             days={calendar(world, cal.personId)}
@@ -230,10 +233,10 @@ export function worstFirst(world: World): HabitRow[] {
     .map(({ rule, of }) => ({ rule, of }));
 }
 
-/** Whose habit it is when only one person has it: "Only you", "Jordan only". */
+/** Whose habit it is when only one person has it: "Only you", "Only Jordan" (as Invite and the pact say). */
 function onlyWho(world: World, rule: Rule) {
   if (rule.who === 'both') return null;
-  return rule.who === world.me.id ? 'Only you' : `${world.partner.name} only`;
+  return rule.who === world.me.id ? 'Only you' : `Only ${world.partner.name}`;
 }
 
 /**
@@ -372,6 +375,32 @@ function HabitLine({
 }
 
 /**
+ * How close the next badge is, in days: "On a roll, 5 of 7 days". Unbroken counts the days the rule
+ * with the longest run asks for, so a rule that skips days says which: "Unbroken, 10 of 22 Sun–Thu
+ * days" beside "Unbroken, 18 of 30 days".
+ */
+function nextLine(
+  world: World,
+  personId: string,
+  next: NonNullable<ReturnType<typeof nextBadge>>,
+) {
+  const { have, need, unit } = next.progress!;
+  const run =
+    next.id === 'streak-all'
+      ? streaks(world, personId)
+          .filter((s) => s.unit === 'day')
+          .sort((a, b) => b.current - a.current)[0]
+      : undefined;
+  const days =
+    run && run.rule.days.length < 7
+      ? `${formatWeekdays(run.rule.days)} days`
+      : unit.includes('day')
+        ? 'days'
+        : '';
+  return `${next.title}, ${have} of ${need}${days ? ` ${days}` : ''}`;
+}
+
+/**
  * One row per person: how many badges are earned and the next one with how close it is. A row
  * opens that person's badges.
  */
@@ -385,9 +414,7 @@ export function BadgesBoth({ detail }: { detail: Detail }) {
         const next = nextBadge(world, p.id);
         const line = [
           `${earned} of ${all.length} earned`,
-          next?.progress
-            ? `next:\u00a0${next.title}, ${next.progress.have} of ${next.progress.need}`
-            : '',
+          next?.progress ? `next:\u00a0${nextLine(world, p.id, next)}` : '',
         ]
           .filter(Boolean)
           .join(' · ');

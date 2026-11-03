@@ -4,6 +4,7 @@ import type { World } from '@/lib/next/model';
 import { askToEnd, dropEndAsk } from '@/lib/next/actions';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
+import { syncThemeColor } from '@/components/next/ui';
 import { exportFile } from './data';
 
 /* ── Appearance ────────────────────────────────────────────────────────── */
@@ -54,9 +55,7 @@ export function useThemeChoice() {
         : next;
     setChoice(next);
     document.documentElement.dataset.theme = theme;
-    document
-      .querySelector('meta[name=theme-color]')
-      ?.setAttribute('content', theme === 'dark' ? '#0d0b14' : '#f6f8fb');
+    syncThemeColor();
   };
   return [choice, choose] as const;
 }

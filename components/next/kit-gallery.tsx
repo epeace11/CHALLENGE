@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import {
   ArrowRight,
-  Check,
   ChevronLeft,
   CircleHelp,
   Dumbbell,
@@ -10,8 +9,8 @@ import {
   Plus,
   Send,
   Trash2,
+  WifiOff,
 } from 'lucide-react';
-import { approve } from '@/lib/next/actions';
 import { stepsShot } from '@/lib/next/shots';
 import {
   formatDay,
@@ -27,7 +26,7 @@ import {
 } from '@/lib/next/selectors';
 import type { Proof } from '@/lib/next/model';
 import { useNav } from './nav';
-import { useDemo, useWorld } from './world';
+import { useWorld } from './world';
 import {
   ActionBar,
   Avatar,
@@ -67,7 +66,6 @@ import {
  */
 export function KitGallery() {
   const world = useWorld();
-  const { update, undo } = useDemo();
   const { navigate } = useNav();
   const toast = useToast();
   const me = world.me.id;
@@ -334,18 +332,14 @@ export function KitGallery() {
           <Button icon={CircleHelp} onClick={() => setSheet(true)}>
             How it works
           </Button>
+          {/* The one message the app shows: a write that failed. Never a confirmation. */}
           <Button
-            icon={Check}
-            onClick={() => {
-              const answer = queue.answers[0];
-              if (answer) update((w) => approve(w, answer.entry.id));
-              toast({
-                text: answer ? 'Approved Jordan’s steps' : 'Nothing to approve',
-                action: answer ? { label: 'Undo', onClick: undo } : undefined,
-              });
-            }}
+            icon={WifiOff}
+            onClick={() =>
+              toast('Couldn’t save your answer. Check your connection.')
+            }
           >
-            Approve with a toast
+            A failed write
           </Button>
           <Menu
             trigger={<Button icon={Plus}>Menu</Button>}

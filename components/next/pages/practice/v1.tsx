@@ -192,7 +192,10 @@ export default function PracticeV2() {
       <div className="flex flex-col gap-6">
         {/* The banner says what this is; the title is for screen readers, so the first question fits. */}
         <h1 className="sr-only">Practice day</h1>
-        <PracticeBanner className={styles.sticky} />
+        {/* Pinned on a page-coloured backing, so nothing scrolling under it shows above or around it. */}
+        <div className={styles.sticky}>
+          <PracticeBanner />
+        </div>
 
         <ol className="flex flex-col gap-6" key={p.run}>
           <Step state={state('answer')} title="Answer three check-ins">

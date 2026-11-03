@@ -3,7 +3,7 @@
 import { dateIn, formatDate, formatTime } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import { Avatar, useReducedMotion } from '@/components/next/ui';
-import { CheckBadge, HOLD_MS, Script } from './parts';
+import { CheckBadge, HOLD_MS, Script, useHoldFill } from './parts';
 import type { Signer } from './pact-data';
 
 /**
@@ -31,8 +31,10 @@ export function SignatureLine({
   const still = useReducedMotion();
   const { person, signedAt } = signer;
   const small = size === 'sm';
-  // Signed: the ink stays full and fades into the drawn line under the name.
-  const inked = holding || !!signedAt;
+  // In step with Hold to sign's fill (in thirds under reduced motion). Signed: the ink stays full
+  // and fades into the drawn line under the name.
+  const fill = useHoldFill(!!holding && !signedAt);
+  const inked = signedAt ? 1 : fill;
   return (
     <div className={cn('flex items-start gap-3.5', className)}>
       <Avatar
@@ -59,7 +61,7 @@ export function SignatureLine({
             aria-hidden="true"
             className="absolute inset-x-0 -bottom-px h-[3px] origin-left rounded-full bg-nx-accent"
             style={{
-              transform: `scaleX(${inked ? 1 : 0})`,
+              transform: `scaleX(${inked})`,
               opacity: signedAt ? 0 : 1,
               transition: still
                 ? 'none'

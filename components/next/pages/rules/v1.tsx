@@ -14,7 +14,7 @@ import {
 } from '@/components/next/ui';
 import { useWorld } from '@/components/next/world';
 import type { Rule } from '@/lib/next/model';
-import { GROUP_ICON, rulesByWho } from './facts';
+import { RULE_ICON, iconOf, rulesByWho } from './facts';
 import {
   GroupMark,
   HowItWorks,
@@ -108,7 +108,7 @@ function RuleRow({
   proposals: Proposals;
   onOpen: () => void;
 }) {
-  const Icon = GROUP_ICON[rule.group];
+  const Icon = RULE_ICON[iconOf(rule)];
   const how =
     rule.kind === 'number'
       ? 'A number'

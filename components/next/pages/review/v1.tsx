@@ -28,6 +28,7 @@ import {
   UndoLine,
   WaitingForPartner,
   cardHeading,
+  showCard,
   useFocusLater,
   useSheetFor,
 } from './parts';
@@ -145,10 +146,17 @@ export default function ReviewV2() {
   const settle = useRef(0);
 
   // After each decision (and Undo) focus moves to the heading of the card now on screen, or to
-  // "All caught up", instead of dropping to the page; after a sheet, once the sheet has gone.
+  // "All caught up", instead of dropping to the page; after a sheet, once the sheet has gone. The
+  // page scrolls so the Undo line above the card shows too, even after a decision made far down a
+  // tall card (`showCard` focuses the heading itself, so nothing is left for focusLater to focus).
   const page = useRef<HTMLDivElement>(null);
+  const stack = useRef<HTMLDivElement>(null);
   const focusLater = useFocusLater();
-  const focusCard = () => focusLater(() => cardHeading(page.current));
+  const focusCard = () =>
+    focusLater(() => {
+      showCard(stack.current, cardHeading(page.current));
+      return null;
+    });
 
   /** Acts on the card on screen, remembering it so the next open one follows. */
   const decide = (item: ReviewItem, main: boolean) => {
@@ -257,35 +265,50 @@ export default function ReviewV2() {
               </Enter>
             )}
 
-            <Enter index={2} className="flex flex-col gap-3">
-              {review.held && review.held.from !== 'points' && (
-                <UndoLine
-                  held={review.held}
-                  onUndo={() => {
-                    review.undo();
-                    focusCard();
-                  }}
-                />
-              )}
-              <Deck id={current?.id ?? null} direction={shown.direction}>
-                {current && (
-                  <GlassCard pad="lg" as="article">
-                    <ItemBody world={world} item={current} size="lg" showDay />
-                    {approveDay}
-                    {!inBar && actions && (
-                      <div className="mt-6 flex items-stretch gap-2">
-                        <Choices
-                          main={actions.main}
-                          alt={actions.alt}
-                          onMain={() => decide(current, true)}
-                          onAlt={() => decide(current, false)}
-                        />
-                      </div>
-                    )}
-                  </GlassCard>
+            <Enter index={2}>
+              {/* What `showCard` keeps on screen after a decision, from its top (the Undo line) down to
+                  the card's heading: its scroll margins clear the preview's bar and, from 1024px, the
+                  sticky header above, and the pinned buttons and tab bar below. */}
+              <div
+                ref={stack}
+                className="flex scroll-mt-[calc(var(--nx-top-inset)_+_var(--nx-header-h,0px)_+_0.75rem)] scroll-mb-[calc(var(--nx-nav-h)_+_var(--nx-action-h,0px)_+_0.75rem)] flex-col gap-3"
+              >
+                {review.held && review.held.from !== 'points' && (
+                  <UndoLine
+                    held={review.held}
+                    onUndo={() => {
+                      review.undo();
+                      focusCard();
+                    }}
+                    onPause={review.pause}
+                  />
                 )}
-              </Deck>
-              {!current && <CaughtUp world={world} />}
+                <Deck id={current?.id ?? null} direction={shown.direction}>
+                  {current && (
+                    <GlassCard pad="lg" as="article">
+                      <ItemBody
+                        world={world}
+                        item={current}
+                        size="lg"
+                        showDay
+                        eager={index === 0}
+                      />
+                      {approveDay}
+                      {!inBar && actions && (
+                        <div className="mt-6 flex items-stretch gap-2">
+                          <Choices
+                            main={actions.main}
+                            alt={actions.alt}
+                            onMain={() => decide(current, true)}
+                            onAlt={() => decide(current, false)}
+                          />
+                        </div>
+                      )}
+                    </GlassCard>
+                  )}
+                </Deck>
+                {!current && <CaughtUp world={world} />}
+              </div>
             </Enter>
 
             {/* Right after the card, so it comes next for a keyboard and scrolls away with the card. */}

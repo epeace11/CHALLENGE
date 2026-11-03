@@ -117,7 +117,14 @@ export function PointActions({ review }: { review: Review }) {
       className="flex flex-col gap-2.5"
       aria-label="Forgiveness"
     >
-      {heldHere && <UndoLine ref={line} held={heldHere} onUndo={undo} />}
+      {heldHere && (
+        <UndoLine
+          ref={line}
+          held={heldHere}
+          onUndo={undo}
+          onPause={review.pause}
+        />
+      )}
       {mine.length > 0 && (
         <RowButton
           data-points="mine"

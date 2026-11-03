@@ -184,7 +184,7 @@ export const PAGE_META: Record<PageId, PageMeta> = {
     frame: 'plain',
     versions: 1,
     brief:
-      'How it ended (Summer Sprint): who won, the gift each gives, best streaks and badges; then run it again or start another.',
+      'How it ended (Summer Sprint): who won, the gift each gives, best streaks and badges; then run it again or start a new challenge.',
   },
   settings: {
     id: 'settings',

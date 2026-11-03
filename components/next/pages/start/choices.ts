@@ -1,6 +1,7 @@
 import {
   Bookmark,
   BookOpen,
+  Camera,
   Dumbbell,
   Flame,
   GlassWater,
@@ -61,6 +62,16 @@ export const GROUP_ICON: Record<RuleGroup, LucideIcon> = {
   Money: PiggyBank,
   Home: House,
 };
+
+/** Each rule's icon: its group's, and a camera for a photo rule. Look one up with `iconOf`. */
+export const RULE_ICON: Record<RuleGroup | 'Photo', LucideIcon> = {
+  ...GROUP_ICON,
+  Photo: Camera,
+};
+
+/** Which icon a rule shows: "Photo" for a photo rule ("Progress photo"), otherwise its group. */
+export const iconOf = (rule: Rule): keyof typeof RULE_ICON =>
+  /\bphoto\b/i.test(rule.title) ? 'Photo' : rule.group;
 
 /** "5 rules", "1 rule + 1 optional". */
 function ruleCount(rules: Rule[], optionalIds: string[]) {

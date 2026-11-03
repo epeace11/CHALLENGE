@@ -179,7 +179,7 @@ export function StepBars({
   return (
     <>
       <p className="sr-only">
-        Misses 1 to {count} cost {costs.join(', ')}.
+        Points 1 to {count} cost {costs.join(', ')}.
       </p>
       <div
         aria-hidden="true"
@@ -372,11 +372,35 @@ export function SignatureRow({
 export const HOLD_MS = 900;
 
 /**
+ * How full a hold is, 0 to 1. With motion it is 1 from the press, and a `HOLD_MS` linear transition
+ * sweeps the fill there. Under reduced motion nothing sweeps: it fills in three steps (a third at
+ * the press, two thirds, then full), so a hold still shows it is getting somewhere.
+ */
+export function useHoldFill(holding: boolean) {
+  const still = useReducedMotion();
+  // Under reduced motion: how many more thirds this hold has reached since the press.
+  const [reached, setReached] = useState(0);
+  useEffect(() => {
+    if (!still || !holding) return;
+    const timers = [1, 2].map((n) =>
+      window.setTimeout(() => setReached(n), (HOLD_MS / 3) * n),
+    );
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+      setReached(0);
+    };
+  }, [holding, still]);
+  if (!holding) return 0;
+  return still ? (reached + 1) / 3 : 1;
+}
+
+/**
  * Sign as a deliberate act: a press fills the button and signs once it is full. Anything short of
  * that (a tap, a click, Enter, a screen reader or Voice Control) asks first with `onAsk`, so
  * nobody is stuck and a stray tap never signs. The thumb can drift while holding (the button
- * doesn't scroll the page). Under reduced motion it still needs the hold, but the fill shows at
- * once instead of sweeping across.
+ * doesn't scroll the page). Under reduced motion it still needs the hold, and the fill steps up in
+ * thirds instead of sweeping across. The fill is the button's own text colour at 30%, so it shows
+ * on the slate button in light and the pale one in dark.
  */
 export function HoldToSign({
   onSign,
@@ -396,6 +420,7 @@ export function HoldToSign({
   // The hold finished and signed; the click that follows the release is part of it.
   const signed = useRef(false);
   const still = useReducedMotion();
+  const fill = useHoldFill(holding);
   const stop = () => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = null;
@@ -444,9 +469,9 @@ export function HoldToSign({
     >
       <span
         aria-hidden="true"
-        className="absolute inset-0 origin-left bg-nx-ink/15"
+        className="absolute inset-0 origin-left bg-[color-mix(in_srgb,var(--nx-on-primary)_30%,transparent)]"
         style={{
-          transform: `scaleX(${holding ? 1 : 0})`,
+          transform: `scaleX(${fill})`,
           transition: still
             ? 'none'
             : holding

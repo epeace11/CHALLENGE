@@ -30,11 +30,18 @@
     }
   }
 
-  /* The practice marker stays in view while the page scrolls (below the preview's bar). */
+  /* The practice marker stays in view while the page scrolls (below the preview's bar), 8px down
+     on a backing in the page's colour: the gap above it and its rounded corners hide what scrolls
+     under. The backing is the page's own glow, fixed like the page's, so at rest it doesn't show;
+     the negative margin keeps its 8px out of the layout. */
   .sticky {
     position: sticky;
-    top: calc(var(--nx-top-inset) + 8px);
+    top: var(--nx-top-inset);
     z-index: 20;
+    margin-top: -8px;
+    padding-top: 8px;
+    background: var(--nx-page-bg, var(--nx-page));
+    background-attachment: fixed;
   }
 
   /* The timeline's line between steps. */

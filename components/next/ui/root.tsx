@@ -22,6 +22,22 @@ let hydrated = false;
 export const isHydrated = () => hydrated;
 
 /**
+ * Sets the browser's bar colour (`theme-color`) to the page colour of the look and theme on screen.
+ * Call it after changing the theme; the root calls it when the look changes.
+ */
+export function syncThemeColor() {
+  requestAnimationFrame(() => {
+    const root = document.querySelector<HTMLElement>('.nx');
+    const page =
+      root && getComputedStyle(root).getPropertyValue('--nx-page').trim();
+    if (page)
+      document
+        .querySelector('meta[name=theme-color]')
+        ?.setAttribute('content', page);
+  });
+}
+
+/**
  * The root of the new UI: the .nx element that scopes styles/next.css, its look, reduced-motion
  * handling for Motion, toasts, and the container that sheets and menus portal into. The preview
  * renders exactly one; pages never render another.
@@ -41,6 +57,7 @@ export function NxRoot({
   useEffect(() => {
     hydrated = true;
   }, []);
+  useEffect(syncThemeColor, [look]);
   return (
     <div className={cn('nx', className)} data-look={look} style={style}>
       <MotionConfig

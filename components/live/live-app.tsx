@@ -51,6 +51,13 @@ import {
 import { NewPassword } from './new-password';
 import { Waiting } from './waiting';
 
+/** The browser tab's name where the preview's page title isn't what a person calls the page. */
+const TAB_TITLES: Partial<Record<PageId, string>> = {
+  signup: 'Sign in',
+  shared: 'Shared challenge',
+  setup: 'Set up',
+};
+
 /**
  * The Challenge for any couple, on the PROD CHALLENGE database, at /app. It signs people in, loads
  * everything their account can read, builds the same World the preview's sample data fills, and
@@ -341,6 +348,15 @@ export function LiveApp() {
     built,
     new URLSearchParams(query).has('shared'),
   );
+
+  // The browser tab names the page, so history and the tab switcher can tell pages apart.
+  useEffect(() => {
+    const name =
+      shown === 'waiting' || shown === 'landing'
+        ? null
+        : (TAB_TITLES[shown] ?? pageById(shown).title);
+    document.title = name ? `${name} · The Challenge` : 'The Challenge';
+  }, [shown]);
 
   const navigate = useCallback<Nav['navigate']>((next) => {
     const url = new URL(location.href);

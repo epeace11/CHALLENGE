@@ -1,20 +1,12 @@
 import {
-  BookOpen,
   CalendarCheck,
   Dumbbell,
   Flame,
-  Footprints,
   Heart,
-  House,
-  Moon,
-  PiggyBank,
   Rocket,
   ShieldCheck,
-  Smartphone,
   Sparkles,
   Trophy,
-  Utensils,
-  Wine,
   type LucideIcon,
 } from 'lucide-react';
 import type { DateString, Entry, Rule, World } from '@/lib/next/model';
@@ -34,9 +26,7 @@ import {
   pendingRequestFor,
   plural,
   pointOfEntry,
-  reviewQueue,
   rulesFor,
-  rulesOn,
   ruleSpan,
   shift,
   streaks,
@@ -45,10 +35,12 @@ import {
   weeksOf,
   type PillStatus,
 } from '@/lib/next/selectors';
+import { waitingOn } from '@/components/next/ui/day-sheet';
 
 /**
  * What the Progress versions show, worked out from the world: each habit's hit rate and streak,
- * a habit's days, a day's check-ins, and what the viewer can do about any of it.
+ * a habit's days, and what the viewer can do about any of it. A day's check-ins are the kit's day
+ * sheet (`components/next/ui/day-sheet.tsx`), shared with Overview.
  */
 
 /** How a calendar cell or a habit's day looks. */
@@ -65,28 +57,6 @@ export type Tone =
 /** A pill status as a cell tone. */
 export const toneOf = (s: PillStatus): Tone =>
   s === 'forgiven' ? 'excused' : s;
-
-/** An icon for a habit, by what it is about. */
-export function habitIcon(rule: Rule): LucideIcon {
-  switch (rule.group) {
-    case 'Sleep':
-      return Moon;
-    case 'Screens':
-      return Smartphone;
-    case 'Food':
-      return Utensils;
-    case 'Drinks':
-      return Wine;
-    case 'Movement':
-      return rule.kind === 'weekly' ? Dumbbell : Footprints;
-    case 'Mind':
-      return BookOpen;
-    case 'Money':
-      return PiggyBank;
-    default:
-      return House;
-  }
-}
 
 /** A badge's icon, by badge id. */
 export const BADGE_ICON: Record<string, LucideIcon> = {
@@ -151,20 +121,6 @@ export function habitDays(w: World, personId: string, rule: Rule): HabitDay[] {
   });
 }
 
-/** The check-ins of one day for one person, with each answer's pill. */
-export function dayCheckins(w: World, personId: string, day: DateString) {
-  return rulesOn(w.challenge, personId, day).map((rule) => {
-    const entry = entryFor(w, personId, rule.id, day);
-    return { rule, entry, pill: entryPill(w, rule, entry, day) };
-  });
-}
-
-/** Notes either person left on a day. */
-export const notesOn = (w: World, day: DateString) =>
-  w.journal
-    .filter((n) => n.day === day)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-
 /** "until 11:59 pm tonight" for the day being logged. */
 export function lockWords(w: World, day: DateString) {
   const lock = lockTime(w.challenge, day),
@@ -172,24 +128,6 @@ export function lockWords(w: World, day: DateString) {
   return dateIn(w.challenge.timeZone, lock) === w.today
     ? `until ${time} tonight`
     : `until ${time}`;
-}
-
-/** What waits on the viewer, filtered to one person's day or habit. */
-export function waitingOnMe(
-  w: World,
-  personId: string,
-  match: { day?: DateString; ruleId?: string },
-) {
-  return reviewQueue(w, w.me.id).items.filter((item) => {
-    const day = item.kind === 'forgiveness' ? item.point.day : item.entry.day;
-    const owner =
-      item.kind === 'forgiveness' ? item.point.personId : item.entry.personId;
-    return (
-      owner === personId &&
-      (match.day === undefined || day === match.day) &&
-      (match.ruleId === undefined || item.rule.id === match.ruleId)
-    );
-  });
 }
 
 export type MainAction = {
@@ -205,7 +143,7 @@ export function mainAction(w: World, personId: string): MainAction | null {
   const day = openDay(w);
   if (personId === w.me.id && day && openCheckins(w, w.me.id).length > 0)
     return { label: `Log ${formatWeekday(day)}`, page: 'log' };
-  if (waitingOnMe(w, personId, {}).length > 0)
+  if (waitingOn(w, personId, {}).length > 0)
     return { label: 'Open Review', page: 'review' };
   return null;
 }
@@ -226,7 +164,7 @@ export function sheetAction(
     if (open.length > 0)
       return { label: `Log ${formatWeekday(day)}`, page: 'log' };
   }
-  if (waitingOnMe(w, personId, match).length > 0)
+  if (waitingOn(w, personId, match).length > 0)
     return { label: 'Open Review', page: 'review' };
   return null;
 }

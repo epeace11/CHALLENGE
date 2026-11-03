@@ -111,25 +111,42 @@ export function problemOf(
   return null;
 }
 
-/**
- * Brings one part of a check-in's form into view, clear of the pinned Save bar, and focuses it:
- * the number or Yes, the add-screenshot button, or the reason box. The form marks each part with
- * `data-field` and the rule's id.
- */
-function revealField(ruleId: string, field: Field) {
-  const box = document.querySelector<HTMLElement>(
+/** One part of a check-in's form, marked with `data-field` and the rule's id. */
+function fieldBox(ruleId: string, field: Field) {
+  return document.querySelector<HTMLElement>(
     `[data-field="${field}"][data-rule="${CSS.escape(ruleId)}"]`,
   );
+}
+
+/**
+ * The controls of one part of the form that take focus: the number, both Yes and No, the
+ * add-screenshot button, or the reason box. The first is the one Save focuses.
+ */
+export function fieldControls(ruleId: string, field: Field): HTMLElement[] {
+  const box = fieldBox(ruleId, field);
+  if (!box) return [];
+  if (field === 'proof')
+    return [...box.querySelectorAll<HTMLElement>('button')].slice(-1);
+  const inputs = [
+    ...box.querySelectorAll<HTMLElement>(
+      'input:not([type="hidden"]), textarea',
+    ),
+  ];
+  return inputs.length
+    ? inputs
+    : [...box.querySelectorAll<HTMLElement>('button')].slice(0, 1);
+}
+
+/**
+ * Brings one part of a check-in's form into view, clear of the pinned Save bar, and focuses it:
+ * the number or Yes, the add-screenshot button, or the reason box.
+ */
+function revealField(ruleId: string, field: Field) {
+  const box = fieldBox(ruleId, field);
   if (!box) return;
-  const target =
-    field === 'proof'
-      ? [...box.querySelectorAll<HTMLElement>('button')].pop()
-      : (box.querySelector<HTMLElement>(
-          'input:not([type="hidden"]), textarea',
-        ) ?? box.querySelector<HTMLElement>('button'));
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   box.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
-  target?.focus({ preventScroll: true });
+  fieldControls(ruleId, field)[0]?.focus({ preventScroll: true });
 }
 
 /** "Minutes", "Pages", "Steps": the number field's label. */
@@ -246,12 +263,17 @@ export function useCheckin({ top, heading }: Anchors) {
     !problemOf(rule, draftOf(rule), late) && !unchanged(rule);
   // Save stays pressable when it can't save; pressing it then says why next to it.
   const [tried, setTried] = useState<string | null>(null);
-  /** Why Save can't save this check-in, once it was pressed or when it isn't obvious; else null. */
-  const blocked = (rule: Rule) => {
+  /**
+   * Why Save can't save this check-in and the part of the form to fix, once Save was pressed or
+   * when it isn't obvious; else null.
+   */
+  const blocked = (rule: Rule): { text: string; field: Field } | null => {
     const pressed = tried === key(rule),
       problem = problemOf(rule, draftOf(rule), late);
-    if (problem) return problem.show || pressed ? problem.text : null;
-    return pressed && unchanged(rule) ? 'Change the answer to save.' : null;
+    if (problem) return problem.show || pressed ? problem : null;
+    return pressed && unchanged(rule)
+      ? { text: 'Change the answer to save.', field: 'answer' }
+      : null;
   };
   /** Saves, or says why it can't and brings what is missing into view, focused. */
   const trySave = (rule: Rule) => {
