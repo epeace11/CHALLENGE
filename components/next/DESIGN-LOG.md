@@ -10,7 +10,7 @@ The leftovers:
 
 - **A failed dispute, reply or forgiveness ask on Review keeps its words.** Review's decisions now wait for the write: if it fails, the card comes back without its stamp and its sheet opens with what was typed.
 - **Nothing is cut off at 150% text zoom (260px).** The top bar's account chip goes under Back, button labels wrap under 320px, Your challenges' column shrinks, Check in's day reads "Thu 19" under 360px and is never cut off, and the tab bar shows icons only under 320px (labels still read out). All 19 pages fit at 260 and 320px.
-- **The animation code loads after the page.** The kit uses Motion's light `m` component (the kit's `motion` is it), and the animation features load in a chunk of their own as the kit loads (retried once). The kit's chunk went from 114 KB to 89 KB gzipped. The EXIF reader loads only when a screenshot is added: the live app's first download went from 91 KB to 66 KB gzipped.
+- **The animation code loads after the page.** The kit uses Motion's light `m` component (the kit's `motion` is it), and the animation features load in a chunk of their own as the kit loads in the browser (retried once). Only in the browser: starting that load at the top of the module on the server hung the whole Worker on Cloudflare, though not in `wrangler dev`, so the test site went down until it was rolled back and fixed. After a deploy, always load `/preview` and `/app` on the test site. The kit's chunk went from 114 KB to 89 KB gzipped. The EXIF reader loads only when a screenshot is added: the live app's first download went from 91 KB to 66 KB gzipped.
 
 From the critique:
 

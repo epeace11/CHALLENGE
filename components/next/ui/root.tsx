@@ -16,12 +16,15 @@ const PortalContext = createContext<HTMLElement | null>(null);
 
 /**
  * Motion's animation features (layout animations included) are a chunk of their own, fetched as soon
- * as the kit loads instead of bundled with it. Until they arrive an animated element waits at its
- * starting state, so a failed fetch is tried once more.
+ * as the kit loads in the browser instead of bundled with it. Until they arrive an animated element
+ * waits at its starting state, so a failed fetch is tried once more. Only in the browser: a dynamic
+ * import at the top of a module on the server hung the whole Worker on Cloudflare (though not in
+ * `wrangler dev`), and the server never needs the features.
  */
 const loadFeatures = () => import('./motion-features').then((f) => f.default);
-const features = loadFeatures().catch(loadFeatures);
-const motionFeatures = () => features;
+let features: ReturnType<typeof loadFeatures> | undefined;
+const motionFeatures = () => (features ??= loadFeatures().catch(loadFeatures));
+if (typeof window !== 'undefined') void motionFeatures();
 
 /** Where sheets, menus and toasts render: inside the .nx root, so they keep its tokens and look. */
 export const usePortalContainer = () => useContext(PortalContext);
