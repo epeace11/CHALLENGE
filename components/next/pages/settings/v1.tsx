@@ -1,9 +1,26 @@
-// A calm list of grouped rows that show each setting's value; tapping one opens a sheet to change just that.
+// Two tabs, this challenge and all challenges, each a calm list of rows that show each setting's value; tapping one opens a sheet to change just that.
 'use client';
-import { useRef, useState } from 'react';
-import { Clock3, Download, LogOut, Trash2 } from 'lucide-react';
+import {
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import {
+  BookOpen,
+  CircleUser,
+  Clock3,
+  Download,
+  Flag,
+  LayoutGrid,
+  LogOut,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
+import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
   Avatar,
@@ -17,7 +34,12 @@ import {
   TextField,
   Toggle,
 } from '@/components/next/ui';
-import { formatMoney } from '@/lib/next/selectors';
+import { deleteChallenge, renameChallenge } from '@/lib/next/actions';
+import { formatMoney, plural } from '@/lib/next/selectors';
+import {
+  DeleteChallengeSheet,
+  deleteChallengeLine,
+} from '../home/delete-sheet';
 import {
   DEFAULT_REMINDERS,
   TIMES,
@@ -45,17 +67,68 @@ import {
 import { THEME_OPTIONS, useAccount, useEndAsk, useThemeChoice } from './hooks';
 import styles from './settings.module.css';
 
-type Open = 'name' | 'times' | 'terms' | 'ask' | 'leave' | 'delete' | null;
+type Open =
+  | 'name'
+  | 'challengeName'
+  | 'times'
+  | 'terms'
+  | 'ask'
+  | 'leave'
+  | 'delete'
+  | 'deleteChallenge'
+  | null;
+
+/**
+ * A group of settings under one heading that says what it applies to: this challenge, or all of
+ * them. It's the first thing read, so nobody has to guess which is which.
+ */
+function Scope({
+  icon: Icon,
+  title,
+  detail,
+  index,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+  index: number;
+  children: ReactNode;
+}) {
+  const id = useId();
+  return (
+    <section
+      aria-labelledby={id}
+      className="nx-enter flex flex-col gap-5"
+      style={{ ['--nx-i' as string]: index } as CSSProperties}
+    >
+      <header className={styles.scope}>
+        <span className={styles.scopeIcon}>
+          <Icon size={22} aria-hidden="true" />
+        </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <h2 id={id} className="font-nx-serif text-nx-h2">
+            {title}
+          </h2>
+          <p className="text-nx-body text-nx-ink-2">{detail}</p>
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
 
 /** Settings, version 1. */
 export default function SettingsV1() {
   const world = useWorld();
   const backend = useBackend();
+  const { navigate } = useNav();
   const account = useAccount(world);
   // Reminders, proposed changes, leaving and deleting the account come later in the live app.
   const later = backend.live;
   const [theme, setTheme] = useThemeChoice();
   const [open, setOpen] = useState<Open>(null);
+  const [scope, setScope] = useState<'challenge' | 'all'>('challenge');
   const [reminders, setReminders] = useState<Reminders>(DEFAULT_REMINDERS);
   const [proposal, setProposal] = useState<Terms | null>(null);
   const c = world.challenge;
@@ -75,8 +148,9 @@ export default function SettingsV1() {
     refocusEnd.current = true;
     answer();
   };
+  const running = c.status === 'running';
   const theirAsk = endAskFrom(world);
-  const myAsk = c.status === 'running' && c.endAsk && !theirAsk;
+  const myAsk = running && c.endAsk && !theirAsk;
   const endControls = theirAsk ? (
     <EndAskCard
       world={world}
@@ -99,149 +173,200 @@ export default function SettingsV1() {
       variant="quiet"
       icon={LogOut}
       className="-ml-3 self-start text-nx-danger"
-      onClick={() => setOpen(c.status === 'running' ? 'ask' : 'leave')}
+      onClick={() => setOpen(running ? 'ask' : 'deleteChallenge')}
     >
-      End the challenge
+      {running ? 'End the challenge' : 'Delete this challenge'}
     </Button>
   );
 
   return (
     <AppFrame>
-      <div className="flex flex-col gap-9">
-        <PageTitle title="Settings" />
+      <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-5">
+          <PageTitle title="Settings" />
+          {/* One group at a time, so what's on screen is never mistaken for the other. */}
+          {c.id && (
+            <SegmentedControl
+              label="Which settings"
+              value={scope}
+              onChange={setScope}
+              options={[
+                { value: 'challenge', label: 'This challenge' },
+                { value: 'all', label: 'All challenges' },
+              ]}
+              className={styles.seg}
+            />
+          )}
+        </div>
 
-        <Section title="You" index={1}>
-          <RowButton
-            leading={<Avatar person={world.me} decorative />}
-            title="Your name"
-            detail={world.me.name}
-            onClick={() => setOpen('name')}
-          />
-        </Section>
-
-        {!later && (
-          <Section title="Reminders" index={2}>
-            <GlassCard pad="sm" className="flex flex-col gap-1 px-5 sm:px-6">
-              <Toggle
-                checked={reminders.on}
-                onChange={(on) => setReminders({ ...reminders, on })}
-                label="Evening reminders"
-                description="Only when something is left to log"
+        {c.id && scope === 'challenge' && (
+          <Scope
+            icon={Flag}
+            title={c.name}
+            detail={`With ${partner}. These are for this challenge only.`}
+            index={1}
+          >
+            <div className="flex flex-col gap-2.5">
+              <RowButton
+                title="Challenge name"
+                detail={c.name}
+                onClick={() => setOpen(later ? 'challengeName' : 'terms')}
               />
-              <div className="-mx-2 border-t border-nx-line pt-2 sm:-mx-3">
+              {later ? (
                 <RowButton
-                  glass={false}
-                  className="border-0 bg-transparent disabled:opacity-50"
                   leading={
-                    <Clock3
+                    <BookOpen
                       size={22}
                       className="text-nx-accent"
                       aria-hidden="true"
                     />
                   }
-                  title="Times"
-                  detail={remindersLine(reminders)}
-                  disabled={!reminders.on}
-                  onClick={() => setOpen('times')}
+                  title="Rules and stakes"
+                  detail={`${plural(c.rules.length, 'rule')} · First point ${formatMoney(c.step)} · ${capLine(c.cap)}`}
+                  onClick={() => navigate('rules')}
                 />
-              </div>
-            </GlassCard>
-          </Section>
+              ) : (
+                <>
+                  <RowButton
+                    title={`First point: ${formatMoney(c.step)}`}
+                    detail={thenLine(c.step)}
+                    onClick={() => setOpen('terms')}
+                  />
+                  <RowButton
+                    title="Gift cap"
+                    detail={capLine(c.cap)}
+                    onClick={() => setOpen('terms')}
+                  />
+                </>
+              )}
+            </div>
+            {!later &&
+              (proposal ? (
+                <ProposalCard
+                  partner={partner}
+                  changes={changesOf(now, proposal)}
+                  onWithdraw={() => setProposal(null)}
+                />
+              ) : (
+                <p className="text-nx-2 text-nx-ink-2">
+                  Changes here go to {partner} to accept.
+                </p>
+              ))}
+            {/* Another challenge's settings are in that challenge. */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {endControls}
+              {world.others.length > 0 && (
+                <Button
+                  variant="quiet"
+                  icon={LayoutGrid}
+                  className="-ml-3 self-start sm:ml-0"
+                  onClick={() => navigate('home')}
+                >
+                  Switch challenge
+                </Button>
+              )}
+            </div>
+          </Scope>
         )}
 
-        <Section title="Appearance" index={3}>
-          <SegmentedControl
-            label="Appearance"
-            value={theme}
-            onChange={setTheme}
-            options={THEME_OPTIONS}
-            className={styles.seg}
-          />
-        </Section>
+        {(!c.id || scope === 'all') && (
+          <Scope
+            icon={CircleUser}
+            title="Your account"
+            detail="These apply to all your challenges."
+            index={1}
+          >
+            <RowButton
+              leading={<Avatar person={world.me} decorative />}
+              title="Your name"
+              detail={world.me.name}
+              onClick={() => setOpen('name')}
+            />
 
-        {/* "The challenge", not its name: the name is the first row (and the card below names it when
-            asking to end it), so a heading with it would say it twice. */}
-        {!later && (
-          <Section title="The challenge" index={4}>
+            {!later && (
+              <Section title="Reminders" index={2}>
+                <GlassCard
+                  pad="sm"
+                  className="flex flex-col gap-1 px-5 sm:px-6"
+                >
+                  <Toggle
+                    checked={reminders.on}
+                    onChange={(on) => setReminders({ ...reminders, on })}
+                    label="Evening reminders"
+                    description="Only when something is left to log"
+                  />
+                  <div className="-mx-2 border-t border-nx-line pt-2 sm:-mx-3">
+                    <RowButton
+                      glass={false}
+                      className="border-0 bg-transparent disabled:opacity-50"
+                      leading={
+                        <Clock3
+                          size={22}
+                          className="text-nx-accent"
+                          aria-hidden="true"
+                        />
+                      }
+                      title="Times"
+                      detail={remindersLine(reminders)}
+                      disabled={!reminders.on}
+                      onClick={() => setOpen('times')}
+                    />
+                  </div>
+                </GlassCard>
+              </Section>
+            )}
+
+            <Section title="Appearance" index={3}>
+              <SegmentedControl
+                label="Appearance"
+                value={theme}
+                onChange={setTheme}
+                options={THEME_OPTIONS}
+                className={styles.seg}
+              />
+            </Section>
+
             <div className="flex flex-col gap-2.5">
               <RowButton
-                title="Challenge name"
-                detail={c.name}
-                onClick={() => setOpen('terms')}
-              />
-              <RowButton
-                title={`First point: ${formatMoney(c.step)}`}
-                detail={thenLine(c.step)}
-                onClick={() => setOpen('terms')}
-              />
-              <RowButton
-                title="Gift cap"
-                detail={capLine(c.cap)}
-                onClick={() => setOpen('terms')}
-              />
-            </div>
-            {proposal ? (
-              <ProposalCard
-                partner={partner}
-                changes={changesOf(now, proposal)}
-                onWithdraw={() => setProposal(null)}
-              />
-            ) : (
-              <p className="text-nx-2 text-nx-ink-2">
-                Changes here go to {partner} to accept.
-              </p>
-            )}
-            {endControls}
-          </Section>
-        )}
-
-        {later && world.challenge.status === 'running' && (
-          <Section title="The challenge" index={4}>
-            {endControls}
-          </Section>
-        )}
-
-        <Section title="Your account" index={5}>
-          <div className="flex flex-col gap-2.5">
-            <RowButton
-              leading={
-                <Download
-                  size={22}
-                  className="text-nx-accent"
-                  aria-hidden="true"
-                />
-              }
-              title="Export my data"
-              detail="A file of your answers, points and notes"
-              onClick={account.exportData}
-            />
-            <RowButton
-              leading={
-                <LogOut
-                  size={22}
-                  className="text-nx-accent"
-                  aria-hidden="true"
-                />
-              }
-              title="Sign out"
-              detail={world.me.email}
-              onClick={account.signOut}
-            />
-            {!later && (
-              <RowButton
                 leading={
-                  <Trash2
+                  <Download
                     size={22}
-                    className="text-nx-danger"
+                    className="text-nx-accent"
                     aria-hidden="true"
                   />
                 }
-                title={<span className="text-nx-danger">Delete account</span>}
-                onClick={() => setOpen('delete')}
+                title="Export my data"
+                detail="A file of your answers, points and notes"
+                onClick={account.exportData}
               />
-            )}
-          </div>
-        </Section>
+              <RowButton
+                leading={
+                  <LogOut
+                    size={22}
+                    className="text-nx-accent"
+                    aria-hidden="true"
+                  />
+                }
+                title="Sign out"
+                detail={world.me.email}
+                onClick={account.signOut}
+              />
+              {!later && (
+                <RowButton
+                  leading={
+                    <Trash2
+                      size={22}
+                      className="text-nx-danger"
+                      aria-hidden="true"
+                    />
+                  }
+                  title={<span className="text-nx-danger">Delete account</span>}
+                  onClick={() => setOpen('delete')}
+                />
+              )}
+            </div>
+          </Scope>
+        )}
       </div>
 
       <NameSheet
@@ -251,6 +376,21 @@ export default function SettingsV1() {
         onSave={(name) => {
           backend.act({ type: 'rename', name: name.trim() }, (w) =>
             renamePerson(w, w.me.id, name),
+          );
+        }}
+      />
+      <NameSheet
+        open={open === 'challengeName'}
+        onOpenChange={close}
+        name={c.name}
+        title="Challenge name"
+        label="Challenge name"
+        missing="Give it a name."
+        maxLength={60}
+        hint={`${partner} sees the new name too.`}
+        onSave={(name) => {
+          backend.act({ type: 'renameChallenge', name: name.trim() }, (w) =>
+            renameChallenge(w, name),
           );
         }}
       />
@@ -282,6 +422,21 @@ export default function SettingsV1() {
         onOpenChange={close}
         onLeave={account.leave}
       />
+      <DeleteChallengeSheet
+        name={c.name}
+        description={deleteChallengeLine(partner)}
+        open={open === 'deleteChallenge'}
+        onOpenChange={close}
+        onDelete={async () => {
+          // Before Day 1 cancelling deletes it; a finished one is deleted outright.
+          if (c.status !== 'finished') return account.leave();
+          await backend.save(
+            { type: 'deleteChallenge', challengeId: c.id },
+            (w) => deleteChallenge(w, c.id),
+          );
+          navigate('home');
+        }}
+      />
       <DeleteSheet
         world={world}
         open={open === 'delete'}
@@ -307,17 +462,27 @@ function NameSheet({
   open,
   onOpenChange,
   name,
+  title = 'Your name',
+  label = 'Name',
+  missing = 'Enter your name.',
+  maxLength = 30,
+  hint = 'Your partner sees it on every answer.',
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   name: string;
+  title?: string;
+  label?: string;
+  missing?: string;
+  maxLength?: number;
+  hint?: string;
   onSave: (name: string) => void;
 }) {
   const [draft, setDraft] = useDraft(open, name);
   const [error, setError] = useState<string | null>(null);
   const save = () => {
-    if (!draft.trim()) return setError('Enter your name.');
+    if (!draft.trim()) return setError(missing);
     onSave(draft.trim());
     onOpenChange(false);
   };
@@ -325,7 +490,7 @@ function NameSheet({
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Your name"
+      title={title}
       footer={
         <>
           <Button onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -346,15 +511,15 @@ function NameSheet({
         }}
       >
         <TextField
-          label="Name"
+          label={label}
           value={draft}
           onChange={(v) => {
             setDraft(v);
             setError(null);
           }}
-          autoComplete="given-name"
-          maxLength={30}
-          hint="Your partner sees it on every answer."
+          autoComplete="off"
+          maxLength={maxLength}
+          hint={hint}
           error={error ?? undefined}
         />
       </form>

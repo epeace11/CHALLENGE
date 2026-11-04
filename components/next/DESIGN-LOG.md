@@ -2,6 +2,15 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 4, 2026 (deleting a challenge, and which settings are which)
+
+Erin: "You should be able to fully delete a challenge, and it should not log the money on your challenges page. Also, it's not clear that the settings are for that challenge. I want it to be very obvious what settings are overarching and what settings are for each challenge." Run `supabase/next/delete-challenge.sql` on PROD CHALLENGE before deploying.
+
+- **A challenge can be fully deleted.** A finished challenge has Delete on its card on Your challenges, and "Delete this challenge" in its Settings. It's gone for both people, with every answer, screenshot, point, gift and its saved copy, so it leaves nothing on Your challenges. A sheet says what goes; it can't be undone. A saved challenge has Delete too. A running challenge has to end first, because ending takes both; before Day 1 it's deleted the same way.
+- **Either person can delete a finished challenge alone,** without the other agreeing. That's the simple version, and a question for Erin.
+- **Settings has two tabs, This challenge and All challenges,** so only one group is on screen and neither can be mistaken for the other. Each opens with a heading that says what it's for: "Fall Reset. With Jordan. These are for this challenge only." and "Your account. These apply to all your challenges." This challenge has its name, its rules and stakes, and ending or deleting it; All challenges has your name, appearance, export and sign out. With several challenges, Switch challenge goes to Your challenges.
+- **A challenge can be renamed** in the live app, at any time, from its Settings.
+
 ## Decisions, November 4, 2026 (Erin's launch answers: settle everything now)
 
 Erin: "Things should not wait till after we start. We're settling everything now." Run `supabase/next/settle-and-many.sql` on PROD CHALLENGE before deploying.

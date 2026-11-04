@@ -873,6 +873,27 @@ begin
   return s;
 end $$;
 
+-- Deletes a challenge for both people, with everything in it: answers, points, notes, gifts, and its
+-- saved copy unless another challenge shares the name. The app removes its screenshots first. A running
+-- challenge has to end first, which takes both.
+create function public.nx_delete_challenge(p_challenge uuid) returns void language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge);
+begin
+  if c.status = 'running' then raise exception 'A running challenge has to end first. Ending takes you both.'; end if;
+  delete from saved_challenges s where s.couple_id = c.couple_id and s.name = c.name
+    and not exists(select 1 from challenges x where x.couple_id = c.couple_id and x.name = c.name and x.id <> c.id);
+  delete from challenges where id = c.id;
+end $$;
+
+-- Deletes a saved challenge; its share link stops working.
+create function public.nx_delete_saved(p_saved uuid) returns void language plpgsql security definer set search_path = public as $$
+declare s saved_challenges;
+begin
+  select * into s from saved_challenges where id = p_saved;
+  if s.id is null or not nx_in_couple(s.couple_id) then raise exception 'That saved challenge is gone.'; end if;
+  delete from saved_challenges where id = s.id;
+end $$;
+
 create function public.nx_set_share_link(p_saved uuid, p_on boolean) returns void language plpgsql security definer set search_path = public as $$
 begin
   update saved_challenges set link_on = p_on where id = p_saved and nx_in_couple(couple_id);
@@ -1066,7 +1087,7 @@ do $$ declare f text; begin
     'nx_save_checkin(uuid,uuid,date,boolean,numeric,text,jsonb,text)','nx_review(uuid,text,text)',
     'nx_resolve_dispute(uuid,text,text)','nx_ask_forgiveness(uuid,text)','nx_decide_forgiveness(uuid,boolean)',
     'nx_forgive_point(uuid)','nx_add_note(uuid,date,text)','nx_edit_note(uuid,text)','nx_remove_note(uuid)',
-    'nx_save_challenge(uuid,text)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)',
+    'nx_save_challenge(uuid,text)','nx_delete_challenge(uuid)','nx_delete_saved(uuid)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)',
     'nx_end_request(uuid,text)'] loop
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
@@ -1087,6 +1108,9 @@ grant execute on function public.nx_tick_all() to service_role;
 insert into storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
 values ('proofs', 'proofs', false, 5242880, array['image/jpeg','image/png','image/webp']);
 create policy proofs_read on storage.objects for select to authenticated
+  using (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid));
+-- Either member can remove a challenge's screenshots, so deleting it leaves none behind.
+create policy proofs_delete on storage.objects for delete to authenticated
   using (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid));
 create policy proofs_insert on storage.objects for insert to authenticated
   with check (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid)

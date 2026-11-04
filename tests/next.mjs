@@ -78,6 +78,9 @@ import {
   saveCheckin,
   setShareLink,
   signPact,
+  deleteChallenge,
+  deleteSaved,
+  renameChallenge,
   updateChallenge,
   withdrawDispute,
 } from '../lib/next/actions.ts';
@@ -679,6 +682,15 @@ assert.ok(signPact(w, JORDAN).pact.signatures.every((s) => s.signedAt));
     challengeSummary(signPact(signing, MAYA)).line,
     'Waiting for Jordan to sign',
   );
+}
+// Deleting a finished challenge takes its saved copy with it, unless another shares the name.
+{
+  const past = w.past[0];
+  const gone = deleteChallenge(w, past.challenge.id);
+  assert.equal(gone.past.length, w.past.length - 1);
+  assert.ok(!gone.saved.some((s) => s.name === past.challenge.name));
+  assert.equal(deleteSaved(w, w.saved[0].id).saved.length, w.saved.length - 1);
+  assert.equal(renameChallenge(w, ' New ').challenge.name, 'New');
 }
 // Practice from a couple's own rules: the sample couple's (as hand-made), and a couple with only
 // Yes-or-No rules, whose number parts fall back to the sample's.

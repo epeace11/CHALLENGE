@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ListChecks,
   Plus,
+  Trash2,
   Trophy,
 } from 'lucide-react';
 import type { PastChallenge, SavedChallenge } from '@/lib/next/model';
@@ -18,6 +19,7 @@ import {
   PageTitle,
   ProgressBar,
 } from '@/components/next/ui';
+import { deleteChallenge, deleteSaved } from '@/lib/next/actions';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -28,6 +30,7 @@ import {
   lastDay,
 } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
+import { DeleteChallengeSheet, deleteChallengeLine } from './delete-sheet';
 import { SavedSheet } from './saved-sheet';
 import { ShareLink } from './share-link';
 import {
@@ -53,7 +56,19 @@ export default function HomeV2() {
     setShownId(s.id);
     setOpen(true);
   };
-  const { host } = useBackend();
+  const backend = useBackend();
+  const { host } = backend;
+  // What the Delete sheet asks about; it stays set while the sheet closes.
+  const [deleting, setDeleting] = useState<{
+    name: string;
+    description: string;
+    remove: () => Promise<boolean>;
+  } | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const ask = (d: NonNullable<typeof deleting>) => {
+    setDeleting(d);
+    setConfirming(true);
+  };
   /** Starts a new challenge from a saved one (the live app), or opens Set up (the preview). */
   const startFrom = (saved: SavedChallenge) =>
     host ? void host.startFrom({ kind: 'saved', saved }) : navigate('setup');
@@ -248,6 +263,24 @@ export default function HomeV2() {
                     </Button>
                   </>
                 )}
+                <DeleteButton
+                  onClick={() =>
+                    ask({
+                      name: past.challenge.name,
+                      description: deleteChallengeLine(
+                        (past.partner ?? world.partner).name,
+                      ),
+                      remove: () =>
+                        backend.save(
+                          {
+                            type: 'deleteChallenge',
+                            challengeId: past.challenge.id,
+                          },
+                          (w) => deleteChallenge(w, past.challenge.id),
+                        ),
+                    })
+                  }
+                />
               </ChallengeCard>
             </Enter>
           ))}
@@ -274,12 +307,33 @@ export default function HomeV2() {
                 <Button className="self-start" onClick={() => startFrom(s)}>
                   {startLabel(s)}
                 </Button>
+                <DeleteButton
+                  onClick={() =>
+                    ask({
+                      name: s.name,
+                      description:
+                        'It comes off Your challenges, and its share link stops working. This can’t be undone.',
+                      remove: () =>
+                        backend.save(
+                          { type: 'deleteSaved', savedId: s.id },
+                          (w) => deleteSaved(w, s.id),
+                        ),
+                    })
+                  }
+                />
               </ChallengeCard>
             </Enter>
           ))}
         </div>
       </div>
 
+      <DeleteChallengeSheet
+        name={deleting?.name ?? ''}
+        description={deleting?.description ?? ''}
+        open={confirming}
+        onOpenChange={setConfirming}
+        onDelete={() => deleting?.remove()}
+      />
       <SavedSheet
         saved={shown}
         open={open}
@@ -374,6 +428,20 @@ function ChallengeCard({
       </header>
       {children}
     </GlassCard>
+  );
+}
+
+/** A card's quiet Delete, last in the card. */
+function DeleteButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      variant="quiet"
+      icon={Trash2}
+      className="-ml-3 self-start text-nx-danger"
+      onClick={onClick}
+    >
+      Delete
+    </Button>
   );
 }
 

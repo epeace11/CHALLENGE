@@ -522,6 +522,27 @@ export const saveShared = (token: string) =>
 
 /* ── Screenshots ───────────────────────────────────────────────────────── */
 
+/** Deletes a challenge for both people. Its screenshots go first, while they can still be found. */
+async function deleteChallenge(challengeId: string) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select('proofs,correction_proofs')
+    .eq('challenge_id', challengeId);
+  if (error) throw new Error(error.message);
+  const paths = (data ?? []).flatMap((e) =>
+    [...(e.proofs ?? []), ...(e.correction_proofs ?? [])].map(
+      (p: { path: string }) => p.path,
+    ),
+  );
+  if (paths.length) {
+    const { error: failed } = await supabase.storage
+      .from(PROOF_BUCKET)
+      .remove(paths);
+    if (failed) throw new Error(failed.message);
+  }
+  await rpc('nx_delete_challenge', { p_challenge: challengeId });
+}
+
 /** Compresses and uploads one screenshot into the challenge's folder. Returns its path and when it was taken. */
 export async function uploadProof(
   challengeId: string,
@@ -630,6 +651,15 @@ export function send(challengeId: string, c: Command) {
       });
     case 'rename':
       return setName(c.name);
+    case 'renameChallenge':
+      return rpc('nx_update_challenge', {
+        p_challenge: challengeId,
+        p_name: c.name,
+      });
+    case 'deleteChallenge':
+      return deleteChallenge(c.challengeId);
+    case 'deleteSaved':
+      return rpc('nx_delete_saved', { p_saved: c.savedId });
     case 'setShareLink':
       return rpc('nx_set_share_link', { p_saved: c.savedId, p_on: c.on });
     case 'markGift':

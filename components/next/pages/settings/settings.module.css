@@ -5,6 +5,25 @@
 @layer properties, theme, base, components, utilities;
 
 @layer components {
+  /* The heading of a group: what these settings apply to, this challenge or all of them. */
+  .scope {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--nx-line);
+  }
+  .scopeIcon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--nx-r);
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+  }
+
   /* The kit's SegmentedControl thumb also matches `.nx-seg-option > span`, which makes it relative
      and 0 by 0, so the selection never shows. Put it back behind the chosen option, here only. */
   .seg :global(.nx-seg-option) > :global(.nx-seg-thumb) {

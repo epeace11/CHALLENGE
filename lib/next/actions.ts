@@ -409,6 +409,34 @@ export function updateChallenge(
 }
 
 /** Turns a saved challenge's share link on or off. */
+/** Renames the challenge on screen. */
+export const renameChallenge = (w: World, name: string): World => ({
+  ...w,
+  challenge: { ...w.challenge, name: name.trim() },
+});
+
+/** Deletes a challenge that isn't running: it leaves Your challenges, with its saved copy. */
+export function deleteChallenge(w: World, challengeId: string): World {
+  const gone = w.past.find((p) => p.challenge.id === challengeId);
+  const past = w.past.filter((p) => p.challenge.id !== challengeId);
+  const name = gone?.challenge.name ?? w.challenge.name;
+  const shared = past.some((p) => p.challenge.name === name);
+  return {
+    ...w,
+    past,
+    others: w.others.filter((o) => o.id !== challengeId),
+    saved: shared
+      ? w.saved
+      : w.saved.filter((s) => !(s.source === 'mine' && s.name === name)),
+  };
+}
+
+/** Deletes a saved challenge. */
+export const deleteSaved = (w: World, savedId: string): World => ({
+  ...w,
+  saved: w.saved.filter((s) => s.id !== savedId),
+});
+
 export function setShareLink(w: World, savedId: string, on: boolean): World {
   return { ...w, saved: replace(w.saved, savedId, { linkOn: on }) };
 }

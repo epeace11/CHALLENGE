@@ -40,6 +40,7 @@ for (const script of [
   'end-requests.sql',
   'pact-limits.sql',
   'settle-and-many.sql',
+  'delete-challenge.sql',
 ])
   await db.exec(
     readFileSync(
@@ -1249,6 +1250,56 @@ await as(sam, `select nx_accept_invite($1)`, [samInvite.token]);
 assert.equal(
   (await as(sam, `select id from challenges where id=$1`, [samOwn])).length,
   1,
+);
+
+// Deleting: gone for both, with everything in it and its saved copy. Only a member can, and a running
+// challenge has to end first.
+await as(maya, `select nx_save_challenge($1,'Short')`, [short]);
+await as(maya, `select nx_mark_gift($1,$2,true)`, [short, jordan]);
+await fails(as(sam, `select nx_delete_challenge($1)`, [short]), /isn't yours/);
+await as(jordan, `select nx_delete_challenge($1)`, [short]);
+for (const [table, column] of [
+  ['challenges', 'id'],
+  ['entries', 'challenge_id'],
+  ['points', 'challenge_id'],
+  ['disputes', 'challenge_id'],
+  ['gifts_given', 'challenge_id'],
+  ['rules', 'challenge_id'],
+])
+  assert.equal(
+    (await db.query(`select 1 from ${table} where ${column}=$1`, [short])).rows
+      .length,
+    0,
+    `nothing left in ${table}`,
+  );
+assert.equal(
+  (await as(maya, `select id from saved_challenges where name='Short'`)).length,
+  0,
+  'its saved copy goes too',
+);
+const { nx_create_challenge: stillOn } = await one(
+  maya,
+  `select nx_create_challenge('Still on','classic',null,'2026-12-06',5,'America/Toronto',1,null,$1::jsonb)`,
+  [prayRule],
+);
+await as(maya, `select nx_finish_setup($1)`, [stillOn]);
+await as(maya, `select nx_sign_pact($1)`, [stillOn]);
+await as(priya, `select nx_sign_pact($1)`, [stillOn]);
+await fails(
+  as(maya, `select nx_delete_challenge($1)`, [stillOn]),
+  /has to end first/,
+);
+const { nx_save_challenge: keptCopy } = await one(
+  maya,
+  `select nx_save_challenge($1,'Kept copy')`,
+  [stillOn],
+);
+await fails(as(sam, `select nx_delete_saved($1)`, [keptCopy]), /is gone/);
+await as(priya, `select nx_delete_saved($1)`, [keptCopy]);
+assert.equal(
+  (await as(maya, `select id from saved_challenges where id=$1`, [keptCopy]))
+    .length,
+  0,
 );
 
 console.log('next database: ok');

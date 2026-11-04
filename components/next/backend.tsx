@@ -47,6 +47,11 @@ export type Command =
   | { type: 'withdrawEnd' }
   | { type: 'declineEnd' }
   | { type: 'rename'; name: string }
+  /** Renames the challenge on screen. */
+  | { type: 'renameChallenge'; name: string }
+  /** Deletes a challenge that isn't running, for both people, with its screenshots. */
+  | { type: 'deleteChallenge'; challengeId: string }
+  | { type: 'deleteSaved'; savedId: string }
   | { type: 'setShareLink'; savedId: string; on: boolean }
   | { type: 'saveAs'; challengeId: string; name: string }
   | {
