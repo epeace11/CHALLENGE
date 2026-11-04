@@ -30,8 +30,9 @@ end $$;
 revoke all on function public.nx_delete_challenge(uuid), public.nx_delete_saved(uuid) from public, anon;
 grant execute on function public.nx_delete_challenge(uuid), public.nx_delete_saved(uuid) to authenticated;
 
+commit;
+
+-- On its own, so the functions above are saved even if this step needs attention.
 drop policy if exists proofs_delete on storage.objects;
 create policy proofs_delete on storage.objects for delete to authenticated
   using (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid));
-
-commit;
