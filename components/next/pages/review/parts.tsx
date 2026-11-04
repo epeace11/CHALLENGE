@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { m as motion, useReducedMotion } from 'motion/react';
 import { CheckCheck, ChevronRight, Expand, Undo2, X } from 'lucide-react';
 import type { Person, Proof, Rule, World } from '@/lib/next/model';
 import {
@@ -696,6 +696,7 @@ export function DisputeSheet({
       placeholder="What looks off to you?"
       submit="Dispute"
       missing={`Write a reason so ${partner} knows what to look at.`}
+      initial={sheet.target ? review.unsent[sheet.target.id] : undefined}
       onSubmit={(reason) => {
         if (sheet.target) review.dispute(sheet.target, reason);
         sheet.setOpen(false);
@@ -729,6 +730,7 @@ export function ReplySheet({
       label="Your reply"
       submit="Send reply"
       missing="Write your reply first."
+      initial={sheet.target ? review.unsent[sheet.target.id] : undefined}
       onSubmit={(text) => {
         if (sheet.target) review.reply(sheet.target, text);
         sheet.setOpen(false);
@@ -896,10 +898,10 @@ export function CaughtUp({ world }: { world: World }) {
     >
       <GlassCard
         pad="lg"
-        className="flex flex-col items-center gap-3 py-10 text-center"
+        className="flex flex-col items-center gap-3 py-7 text-center"
       >
         <motion.span
-          className="mb-1 grid size-16 place-items-center rounded-full bg-nx-done-soft text-nx-done"
+          className="mb-1 grid size-14 place-items-center rounded-full bg-nx-done-soft text-nx-done"
           initial={{ scale: 0.6 }}
           animate={{ scale: [0.6, 1.08, 1] }}
           transition={{
@@ -908,7 +910,7 @@ export function CaughtUp({ world }: { world: World }) {
             ease: EASE,
           }}
         >
-          <CheckCheck size={30} strokeWidth={2.2} aria-hidden="true" />
+          <CheckCheck size={26} strokeWidth={2.2} aria-hidden="true" />
         </motion.span>
         {/* Focused after the last decision; `showCard` brings the card's top, its check included, into view. */}
         <h2

@@ -6,6 +6,7 @@ import { PasswordField } from '@/components/next/pages/signup/fields';
 import { MIN_PASSWORD } from '@/components/next/pages/signup/form';
 import { Button, GlassCard, PageTitle, useToast } from '@/components/next/ui';
 import * as api from '@/lib/live/api';
+import { failure } from './failure';
 
 /**
  * After the link in a password reset email (/app?reset=1), which signs in: choose the new password.
@@ -29,9 +30,7 @@ export function NewPassword({ onDone }: { onDone: () => void }) {
       await api.setPassword(password);
       onDone();
     } catch (e) {
-      toast(
-        e instanceof Error ? e.message : 'Something went wrong. Try again.',
-      );
+      toast(failure(e));
     } finally {
       setBusy(false);
     }

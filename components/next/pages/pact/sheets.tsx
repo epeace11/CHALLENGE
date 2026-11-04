@@ -196,7 +196,7 @@ function SignSheet({ flow, onSign }: { flow: PactFlow; onSign: () => void }) {
       open={flow.sheet === 'sign'}
       onOpenChange={onOpenChange(flow)}
       title={`Sign ${c.name}?`}
-      description={`Day 1 is ${flow.start}. At stake: about ${flow.stakes} for each gift, if you miss 1 in ${flow.missEvery}.`}
+      description={`Day 1 is ${flow.start}. At stake: about ${flow.stakes} for each gift, if you miss 1 in ${flow.missEvery}.${flow.limitLine ? ` ${flow.limitLine}` : ''}`}
       footer={
         <>
           <Button onClick={flow.close}>Cancel</Button>

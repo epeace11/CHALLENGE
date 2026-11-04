@@ -87,13 +87,10 @@ export function PasswordField({
   );
 }
 
-/**
- * The code field's own look: the kit's input, with big spaced digits. The `!` sizes win over the
- * old app's `input { font: inherit; font-size: 16px !important }`; the dark fill is the sunken token.
- */
+/** The code field's own look: the kit's input (its 3:1 edge included), with big spaced digits; the dark fill is the sunken token. */
 const CODE_INPUT = [
-  'min-h-16 w-full rounded-[14px] border-[1.5px] border-nx-line-strong bg-nx-surface px-4',
-  'text-center !text-[28px] !leading-[1.2] !font-semibold tracking-[0.35em] indent-[0.35em] text-nx-ink tabular-nums',
+  'min-h-16 w-full rounded-[14px] border-[1.5px] border-nx-field-line bg-nx-surface px-4',
+  'text-center text-[28px] leading-[1.2] font-semibold tracking-[0.35em] indent-[0.35em] text-nx-ink tabular-nums',
   'transition-[border-color,box-shadow] duration-200 ease-nx outline-none',
   'hover:border-nx-accent-line focus:border-nx-accent focus:shadow-[0_0_0_4px_var(--nx-accent-soft)]',
   'aria-[invalid=true]:border-nx-missed [[data-theme=dark]_&]:bg-nx-sunken',

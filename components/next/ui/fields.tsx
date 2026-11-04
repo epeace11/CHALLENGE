@@ -209,7 +209,6 @@ export function NumberField({
             autoComplete="off"
             value={text}
             disabled={disabled}
-            placeholder="0"
             aria-invalid={error ? true : undefined}
             aria-describedby={
               error || hint || target ? `${id}-note` : undefined

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Check, X } from 'lucide-react';
-import { motion, useReducedMotion } from 'motion/react';
+import { m as motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 /** The keys that choose a radio: arrows move the choice, Space picks the focused one. */

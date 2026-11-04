@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import type { Proof, Rule, World } from '@/lib/next/model';
+import type { PracticeScript, Proof, Rule, World } from '@/lib/next/model';
 import {
   formatAnswer,
   formatMoney,
@@ -141,6 +141,15 @@ export function outcomes(w: World, answers: Answer[]) {
   };
 }
 
+/**
+ * What the screenshot of one of the partner's answers shows instead ("8,412 steps"), when it
+ * doesn't back the answer; null when it does or there is none.
+ */
+export function shotSays(item: PracticeScript['partnerAnswers'][number]) {
+  if (item.shot === undefined || item.shot === item.answer.value) return null;
+  return partnerAnswerText(item.rule, { value: item.shot });
+}
+
 /** "10,200 steps", "Yes": one of the partner's answers to review. */
 export const partnerAnswerText = (
   rule: Rule,
@@ -222,12 +231,21 @@ export function usePractice() {
     },
     /** What you did with each of the partner's answers so far, in order. */
     decided,
-    /** Approve or dispute the partner's next answer; after the last, on to the gift. */
+    /**
+     * Approve or dispute the partner's next answer; after the last, on to the gift, unless an answer
+     * its screenshot doesn't back was approved: that stays on screen to say so, until Next.
+     */
     decide: (d: Decision) => {
       const next = [...decided, d];
       setDecided(next);
-      if (next.length >= world.practice.partnerAnswers.length) setPhase('gift');
+      const theirs = world.practice.partnerAnswers;
+      const missed = next.some(
+        (x, n) => x.decision === 'approve' && !!shotSays(theirs[n]),
+      );
+      if (next.length >= theirs.length && !missed) setPhase('gift');
     },
+    /** On to the gift, after reading what an approved answer's screenshot said. */
+    toGift: () => setPhase('gift'),
     restart: () => {
       setAnswers(firstAnswers(world));
       setSaved(0);

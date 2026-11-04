@@ -179,6 +179,8 @@ export function pactView(world: World, you: Person) {
       hours: Math.floor((left % 864e5) / 36e5),
     },
     groups,
+    /** Day 1 moved from the planned day: it's the day after both sign. */
+    moved: c.start !== world.challenge.start,
     /** Rules where each person sets their own target, which `you` sets when signing. */
     limitRules: rulesFor(c, you.id).filter(
       (r) => r.kind === 'number' && r.personalTarget && !!r.target,

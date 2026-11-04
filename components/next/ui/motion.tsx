@@ -8,7 +8,8 @@ import {
   type ReactNode,
   type Ref,
 } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+// `m` is Motion's light component: its animation features load once, from NxRoot's LazyMotion.
+import { AnimatePresence, m as motion, useReducedMotion } from 'motion/react';
 import { formatNumber } from '@/lib/next/format';
 import { cn } from '@/lib/utils';
 import { isHydrated } from './root';

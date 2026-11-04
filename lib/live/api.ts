@@ -1,4 +1,3 @@
-import { parse as parseExif } from 'exifr';
 import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { compress } from '@/lib/proof';
@@ -521,7 +520,10 @@ export async function uploadProof(
   userId: string,
   file: File,
 ) {
-  const exif = await parseExif(file, ['DateTimeOriginal']).catch(() => null);
+  // The EXIF reader loads only when a screenshot is added, not with the app.
+  const exif = await import('exifr')
+    .then(({ parse }) => parse(file, ['DateTimeOriginal']))
+    .catch(() => null);
   const takenAt =
     exif?.DateTimeOriginal instanceof Date
       ? exif.DateTimeOriginal.toISOString()

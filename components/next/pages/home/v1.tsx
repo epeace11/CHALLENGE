@@ -96,7 +96,7 @@ export default function HomeV2() {
 
   return frame(
     <>
-      <div className="grid gap-6">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
         <div className="flex flex-col gap-6">
           <PageTitle title="Your challenges" />
           {finishedNow && startNew}

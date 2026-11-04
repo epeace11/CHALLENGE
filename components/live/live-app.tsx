@@ -46,6 +46,7 @@ import {
 import { CantLoad, PageBoundary } from './cant-load';
 import { InviteGone } from './invite-gone';
 import { NewPassword } from './new-password';
+import { failure } from './failure';
 import { Waiting } from './waiting';
 
 /** The browser tab's name where the preview's page title isn't what a person calls the page. */
@@ -109,14 +110,6 @@ let joining = false;
 function withoutSaved(list: Pending[], load: number) {
   const left = list.filter((p) => p.savedAt === undefined || p.savedAt >= load);
   return left.length === list.length ? list : left;
-}
-
-/** What a failed write says. Network errors become one plain line; the database's own messages stay. */
-function failure(e: unknown) {
-  const text = e instanceof Error ? e.message : '';
-  if (!navigator.onLine || /fetch|Load failed|NetworkError/i.test(text))
-    return 'Couldn’t save. Check your connection.';
-  return text || 'Something went wrong. Try again.';
 }
 
 /** Fired a few seconds after a load fails, to try again. */

@@ -2,6 +2,41 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 3, 2026 (the last leftovers, then a seventh audit and sixth critique)
+
+Erin: fix the three leftovers, then audit and critique again. The audit scored 16/20 again, now covering the pact, limit and Practice changes; the critique 30/40 (trend 28, 26, 27, 29, 30; `.impeccable/critique/`). Everything both found was fixed except what's listed for Erin below.
+
+The leftovers:
+
+- **A failed dispute, reply or forgiveness ask on Review keeps its words.** Review's decisions now wait for the write: if it fails, the card comes back without its stamp and its sheet opens with what was typed.
+- **Nothing is cut off at 150% text zoom (260px).** The top bar's account chip goes under Back, button labels wrap under 320px, Your challenges' column shrinks, Check in's day reads "Thu 19" under 360px and is never cut off, and the tab bar shows icons only under 320px (labels still read out). All 19 pages fit at 260 and 320px.
+- **The animation code loads after the page.** The kit uses Motion's light `m` component (the kit's `motion` is it), and the animation features load in a chunk of their own as the kit loads (retried once). The kit's chunk went from 114 KB to 89 KB gzipped. The EXIF reader loads only when a screenshot is added: the live app's first download went from 91 KB to 66 KB gzipped.
+
+From the critique:
+
+- **The limit step says it's final:** "Jordan sets their own. Yours can't change after you sign." The signature step and the Sign sheet repeat "Your limit: 1,800 kcal or less."
+- **Practice's review teaches:** approving Jordan's 10,200 steps against a screenshot of 8,412 now says "Its screenshot says 8,412 steps. On Review, that's one to dispute." with Next, instead of moving on.
+- **Check in's Save stays in one place** on every question: its bar is pinned to the bottom of the screen (`ActionBar pinned`), with a space of its height where it was.
+- **Number fields have no placeholder "0"**, which read as an answer.
+- **The setter-up's pact:** their own signature line is first, after signing it says "Now invite Jordan to sign." until Jordan has joined, and a Day 1 moved past the planned day says "The day after you both sign".
+- **Your own dispute is in the waiting colour** with a question mark (it's being talked about), not the missed red and warning triangle.
+- **Review's "All caught up" fits** at 390×844.
+
+From the audit:
+
+- **Scrolling never waits for script:** the page-wide touchmove listener is gone (pinch stays blocked by the viewport, `touch-action` and the iOS gesture block; sheets lock the page behind them themselves).
+- **The sign-in code field has the 3:1 input edge** (`field-line`), like every other field.
+- **Windows High Contrast** draws the switch, the chosen segment and the bars in system colours. In dark, the page's own scrollbar is dark, and the tab bar's shadow is a token.
+- **Choosing a new password** says "Couldn't save. Check your connection." when offline instead of the raw error.
+
+- **For Erin:**
+  - **Pinch-zoom.** The audit's one P1 again: blocking it fails WCAG 1.4.4 as axe and Lighthouse apply it. Allowing it would keep double-tap zoom off (`touch-action: manipulation`). It's your call; it stays blocked.
+  - **The verdict.** Should it lead with what you did together ("21 of 21 days, both of you"), with the winner second?
+  - **Open disputes.** An open dispute is never a point, and only the person disputed can concede (the "free veto"): should one still open at the end count, or settle after a few days?
+  - **Several Yes answers at once.** Most days are mostly plain Yes. Should Check in offer "All yes except…"?
+  - **Practice's second question.** It starts filled in (45 min with a screenshot) and is then disputed. Should it start empty?
+- **For later:** the setter-up's invite-link screen exists only in the live app (the preview's "Invite Jordan" opens Jordan's side). On a 1280×800 laptop, Review's screenshot is partly under the pinned bar. Day squares are 37–39px at 320px (they pass WCAG's 24px but not Kazzy's 44).
+
 ## Decisions, November 3, 2026 (Erin's answers to the last six questions)
 
 Erin's answers: a gym No doesn't save on tap (forgiveness should stay possible); Day 1 after late signing was left to the recommendation; Practice uses the couple's own rules; the person who sets it up reads the pact before signing; there is a place for each person's own limit on Fitness & Food; the card blur was left to the recommendation. Run `supabase/next/pact-limits.sql` on PROD CHALLENGE before deploying.

@@ -116,10 +116,11 @@ export function CheckinPage({
           {/* The day, what's left of it (opens the answers so far) and its journal on one row, with
               the progress bar and the time left under it: no card of their own above the question. */}
           <div className="nx-enter flex flex-col gap-2 pt-1 sm:pt-2">
-            <div className="flex items-center gap-2">
+            {/* The day is never cut off: shorter under 360px ("Thu 19"), and at 150% zoom the rest wraps under it. */}
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className={cn(styles.chip, styles.chipRow, 'nx-press min-w-0')}
+                className={cn(styles.chip, styles.chipRow, 'nx-press')}
                 aria-haspopup="dialog"
                 onClick={() => setDays(true)}
               >
@@ -128,8 +129,11 @@ export function CheckinPage({
                   aria-hidden="true"
                   className="shrink-0 text-nx-accent"
                 />
-                <span className={cn(styles.chipTitle, 'truncate')}>
-                  <span className="sm:hidden">
+                <span className={cn(styles.chipTitle, 'whitespace-nowrap')}>
+                  <span className="hidden max-[359px]:inline">
+                    {formatWeekday(day).slice(0, 3)} {Number(day.slice(8))}
+                  </span>
+                  <span className="max-[359px]:hidden sm:hidden">
                     {formatWeekday(day).slice(0, 3)}, {formatDate(day)}
                   </span>
                   <span className="hidden sm:inline">{formatDay(day)}</span>
@@ -212,7 +216,7 @@ export function CheckinPage({
           </div>
 
           {/* The page's gap is space enough above the bar, so a check-in fits on a phone. */}
-          <ActionBar className="mt-0">
+          <ActionBar className="mt-0" pinned>
             {rule ? (
               <>
                 <SaveHint

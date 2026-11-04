@@ -25,6 +25,7 @@ import {
   Question,
 } from './parts';
 import {
+  shotSays,
   capital,
   isAnswered,
   needsShot,
@@ -229,6 +230,16 @@ export default function PracticeV1() {
       >
         Next
       </Button>
+    ) : p.phase === 'yours' && !reviewing ? (
+      <Button
+        variant="primary"
+        size="lg"
+        full
+        iconEnd={ArrowRight}
+        onClick={p.toGift}
+      >
+        Next
+      </Button>
     ) : p.phase === 'yours' ? (
       // As on Review: Dispute and Approve side by side, Approve the filled one.
       <>
@@ -352,6 +363,21 @@ export default function PracticeV1() {
                     />
                   </div>
                 ))}
+                {/* Approving an answer its screenshot doesn't back is the lesson: say so before moving on. */}
+                {!reviewing &&
+                  p.decided.map((d, n) =>
+                    d.decision === 'approve' && shotSays(toReview[n]) ? (
+                      <p
+                        key={`missed-${n}`}
+                        id={`practice-yours-${p.decided.length}`}
+                        tabIndex={-1}
+                        className="nx-enter mt-1 text-nx-body text-nx-ink outline-none"
+                      >
+                        Its screenshot says {shotSays(toReview[n])}. On Review,
+                        that’s one to dispute.
+                      </p>
+                    ) : null,
+                  )}
                 {reviewing && (
                   <GlassCard
                     key={reviewing.rule.id}
@@ -389,7 +415,9 @@ export default function PracticeV1() {
         </ol>
 
         <ActionBar
-          className={cn(p.phase === 'yours' && 'flex-row items-stretch')}
+          className={cn(
+            p.phase === 'yours' && reviewing && 'flex-row items-stretch',
+          )}
         >
           {action}
         </ActionBar>

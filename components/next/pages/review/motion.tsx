@@ -2,7 +2,7 @@
 import { createContext, useContext, type ReactNode, type Ref } from 'react';
 import {
   AnimatePresence,
-  motion,
+  m as motion,
   useIsPresent,
   useReducedMotion,
 } from 'motion/react';
@@ -10,8 +10,8 @@ import {
   Check,
   HeartHandshake,
   MessageCircle,
+  MessageCircleQuestion,
   Send,
-  TriangleAlert,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -58,12 +58,13 @@ export const STAMP: Record<
     ink: 'text-nx-excused',
     bar: 'bg-nx-done-bar',
   },
+  // Your dispute is a question still being talked about, not a miss.
   disputed: {
     label: 'Disputed',
-    icon: TriangleAlert,
-    tint: 'bg-nx-missed-soft',
-    ink: 'text-nx-missed',
-    bar: 'bg-nx-missed-bar',
+    icon: MessageCircleQuestion,
+    tint: 'bg-nx-wait-soft',
+    ink: 'text-nx-wait',
+    bar: 'bg-nx-wait-bar',
   },
   declined: {
     label: 'Declined',

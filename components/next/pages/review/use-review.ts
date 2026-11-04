@@ -41,6 +41,8 @@ export type Held = {
   from: 'card' | 'points' | 'waiting';
   command: Command | Command[];
   change: (w: World) => World;
+  /** The words of a dispute, reply or forgiveness ask, kept if the write fails. */
+  text?: string;
 };
 
 /** Why the Undo window's clock is stopped: a pointer or finger is on Undo, or focus is. */
@@ -55,6 +57,7 @@ const pointAbout = (point: Point, rule: Rule) =>
  * but waits UNDO_MS before it is sent, so Undo can take it back without a pop-up and without the
  * database having to reverse anything. The next decision, leaving the page or hiding the app sends
  * the one waiting straight away. The 5 seconds stand still while the viewer is on Undo (`pause`).
+ * A write that fails (the live app says so) brings its item back, with any words in `unsent`.
  */
 export function useReview() {
   const world = useWorld();
@@ -67,10 +70,12 @@ export function useReview() {
   const due = useRef(0);
   const left = useRef(0);
   const pauses = useRef(new Set<Pause>());
-  const send = useRef(backend.act);
+  const send = useRef(backend.save);
   useEffect(() => {
-    send.current = backend.act;
+    send.current = backend.save;
   });
+  /** Words of a write that failed, by item id, so its sheet opens with them again. */
+  const [unsent, setUnsent] = useState<Record<string, string>>({});
 
   /** Sends the decision waiting, if any. */
   const flush = useCallback(() => {
@@ -80,7 +85,21 @@ export function useReview() {
     const h = heldRef.current;
     heldRef.current = null;
     setHeld(null);
-    if (h) send.current(h.command, h.change);
+    if (!h) return;
+    void send.current(h.command, h.change).then((ok) => {
+      const id = h.ids[0];
+      if (ok) {
+        if (h.text !== undefined) setUnsent(({ [id]: _, ...rest }) => rest);
+        return;
+      }
+      // Not saved: the item is back in the queue without its stamp, and its words are kept.
+      setOutcomes((o) => {
+        const next = { ...o };
+        for (const x of h.ids) delete next[x];
+        return next;
+      });
+      if (h.text !== undefined) setUnsent((u) => ({ ...u, [id]: h.text! }));
+    });
   }, []);
 
   useEffect(() => {
@@ -161,6 +180,7 @@ export function useReview() {
     world: shown,
     state,
     outcomes,
+    unsent,
     held,
     undo,
     pause,
@@ -189,6 +209,7 @@ export function useReview() {
         about: shortTitle(item.rule),
         command: { type: 'dispute', entryId: item.entry.id, comment: reason },
         change: (w) => dispute(w, item.entry.id, w.me.id, reason),
+        text: reason,
       }),
     declineLate: (item: LateItem) =>
       act({
@@ -242,6 +263,7 @@ export function useReview() {
           reply: text,
         },
         change: (w) => replyToDispute(w, item.dispute.id, text),
+        text,
       }),
     /** Forgives one of the partner's points nobody asked about (from the forgiveness rows). */
     forgivePoint: (point: Point, rule: Rule) =>
@@ -262,6 +284,7 @@ export function useReview() {
         from: 'points',
         command: { type: 'askForgiveness', pointId: point.id, reason },
         change: (w) => askForgiveness(w, point.id, reason),
+        text: reason,
       }),
     /** Takes back a dispute the viewer raised on the partner's answer (sent at once). */
     withdraw: (disputeId: string) => {

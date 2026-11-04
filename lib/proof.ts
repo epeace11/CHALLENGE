@@ -1,4 +1,3 @@
-import { parse as parseExif } from 'exifr';
 import { supabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 
@@ -30,7 +29,10 @@ export async function compress(file: File) {
 
 /** Uploads one screenshot to the member's folder, recording its EXIF date first. Returns its storage path. */
 export async function uploadProof(userId: string, file: File) {
-  const exif = await parseExif(file, ['DateTimeOriginal']).catch(() => null);
+  // The EXIF reader loads only when a screenshot is added, not with the app.
+  const exif = await import('exifr')
+    .then(({ parse }) => parse(file, ['DateTimeOriginal']))
+    .catch(() => null);
   const taken =
     exif?.DateTimeOriginal instanceof Date
       ? exif.DateTimeOriginal.toISOString()

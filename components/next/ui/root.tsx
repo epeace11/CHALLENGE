@@ -7,12 +7,21 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
-import { MotionConfig } from 'motion/react';
+import { LazyMotion, MotionConfig } from 'motion/react';
 import type { Look } from '@/lib/next/model';
 import { cn } from '@/lib/utils';
 import { ToastProvider } from './toast';
 
 const PortalContext = createContext<HTMLElement | null>(null);
+
+/**
+ * Motion's animation features (layout animations included) are a chunk of their own, fetched as soon
+ * as the kit loads instead of bundled with it. Until they arrive an animated element waits at its
+ * starting state, so a failed fetch is tried once more.
+ */
+const loadFeatures = () => import('./motion-features').then((f) => f.default);
+const features = loadFeatures().catch(loadFeatures);
+const motionFeatures = () => features;
 
 /** Where sheets, menus and toasts render: inside the .nx root, so they keep its tokens and look. */
 export const usePortalContainer = () => useContext(PortalContext);
@@ -60,14 +69,17 @@ export function NxRoot({
   useEffect(syncThemeColor, [look]);
   return (
     <div className={cn('nx', className)} data-look={look} style={style}>
-      <MotionConfig
-        reducedMotion="user"
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <PortalContext.Provider value={portal}>
-          <ToastProvider>{children}</ToastProvider>
-        </PortalContext.Provider>
-      </MotionConfig>
+      {/* strict: a full `motion` component here would load the features again, so it throws. */}
+      <LazyMotion features={motionFeatures} strict>
+        <MotionConfig
+          reducedMotion="user"
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <PortalContext.Provider value={portal}>
+            <ToastProvider>{children}</ToastProvider>
+          </PortalContext.Provider>
+        </MotionConfig>
+      </LazyMotion>
       <div ref={setPortal} />
     </div>
   );

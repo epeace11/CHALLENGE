@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Instant } from '@/lib/next/model';
-import { targetFor } from '@/lib/next/selectors';
+import { formatTarget, targetFor } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
 import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
@@ -63,10 +63,28 @@ export function usePact() {
   const setterUp =
     !!drafted || (backend.live && world.invite.from === view.you.id);
   const partner = view.other.name;
+  // "limit" for at most (calories), "target" for at least.
+  const limitWord = view.limitRules.every((r) => r.target?.op === '<=')
+    ? 'limit'
+    : 'target';
+  const limitsTyped = view.limitRules.flatMap((r) =>
+    own[r.id] !== undefined && r.target
+      ? [formatTarget({ ...r.target, value: own[r.id] })]
+      : [],
+  );
 
   return {
     ...view,
     steps,
+    /** They set it up: their signature line comes first, and after signing they invite. */
+    setterUp,
+    /** The partner hasn't joined yet: after signing, the next step is the invite. */
+    partnerPending: !!world.partnerPending,
+    limitWord,
+    /** "Your limit: 1,800 kcal or less.", said again where you sign; null without limits. */
+    limitLine: limitsTyped.length
+      ? `Your ${limitWord}${limitsTyped.length > 1 ? 's' : ''}: ${limitsTyped.join(', ')}.`
+      : null,
     sheet,
     open: (next: PactSheet) => setSheet(next),
     close: () => setSheet(null),

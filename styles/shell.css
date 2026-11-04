@@ -6,6 +6,10 @@ body {
   min-height: 100dvh;
   background: #f6f8fb;
 }
+[data-theme='dark'] {
+  /* The page's own scrollbar and controls are dark too, not only the new UI's root. */
+  color-scheme: dark;
+}
 [data-theme='dark'] body {
   background: #0d0b14;
 }

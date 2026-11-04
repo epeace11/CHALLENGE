@@ -1,6 +1,6 @@
 // One step at a time: the stakes and Day 1, then the rules, your own limit when a rule has one, then your signature; after signing the countdown to Day 1 is the hero.
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import {
@@ -184,7 +184,11 @@ function StartsAndStakes({ flow, focus }: { flow: PactFlow; focus: boolean }) {
         <StatButton
           label="Day 1"
           value={flow.start}
-          hint={`${c.days} days, to ${flow.end}`}
+          hint={
+            flow.moved
+              ? `The day after you both sign · ${c.days} days`
+              : `${c.days} days, to ${flow.end}`
+          }
           onClick={() => flow.open('first')}
         />
       </div>
@@ -218,9 +222,7 @@ function Limits({
   /** Next was pressed with a limit empty. */
   shown: boolean;
 }) {
-  const word = flow.limitRules.every((r) => r.target?.op === '<=')
-    ? 'limit'
-    : 'target';
+  const word = flow.limitWord;
   const many = flow.limitRules.length > 1;
   return (
     <div className="flex flex-col gap-7">
@@ -240,7 +242,7 @@ function Limits({
               value={value}
               onChange={(v) => flow.setLimit(rule.id, v)}
               unit={rule.target?.unit}
-              hint={`${flow.other.name} sets their own.`}
+              hint={`${flow.other.name} sets their own. Yours can’t change after you sign.`}
               error={
                 shown && !(value !== null && value > 0)
                   ? `Enter your ${word}.`
@@ -285,24 +287,41 @@ function SignStep({
             What you both agree to
           </h2>
           <Terms terms={flow.terms} compact />
+          {flow.limitLine && (
+            <p className="text-nx-2 font-semibold text-nx-ink">
+              {flow.limitLine}
+            </p>
+          )}
         </section>
         <div
           aria-hidden="true"
           className="my-4 border-t border-nx-line sm:my-6"
         />
         <h2 className="sr-only">Signatures</h2>
+        {/* Whoever set it up signs first, so their line is on top. */}
         <div className="flex flex-col gap-4 sm:gap-6">
-          <SignatureLine signer={flow.theirs} timeZone={c.timeZone} />
-          <SignatureLine
-            signer={flow.yours}
-            timeZone={c.timeZone}
-            holding={holding}
-          />
+          {inOrder(flow, [
+            <SignatureLine
+              key="theirs"
+              signer={flow.theirs}
+              timeZone={c.timeZone}
+            />,
+            <SignatureLine
+              key="yours"
+              signer={flow.yours}
+              timeZone={c.timeZone}
+              holding={holding}
+            />,
+          ])}
         </div>
       </GlassCard>
     </div>
   );
 }
+
+/** The two signature lines, the first signer's on top: the partner's, or yours when you set it up. */
+const inOrder = (flow: PactFlow, [theirs, yours]: [ReactNode, ReactNode]) =>
+  flow.setterUp ? [yours, theirs] : [theirs, yours];
 
 /* ── Signed: the countdown, then both signatures, small ─────────────────── */
 
@@ -332,7 +351,9 @@ function Signed({ flow, focus }: { flow: PactFlow; focus: boolean }) {
             You signed
           </h1>
           <p className="text-nx-body text-nx-ink-2">
-            Waiting for {flow.theirs.person.name} to sign.
+            {flow.partnerPending
+              ? `Now invite ${flow.theirs.person.name} to sign.`
+              : `Waiting for ${flow.theirs.person.name} to sign.`}
           </p>
         </header>
       )}
@@ -346,13 +367,21 @@ function Signed({ flow, focus }: { flow: PactFlow; focus: boolean }) {
         </h2>
         <GlassCard className="flex flex-col gap-4">
           {flow.bothSigned && drawn && <SealRing />}
-          <SignatureLine size="sm" signer={flow.theirs} timeZone={c.timeZone} />
-          <SignatureLine
-            size="sm"
-            signer={flow.yours}
-            timeZone={c.timeZone}
-            drawn={drawn}
-          />
+          {inOrder(flow, [
+            <SignatureLine
+              key="theirs"
+              size="sm"
+              signer={flow.theirs}
+              timeZone={c.timeZone}
+            />,
+            <SignatureLine
+              key="yours"
+              size="sm"
+              signer={flow.yours}
+              timeZone={c.timeZone}
+              drawn={drawn}
+            />,
+          ])}
         </GlassCard>
       </section>
     </div>

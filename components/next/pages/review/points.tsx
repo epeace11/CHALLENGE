@@ -202,6 +202,11 @@ export function PointActions({ review }: { review: Review }) {
         label="Your reason"
         submit="Ask"
         missing="Write your reason first."
+        initial={
+          asking.target
+            ? review.unsent[`point:${asking.target.point.id}`]
+            : undefined
+        }
         onSubmit={(reason) => {
           const target = asking.target;
           asking.setOpen(false);
