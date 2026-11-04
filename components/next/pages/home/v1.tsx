@@ -77,10 +77,10 @@ export default function HomeV2() {
       <AppFrame>{children}</AppFrame>
     );
 
-  // In the live app a new challenge starts once this one has finished. It is the main action only
-  // then; while one runs or is being set up, that challenge's own button is, and this one follows it.
+  // A new one can start at any time. It is the main action only once this one has finished; while
+  // one runs or is being set up, that challenge's own button is, and this one follows it.
   const finishedNow = status === 'finished';
-  const startNew = (!host || finishedNow) && (
+  const startNew = (
     <Enter index={finishedNow ? 1 : 3}>
       <Button
         variant={finishedNow ? 'primary' : 'secondary'}
@@ -110,7 +110,11 @@ export default function HomeV2() {
           {world.challenge.status === 'running' && (
             <Enter index={2}>
               <ChallengeCard
-                kicker="Running now"
+                kicker={
+                  world.partners.length > 1
+                    ? `Running now, with ${world.partner.name}`
+                    : 'Running now'
+                }
                 name={run.name}
                 detail={run.range}
               >
@@ -172,6 +176,24 @@ export default function HomeV2() {
               </ChallengeCard>
             </Enter>
           )}
+          {world.others.map((o, i) => (
+            <Enter key={o.id} index={3 + i}>
+              <ChallengeCard
+                kicker={`With ${o.partner}`}
+                name={o.name}
+                detail={o.line}
+              >
+                <Button
+                  className="self-start"
+                  onClick={() =>
+                    host ? host.openChallenge(o.id) : navigate('overview')
+                  }
+                >
+                  Open challenge
+                </Button>
+              </ChallengeCard>
+            </Enter>
+          ))}
           {!finishedNow && startNew}
         </div>
 

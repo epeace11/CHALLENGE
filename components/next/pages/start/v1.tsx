@@ -12,7 +12,12 @@ import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
-import { Glide, PageTitle, Stagger } from '@/components/next/ui';
+import {
+  Glide,
+  PageTitle,
+  SegmentedControl,
+  Stagger,
+} from '@/components/next/ui';
 import { ChoiceSheet } from './choice-sheet';
 import { useChoiceSheet } from './use-choice-sheet';
 import { savedChoices, themeChoices, type Choice } from './choices';
@@ -43,6 +48,16 @@ export default function Start() {
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
   const saved = savedChoices(world);
+  // Who it's with: anyone this person already does challenges with, or someone new.
+  const partners = world.partners;
+  const [who, setWho] = useState(() =>
+    partners.some((p) => p.coupleId === world.couple.id)
+      ? world.couple.id
+      : (partners[0]?.coupleId ?? 'new'),
+  );
+  const chosen = partners.find((p) => p.coupleId === who)?.person;
+  // Without a partner yet, a first challenge is with someone new: nothing to choose.
+  const couple = partners.length ? who : undefined;
 
   const go = (next: Step) => {
     moved.current = true;
@@ -71,8 +86,27 @@ export default function Start() {
       <div className="flex flex-col gap-6">
         <PageTitle
           title="Start a challenge"
-          detail={`With ${world.partner.name}`}
+          detail={partners.length ? undefined : `With ${world.partner.name}`}
         />
+        {partners.length > 0 && step === 'how' && (
+          <SegmentedControl
+            label="Who with"
+            value={who}
+            onChange={setWho}
+            options={[
+              ...partners.map((p) => ({
+                value: p.coupleId,
+                label: p.person.name,
+              })),
+              { value: 'new', label: 'Someone new' },
+            ]}
+          />
+        )}
+        {partners.length > 0 && step !== 'how' && (
+          <p className="-mt-3 text-nx-body text-nx-ink-2">
+            {chosen ? `With ${chosen.name}` : 'With someone new'}
+          </p>
+        )}
         <Glide id={step} direction={direction}>
           {step === 'how' ? (
             <div className="flex flex-col gap-4">
@@ -84,7 +118,7 @@ export default function Start() {
                   icon={Plus}
                   onClick={() =>
                     host
-                      ? void host.startFrom({ kind: 'blank' })
+                      ? void host.startFrom({ kind: 'blank' }, couple)
                       : navigate('setup')
                   }
                 />
@@ -145,6 +179,7 @@ export default function Start() {
         </Glide>
       </div>
       <ChoiceSheet
+        couple={couple}
         open={sheet.open}
         choice={sheet.choice}
         onOpenChange={sheet.onOpenChange}

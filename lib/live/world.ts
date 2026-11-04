@@ -27,6 +27,7 @@ import {
   activePoints,
   badges,
   calendar,
+  challengeSummary,
   forgivenPoints,
   initialOf,
   owes,
@@ -192,7 +193,9 @@ export type SharedRow = Pick<
 export type Rows = {
   /** The signed-in person. */
   me: ProfileRow & { email: string };
-  /** Both members of the couple, the viewer included (one before the invite is accepted). */
+  /** Who is in which couple: a person can have several partners. */
+  couples: { couple_id: string; person_id: string; joined_at: string }[];
+  /** Everyone in the viewer's couples, the viewer included (one before the invite is accepted). */
   members: ProfileRow[];
   challenges: ChallengeRow[];
   rules: RuleRow[];
@@ -512,8 +515,19 @@ export function buildWorld(
   withPast = true,
 ): Built {
   const me = personOf(rows.me, rows.me.email);
-  const partnerRow = rows.members.find((m) => m.id !== rows.me.id);
   const current = currentChallenge(rows, wanted);
+  // The partner is whoever shares this challenge's couple; with no challenge, the latest couple's.
+  const couples = rows.couples
+    .filter((m) => m.person_id === rows.me.id)
+    .sort((a, b) => b.joined_at.localeCompare(a.joined_at));
+  const coupleId = current?.couple_id ?? couples[0]?.couple_id;
+  const partnerOfCouple = (id: string | undefined) =>
+    rows.members.find(
+      (p) =>
+        p.id !== rows.me.id &&
+        rows.couples.some((m) => m.couple_id === id && m.person_id === p.id),
+    );
+  const partnerRow = partnerOfCouple(coupleId);
   const invite = current
     ? rows.invites
         .filter((i) => i.challenge_id === current.id)
@@ -565,7 +579,7 @@ export function buildWorld(
     me,
     partner,
     couple: {
-      id: current?.couple_id ?? rows.saved[0]?.couple_id ?? '',
+      id: coupleId ?? rows.saved[0]?.couple_id ?? '',
       people: [me, partner],
       since: today,
     },
@@ -594,6 +608,11 @@ export function buildWorld(
     // From the couple's own rules; a part they can't play takes the sample's.
     practice: practiceFor(challenge, me.id, partner.id, sample.practice),
     sayRules: { sentence: '', rules: [], questions: [] },
+    others: [],
+    partners: couples.flatMap(({ couple_id }) => {
+      const row = partnerOfCouple(couple_id);
+      return row ? [{ coupleId: couple_id, person: personOf(row) }] : [];
+    }),
     partnerPending: !partnerRow,
   };
 
@@ -615,6 +634,7 @@ export function buildWorld(
           const verdict = verdictFor(w);
           return {
             challenge: w.challenge,
+            partner: w.partner,
             verdict: {
               ...verdict,
               people: verdict.people.map((p) => {
@@ -628,8 +648,19 @@ export function buildWorld(
           };
         })
     : [];
+  // The viewer's other unfinished challenges, each seen from its own rows.
+  const others = withPast
+    ? rows.challenges
+        .filter((c) => c.status !== 'finished' && c.id !== current?.id)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .map((row) =>
+          challengeSummary(
+            buildWorld(rows, now, timeZone, links, urls, row.id, false).world,
+          ),
+        )
+    : [];
   return {
-    world: { ...base, past },
+    world: { ...base, past, others },
     current,
     hasPartner: !!partnerRow,
     iSigned,
@@ -743,6 +774,8 @@ export function inviteWorld(
     },
     practice: practiceFor(challenge, me.id, inviter.id, sample.practice),
     sayRules: { sentence: '', rules: [], questions: [] },
+    others: [],
+    partners: [],
     partnerPending: false,
   };
 }

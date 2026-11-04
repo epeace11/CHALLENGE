@@ -10,6 +10,7 @@ import {
   Toggle,
 } from '@/components/next/ui';
 import { formatMoney, plural } from '@/lib/next/selectors';
+import { useNav } from '@/components/next/nav';
 import { cn } from '@/lib/utils';
 import {
   formatClock,
@@ -255,6 +256,10 @@ export function AskEndSheet({
   const early = world.today <= c.start;
   const now = ifEndedNow(world);
   const id = useId();
+  if (!early && openDisputes(world))
+    return (
+      <SettleFirst world={world} open={open} onOpenChange={onOpenChange} />
+    );
   return (
     <Sheet
       open={open}
@@ -375,6 +380,10 @@ export function LeaveSheet({
   const partner = world.partner.name;
   // Nothing has counted before Day 1 is over, so the challenge is deleted instead.
   const early = world.today <= c.start;
+  if (!early && openDisputes(world))
+    return (
+      <SettleFirst world={world} open={open} onOpenChange={onOpenChange} />
+    );
   const asked = endAskFrom(world) ? `${partner} asked to end it. ` : '';
   // Once their request has named them, "for you both" says who it ends for without naming them again.
   const forWhom = asked ? 'you both' : `you and ${partner}`;
@@ -402,6 +411,38 @@ export function LeaveSheet({
             }}
           >
             End challenge
+          </Button>
+        </>
+      }
+    />
+  );
+}
+
+const openDisputes = (w: World) =>
+  w.disputes.filter((d) => d.status === 'open').length;
+
+/** A challenge can't end with a dispute open, so ending asks to settle it first. */
+function SettleFirst({
+  world,
+  open,
+  onOpenChange,
+}: {
+  world: World;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { navigate } = useNav();
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Settle ${plural(openDisputes(world), 'dispute')} first`}
+      description={`${world.challenge.name} can’t end with a dispute open. The person who answered concedes, or the person who disputed it withdraws.`}
+      footer={
+        <>
+          <Button onClick={() => onOpenChange(false)}>Keep going</Button>
+          <Button variant="primary" onClick={() => navigate('review')}>
+            Go to Review
           </Button>
         </>
       }

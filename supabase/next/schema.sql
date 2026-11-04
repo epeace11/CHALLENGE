@@ -344,7 +344,11 @@ begin
   update entries set status = 'confirmed'
   where challenge_id = c.id and status = 'pending' and correction_at is null and logged_at <= nx_now() - interval '48 hours';
 
-  if c.status = 'running' and nx_now() > nx_lock_time(c, nx_last_day(c)) then
+  -- It's over once the last deadline has passed and nothing can still change the result: every
+  -- dispute settled, every answer reviewed (48 hours at most, above). Until then there's no verdict.
+  if c.status = 'running' and nx_now() > nx_lock_time(c, nx_last_day(c))
+     and not exists(select 1 from disputes where challenge_id = c.id and status = 'open')
+     and not exists(select 1 from entries where challenge_id = c.id and status = 'pending') then
     update challenges set status = 'finished' where id = c.id;
   end if;
 end $$;
@@ -413,19 +417,23 @@ begin
   end loop;
 end $$;
 
--- Starts a challenge in draft: makes the viewer's couple on their first one. Returns its id.
+-- Starts a challenge in draft. A person can have several at once, with the same partner or different
+-- ones. p_couple: with that partner. p_new_partner: with someone new, so a couple of one until they
+-- accept the invite. Neither: the couple joined most recently (a first one makes it). Returns its id.
 create function public.nx_create_challenge(p_name text, p_look text, p_theme text, p_start date, p_days integer,
-  p_time_zone text, p_step numeric, p_cap numeric, p_rules jsonb) returns uuid language plpgsql security definer set search_path = public as $$
-declare couple uuid; c challenges; busy text;
+  p_time_zone text, p_step numeric, p_cap numeric, p_rules jsonb, p_couple uuid default null, p_new_partner boolean default false)
+  returns uuid language plpgsql security definer set search_path = public as $$
+declare couple uuid; c challenges;
 begin
   if auth.uid() is null then raise exception 'Sign in first.'; end if;
   if not exists(select 1 from profiles where id = auth.uid()) then raise exception 'Add your first name first.'; end if;
   if not exists(select 1 from pg_timezone_names where name = p_time_zone) then raise exception 'Unknown time zone.'; end if;
-  -- The couple the person joined most recently: their current partner.
-  select couple_id into couple from couple_members where person_id = auth.uid() order by joined_at desc limit 1;
-  -- One challenge at a time: a new one starts once the one being set up or played has finished.
-  select name into busy from challenges where couple_id = couple and status <> 'finished' limit 1;
-  if busy is not null then raise exception 'Finish % before starting another.', busy; end if;
+  if p_couple is not null then
+    if not nx_in_couple(p_couple) then raise exception 'That couple isn''t yours.'; end if;
+    couple := p_couple;
+  elsif not coalesce(p_new_partner, false) then
+    select couple_id into couple from couple_members where person_id = auth.uid() order by joined_at desc limit 1;
+  end if;
   if couple is null then
     insert into couples default values returning id into couple;
     insert into couple_members(couple_id, person_id) values (couple, auth.uid());
@@ -528,7 +536,7 @@ end $$;
 
 -- The partner joins the couple and the pact opens.
 create function public.nx_accept_invite(p_token text) returns uuid language plpgsql security definer set search_path = public as $$
-declare i invites := nx_find_invite(p_token); c challenges; solo record;
+declare i invites := nx_find_invite(p_token); c challenges; solo record; shared uuid;
 begin
   if auth.uid() is null then raise exception 'Sign in first.'; end if;
   if not exists(select 1 from profiles where id = auth.uid()) then raise exception 'Add your first name first.'; end if;
@@ -537,17 +545,27 @@ begin
   perform pg_advisory_xact_lock(hashtextextended(i.challenge_id::text, 0));
   select * into c from challenges where id = i.challenge_id;
   if (select count(*) from couple_members where couple_id = c.couple_id) >= 2 then raise exception 'This challenge already has two people.'; end if;
-  -- A couple the invitee made on their own before (only them in it): its saved challenges come along,
-  -- and whatever it was setting up goes. A couple with someone else stays as it is.
+  -- A couple the invitee made on their own that has no challenge (only them in it): its saved
+  -- challenges come along. One with a challenge is waiting for someone else to join, so it stays.
   for solo in
     select m.couple_id from couple_members m
     where m.person_id = auth.uid() and m.couple_id <> c.couple_id
       and (select count(*) from couple_members x where x.couple_id = m.couple_id) = 1
+      and not exists(select 1 from challenges x where x.couple_id = m.couple_id)
   loop
     update saved_challenges set couple_id = c.couple_id where couple_id = solo.couple_id;
     delete from couples where id = solo.couple_id;
   end loop;
-  insert into couple_members(couple_id, person_id) values (c.couple_id, auth.uid()) on conflict do nothing;
+  -- Two people who are already a couple stay one: the challenge moves there.
+  select a.couple_id into shared from couple_members a join couple_members b using (couple_id)
+  where a.person_id = i.from_id and b.person_id = auth.uid() limit 1;
+  if shared is not null then
+    update challenges set couple_id = shared where couple_id = c.couple_id;
+    update saved_challenges set couple_id = shared where couple_id = c.couple_id;
+    delete from couples where id = c.couple_id;
+  else
+    insert into couple_members(couple_id, person_id) values (c.couple_id, auth.uid()) on conflict do nothing;
+  end if;
   update invites set accepted_at = nx_now(), accepted_by = auth.uid() where id = i.id;
   update rules set who = auth.uid(), for_invitee = false where challenge_id = c.id and for_invitee;
   update challenges set status = 'signing' where id = c.id and status in ('draft','invited');
@@ -710,6 +728,7 @@ begin
     if e.correction_at is null then raise exception 'There''s no late answer to turn down.'; end if;
     update entries set correction_done = null, correction_value = null, correction_note = null, correction_proofs = null, correction_at = null where id = e.id;
   elsif p_action = 'dispute' then
+    if c.status = 'finished' then raise exception 'This challenge is over.'; end if;
     if length(trim(coalesce(p_comment, ''))) = 0 then raise exception 'Say what doesn''t look right.'; end if;
     if e.status not in ('pending','confirmed') or e.done is not true then raise exception 'Only a Yes can be disputed.'; end if;
     insert into disputes(challenge_id, entry_id, raised_by, comment) values (e.challenge_id, e.id, auth.uid(), left(trim(p_comment), 2000));
@@ -944,8 +963,13 @@ begin
     delete from challenges where id = c.id;
     return 'deleted';
   end if;
+  if exists(select 1 from disputes where challenge_id = c.id and status = 'open') then
+    raise exception 'Settle the open disputes first.';
+  end if;
   delete from points where challenge_id = c.id and day > last_closed;
   delete from entries where challenge_id = c.id and day > last_closed;
+  -- Both agreed to end it, so answers still waiting for review stand.
+  update entries set status = 'confirmed' where challenge_id = c.id and status = 'pending';
   update challenges set days = last_closed - start_date + 1, status = 'finished', end_asked_by = null, end_asked_at = null
   where id = c.id;
   -- The last, shorter week's shortfalls, at its share of the target.
@@ -981,6 +1005,9 @@ begin
   select * into c from challenges where id = c.id for update;
   if c.status <> 'running' then raise exception 'Only a running challenge can be ended early.'; end if;
   if p_action = 'ask' then
+    if exists(select 1 from disputes where challenge_id = c.id and status = 'open') then
+      raise exception 'Settle the open disputes first.';
+    end if;
     if c.end_asked_by is not null and c.end_asked_by <> auth.uid() then return nx_end_now(c.id); end if;
     update challenges set end_asked_by = auth.uid(), end_asked_at = nx_now() where id = c.id;
     return 'asked';
@@ -1033,7 +1060,7 @@ do $$ declare f text; begin
   end loop;
   -- What a signed-in person can call.
   foreach f in array array['nx_sync(uuid)','nx_set_name(text)',
-    'nx_create_challenge(text,text,text,date,integer,text,numeric,numeric,jsonb)',
+    'nx_create_challenge(text,text,text,date,integer,text,numeric,numeric,jsonb,uuid,boolean)',
     'nx_update_challenge(uuid,text,text,date,integer,text,numeric,numeric,boolean,integer,time,integer,jsonb)',
     'nx_finish_setup(uuid)','nx_create_invite(uuid,text,text)','nx_accept_invite(text)','nx_sign_pact(uuid,jsonb)',
     'nx_save_checkin(uuid,uuid,date,boolean,numeric,text,jsonb,text)','nx_review(uuid,text,text)',

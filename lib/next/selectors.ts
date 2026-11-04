@@ -15,6 +15,7 @@ import type {
   RuleGroup,
   Target,
   Weekday,
+  OtherChallenge,
   World,
 } from './model.ts';
 import {
@@ -35,7 +36,13 @@ import {
   weeksOf,
   type Week,
 } from './calendar.ts';
-import { formatTime, formatValue, formatWeekday } from './format.ts';
+import {
+  formatDate,
+  formatTime,
+  formatValue,
+  formatWeekday,
+  plural,
+} from './format.ts';
 
 /**
  * Everything a page asks of the world: what is left to log, what waits for review, points and
@@ -486,6 +493,79 @@ export function reviewQueue(w: World, personId: string) {
 /** What `personId` is waiting on from their partner: the partner's review queue. */
 export const waitingOnPartner = (w: World, personId: string) =>
   reviewQueue(w, partnerOf(w, personId).id);
+
+/* ── Settling and the other challenges ─────────────────────────────────── */
+
+/**
+ * The last deadline has passed but it isn't over: there's no result until every dispute is settled
+ * and every answer reviewed (48 hours at most). Null at any other time. `yours` is what only this
+ * person can do.
+ */
+export function settling(w: World) {
+  const c = w.challenge;
+  if (c.status !== 'running' || ms(w.now) <= lockTime(c, lastDay(c)))
+    return null;
+  const disputes = w.disputes.filter((d) => d.status === 'open');
+  const toReview = w.entries.filter(
+    (e) => e.status === 'pending' && e.personId !== w.me.id,
+  ).length;
+  return {
+    disputes: disputes.length,
+    toReview,
+    /** Open disputes: either person can settle one, by conceding or withdrawing. Answers: only the reviewer. */
+    yours: disputes.length + toReview,
+  };
+}
+
+/** Where a challenge stands, from `w`'s side, as a line for Your challenges. */
+export function challengeSummary(w: World): OtherChallenge {
+  const c = w.challenge,
+    partner = w.partner.name,
+    me = w.me.id;
+  const base = { id: c.id, name: c.name, status: c.status, partner };
+  const signed = w.pact.signatures.some(
+    (s) => s.personId === me && !!s.signedAt,
+  );
+  if (c.status === 'draft')
+    return { ...base, line: 'Keep setting up', needsYou: true };
+  if (c.status === 'invited' || c.status === 'signing')
+    return signed
+      ? {
+          ...base,
+          line:
+            c.status === 'invited'
+              ? `Waiting for ${partner} to join`
+              : `Waiting for ${partner} to sign`,
+          needsYou: false,
+        }
+      : { ...base, line: 'Sign the pact', needsYou: true };
+  const over = settling(w);
+  if (over)
+    return {
+      ...base,
+      line: over.disputes
+        ? `Settle ${plural(over.disputes, 'dispute')} to see who won`
+        : over.toReview
+          ? `Review ${plural(over.toReview, 'answer')} to see who won`
+          : `Waiting for ${partner} to review your answers`,
+      needsYou: over.yours > 0,
+    };
+  if (w.today < c.start)
+    return { ...base, line: `Starts ${formatDate(c.start)}`, needsYou: false };
+  const left = checkinProgress(w, me).left,
+    waiting = reviewQueue(w, me).count;
+  return {
+    ...base,
+    line: [
+      `Day ${dayNumber(c, w.today)} of ${c.days}`,
+      left ? `${left} left to log` : null,
+      waiting ? `${waiting} to review` : null,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+    needsYou: left + waiting > 0,
+  };
+}
 
 /* ── Weeks ─────────────────────────────────────────────────────────────── */
 

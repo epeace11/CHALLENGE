@@ -362,7 +362,7 @@ export function HowItWorks({ className }: { className?: string }) {
     {
       id: 'open-dispute',
       q: 'What if a dispute is still open at the end?',
-      a: 'It isn’t a point. Either of you can still settle it on Review after the last day, and if it’s conceded, the gifts change.',
+      a: 'The challenge can’t end until it’s settled, so the result waits. On Review, the person who answered concedes it, or the person who disputed it withdraws it.',
     },
     {
       id: 'points',

@@ -103,8 +103,13 @@ export type Host = {
     code: string;
     password: string;
   }) => Promise<boolean>;
-  /** Creates a new challenge in setup from a template, and opens Set up. */
-  startFrom: (template: Template) => Promise<boolean>;
+  /**
+   * Creates a new challenge in setup from a template, and opens Set up. `couple` is who it's with: a
+   * couple's id, or 'new' for someone not in the app with you yet; left out, the partner on screen.
+   */
+  startFrom: (template: Template, couple?: string) => Promise<boolean>;
+  /** Shows another of this person's challenges. */
+  openChallenge: (id: string) => void;
   /** Saves a challenge still in setup without moving on, so leaving keeps it as a draft. */
   saveDraft: (draft: SetupDraft) => Promise<boolean>;
   /** Saves Set up and opens the pact, which the person who set it up signs before inviting. */

@@ -824,4 +824,27 @@ export const world: World = deepFreeze({
   pact: PACT,
   practice: PRACTICE,
   sayRules: SAY_RULES,
+  others: [
+    {
+      id: 'morning-walks',
+      name: 'Morning Walks',
+      status: 'running',
+      partner: 'Priya',
+      line: 'Day 6 of 30 · 1 left to log',
+      needsYou: true,
+    },
+  ],
+  partners: [
+    { coupleId: COUPLE.id, person: JORDAN },
+    {
+      coupleId: 'couple-priya',
+      person: {
+        id: 'priya',
+        name: 'Priya',
+        initial: 'P',
+        email: 'priya@example.com',
+        hue: 30,
+      },
+    },
+  ],
 });

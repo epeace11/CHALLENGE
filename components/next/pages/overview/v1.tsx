@@ -3,7 +3,12 @@
 import { Fragment, useMemo, useState } from 'react';
 import { ArrowRight, CircleCheck, Clock3 } from 'lucide-react';
 import type { DateString } from '@/lib/next/model';
-import { formatDuration, formatMoney, plural } from '@/lib/next/selectors';
+import {
+  formatDuration,
+  formatMoney,
+  plural,
+  settling,
+} from '@/lib/next/selectors';
 import { AppFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -59,6 +64,48 @@ function EndAsk() {
   );
 }
 
+/** The last day is over but it isn't settled: there's no result until it is. */
+function Settling() {
+  const world = useWorld();
+  const { navigate } = useNav();
+  const over = settling(world);
+  if (!over) return null;
+  const partner = world.partner.name;
+  return (
+    <Enter index={1}>
+      <GlassCard className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="font-nx-serif text-nx-h2">
+            {over.disputes
+              ? `Settle ${plural(over.disputes, 'dispute')} to see who won`
+              : over.toReview
+                ? `Review ${plural(over.toReview, 'answer')} to see who won`
+                : `Waiting for ${partner} to review your answers`}
+          </h2>
+          <p className="text-nx-body text-nx-ink-2">
+            {over.disputes
+              ? 'The last day is over. The person who answered concedes, or the person who disputed it withdraws.'
+              : over.toReview
+                ? 'The last day is over. Answers nobody reviews count as approved after 48 hours.'
+                : 'The last day is over. Answers nobody reviews count as approved after 48 hours, and then you’ll see who won.'}
+          </p>
+        </div>
+        {over.yours > 0 && (
+          <Button
+            variant="primary"
+            size="lg"
+            iconEnd={ArrowRight}
+            className="w-full sm:w-auto sm:self-start"
+            onClick={() => navigate('review')}
+          >
+            Go to Review
+          </Button>
+        )}
+      </GlassCard>
+    </Enter>
+  );
+}
+
 function Running() {
   const world = useWorld();
   const { navigate } = useNav();
@@ -73,6 +120,7 @@ function Running() {
         <PageTitle title={o.today} />
 
         <EndAsk />
+        <Settling />
 
         {/* One column in order of what matters now. */}
         <div className="flex flex-col gap-8">

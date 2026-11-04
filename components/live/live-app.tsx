@@ -71,6 +71,8 @@ const SHARED_KEY = 'nx-shared';
 const LINK_KEY = 'nx-invite-link';
 /** The invite whose Accept was tapped before having an account: accepted once they're signed in. */
 const ACCEPT_KEY = 'nx-invite-accept';
+/** The challenge last opened on this device: with several, the app comes back to it. */
+const OPEN_KEY = 'nx-open-challenge';
 
 /** The invite token from the link (?invite=…), kept while its person signs up. */
 let inviteToken: string | null = null;
@@ -188,6 +190,8 @@ const RUNNING: PageId[] = [
   'practice',
   // A past challenge's verdict, opened from Your challenges.
   'verdict',
+  // Another challenge can start alongside this one.
+  'start',
 ];
 
 /**
@@ -242,23 +246,30 @@ function resolveAccount(
       // Signed: Your challenges says who it waits for; before the partner joins, the invite link.
       if (built.iSigned)
         return pick(
-          ['setup', 'practice', 'settings', 'home', 'verdict'],
+          ['setup', 'practice', 'settings', 'home', 'verdict', 'start'],
           c.status === 'signing' ? 'home' : 'waiting',
         );
       return pick(
-        ['pact', 'practice', 'setup', 'settings', 'home', 'verdict'],
+        ['pact', 'practice', 'setup', 'settings', 'home', 'verdict', 'start'],
         'pact',
       );
     case 'running':
       return pick(RUNNING, 'overview');
     case 'finished':
-      return pick([...RUNNING, 'start'], 'verdict');
+      return pick(RUNNING, 'verdict');
   }
 }
 
 export function LiveApp() {
   const [loaded, setLoaded] = useState<Loaded>({ kind: 'loading' });
-  const [wantedChallenge, setWantedChallenge] = useState<string | null>(null);
+  // Read before the first load: nothing depends on it until the account's rows are in.
+  const [wantedChallenge, setWanted] = useState<string | null>(() =>
+    readStored(OPEN_KEY),
+  );
+  const setWantedChallenge = useCallback((id: string | null) => {
+    writeStored(OPEN_KEY, id);
+    setWanted(id);
+  }, []);
   /** Changes on screen whose writes aren't in the loaded rows yet, oldest first (see `Pending`). */
   const [pending, setPending] = useState<Pending[]>([]);
   /** The clock: set when rows land and every minute between, so a tab left open keeps up. */
@@ -814,10 +825,22 @@ function Hosting({
         await reload();
         navigate('landing');
       },
-      startFrom: (template: Template) =>
+      openChallenge: (id: string) => {
+        setWantedChallenge(id);
+        navigate(null);
+      },
+      startFrom: (template: Template, couple?: string) =>
         once(async () => {
           const { world: w, built: b } = latest.current;
-          const draft = b?.current?.status === 'draft' ? b.current.id : null;
+          // Who with: the one chosen on Start; a challenge run again keeps its own couple.
+          const shown = b?.current?.couple_id;
+          const withWho =
+            couple ??
+            (template.kind === 'again' ? template.challenge.coupleId : shown);
+          // A draft is reused only for the same person, not one with someone else.
+          const same = withWho === 'new' ? !b?.hasPartner : withWho === shown;
+          const draft =
+            b?.current?.status === 'draft' && same ? b.current.id : null;
           // Starting from scratch again opens the draft as it was left, instead of clearing it.
           if (draft && template.kind === 'blank') {
             navigate('setup');
@@ -831,6 +854,7 @@ function Hosting({
               w.me.id,
               w.partner.id,
               draft,
+              withWho,
             ),
           );
           if (id === false) return false;

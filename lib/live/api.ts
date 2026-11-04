@@ -113,17 +113,18 @@ export async function loadRows(): Promise<Rows | null> {
   ]);
   const me = profiles.find((p) => p.id === user.id);
   if (!me) return null;
-  // The couple this person joined most recently: their current partner (as the database chooses).
-  const couple = members
-    .filter((m) => m.person_id === user.id)
-    .sort((a, b) => b.joined_at.localeCompare(a.joined_at))[0]?.couple_id;
+  // Everyone in this person's couples: they can have several partners.
+  const mine = new Set(
+    members.filter((m) => m.person_id === user.id).map((m) => m.couple_id),
+  );
   const inCouple = new Set(
-    members.filter((m) => m.couple_id === couple).map((m) => m.person_id),
+    members.filter((m) => mine.has(m.couple_id)).map((m) => m.person_id),
   );
   return {
     me: { ...me, email: user.email ?? '' },
+    couples: members.filter((m) => mine.has(m.couple_id)),
     members: profiles.filter((p) => inCouple.has(p.id) || p.id === me.id),
-    challenges: fresh.filter((c) => !couple || c.couple_id === couple),
+    challenges: fresh.filter((c) => mine.has(c.couple_id)),
     rules,
     entries,
     points,
@@ -391,6 +392,8 @@ export async function startChallenge(
   meId: string,
   partnerId: string,
   draftId: string | null,
+  /** The couple it's with, or 'new' for someone who isn't in the app with you yet. */
+  couple?: string,
 ) {
   const f = templateFields(template);
   const rules = f.rules.map((r) => ruleInput(r, meId, partnerId));
@@ -417,6 +420,11 @@ export async function startChallenge(
     p_step: f.step,
     p_cap: f.cap,
     p_rules: rules,
+    ...(couple === 'new'
+      ? { p_new_partner: true }
+      : couple
+        ? { p_couple: couple }
+        : {}),
   });
 }
 

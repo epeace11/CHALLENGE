@@ -690,7 +690,7 @@ export function DisputeSheet({
       open={sheet.open}
       onOpenChange={sheet.setOpen}
       title={`Dispute ${partner}’s answer`}
-      description={`No point while it’s open. It becomes a point only if ${partner} concedes; if it’s still open when the challenge ends, it isn’t one. You can withdraw it any time.`}
+      description={`No point while it’s open. It becomes a point only if ${partner} concedes, and you can withdraw it any time. The challenge can’t end until it’s settled.`}
       label="Your reason"
       hint={`${partner} reads exactly what you write.`}
       placeholder="What looks off to you?"

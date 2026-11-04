@@ -6,6 +6,8 @@ import {
   answerLine,
   activePoints,
   asIfSignedToday,
+  challengeSummary,
+  settling,
   targetFor,
   asViewer,
   badges,
@@ -35,6 +37,7 @@ import {
   giftTotal,
   isClosed,
   lastDay,
+  shift,
   lastRecap,
   leader,
   libraryByGroup,
@@ -632,6 +635,50 @@ assert.ok(signPact(w, JORDAN).pact.signatures.every((s) => s.signedAt));
     ['running', '2026-11-21'],
   );
   assert.equal(signPact(signed, JORDAN, { calories: 3000 }), signed);
+}
+// After the last deadline it isn't over until it's settled, and each challenge says where it stands.
+{
+  assert.equal(settling(w), null, 'mid-challenge');
+  const last = lastDay(w.challenge);
+  const after = shift(last, 3);
+  const ended = { ...w, today: after, now: `${after}T12:00:00.000Z` };
+  const open = {
+    id: 'd-1',
+    entryId: 'x',
+    raisedBy: JORDAN,
+    comment: 'No',
+    status: 'open',
+    createdAt: ended.now,
+  };
+  const idle = { ...ended, entries: [], disputes: [] };
+  assert.deepEqual(settling(idle), { disputes: 0, toReview: 0, yours: 0 });
+  const disputed = { ...idle, disputes: [open] };
+  assert.equal(settling(disputed).disputes, 1);
+  assert.equal(
+    challengeSummary(disputed).line,
+    'Settle 1 dispute to see who won',
+  );
+  assert.equal(challengeSummary(disputed).needsYou, true);
+  assert.equal(
+    challengeSummary(idle).line,
+    'Waiting for Jordan to review your answers',
+  );
+  const here = challengeSummary(w);
+  assert.equal(here.partner, 'Jordan');
+  assert.ok(here.line.startsWith('Day 19 of 30'));
+  const signing = {
+    ...w,
+    challenge: { ...w.challenge, status: 'signing' },
+    pact: {
+      ...w.pact,
+      signatures: w.pact.signatures.map((s) => ({ ...s, signedAt: null })),
+    },
+  };
+  assert.equal(challengeSummary(signing).line, 'Sign the pact');
+  assert.equal(
+    challengeSummary(signPact(signing, MAYA)).line,
+    'Waiting for Jordan to sign',
+  );
 }
 // Practice from a couple's own rules: the sample couple's (as hand-made), and a couple with only
 // Yes-or-No rules, whose number parts fall back to the sample's.

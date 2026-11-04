@@ -39,6 +39,7 @@ for (const script of [
   'cancel-challenge.sql',
   'end-requests.sql',
   'pact-limits.sql',
+  'settle-and-many.sql',
 ])
   await db.exec(
     readFileSync(
@@ -638,6 +639,10 @@ async function rowsFor(id) {
   const members = await as(id, `select person_id from couple_members`);
   return {
     me: { id: me.id, name: me.name, hue: me.hue, email: '' },
+    couples: await as(
+      id,
+      `select couple_id, person_id, joined_at::text from couple_members`,
+    ),
     members: (await all('profiles')).filter((p) =>
       members.some((m) => m.person_id === p.id),
     ),
@@ -721,14 +726,21 @@ assert.equal(
 );
 assert.equal(opened.saved[0].rules[3].who, opened.partner.id);
 
-// One challenge at a time: a couple starts another once the unfinished one is done.
-await fails(
-  as(
-    priya,
-    `select nx_create_challenge('Solo Start','classic',null,'2026-12-01',30,'America/Toronto',1,null,'[]')`,
-  ),
-  /Finish Dry October before starting another/,
+// Several at once: a couple can start another while one is under way.
+const { nx_create_challenge: alongside } = await one(
+  priya,
+  `select nx_create_challenge('Alongside','classic',null,'2026-12-01',30,'America/Toronto',1,null,'[]')`,
 );
+assert.equal(
+  (
+    await one(priya, `select couple_id from challenges where id=$1`, [
+      alongside,
+    ])
+  ).couple_id,
+  (await one(priya, `select couple_id from challenges where id=$1`, [dry]))
+    .couple_id,
+);
+await as(priya, `select nx_cancel_challenge($1)`, [alongside]);
 const sam2 = buildWorld(
   await rowsFor(sam),
   '2026-11-17T14:00:00.000Z',
@@ -973,8 +985,8 @@ assert.equal(
   0,
 );
 
-// An invitee who had started on their own: their saved challenge comes along, their setup goes, and
-// the rules they called their own stay theirs for both of them.
+// An invitee who had saved a challenge on their own: it comes along, and the rules they called their
+// own stay theirs for both of them.
 const alex = '00000000-0000-0000-0000-00000000000e',
   blake = '00000000-0000-0000-0000-00000000000f';
 await db.exec(
@@ -988,6 +1000,7 @@ const { nx_create_challenge: alexDraft } = await one(
   [rules],
 );
 await as(alex, `select nx_save_challenge($1,'Alex Saved')`, [alexDraft]);
+await as(alex, `select nx_cancel_challenge($1)`, [alexDraft]);
 const { nx_create_challenge: blakePlan } = await one(
   blake,
   `select nx_create_challenge('Blake Plan','classic',null,'2026-12-01',30,'America/Toronto',1,null,$1::jsonb)`,
@@ -1003,7 +1016,7 @@ assert.deepEqual(
     (r) => r.name,
   ),
   ['Blake Plan'],
-  "Alex's own setup is gone",
+  'only the challenge Alex joined',
 );
 assert.equal(
   (
@@ -1060,5 +1073,182 @@ assert.equal(
 // A name that starts with an emoji keeps the whole emoji as its initial.
 assert.equal(personOf({ id: 'x', name: '🌸 Maya', hue: 0 }).initial, '🌸');
 assert.equal(personOf({ id: 'x', name: '  ', hue: 0 }).initial, '?');
+
+// A challenge isn't over until it's settled: after the last deadline it waits for every dispute to
+// be settled and every answer reviewed, and it can't be ended early with a dispute open.
+await clock('2026-12-01T09:00:00-05:00');
+const prayRule = JSON.stringify([
+  {
+    title: 'Pray daily',
+    question: 'Did you pray?',
+    kind: 'yesno',
+    days: [0, 1, 2, 3, 4, 5, 6],
+    who: 'both',
+  },
+]);
+const { nx_create_challenge: short } = await one(
+  maya,
+  `select nx_create_challenge('Short','classic',null,'2026-12-02',1,'America/Toronto',1,null,$1::jsonb)`,
+  [prayRule],
+);
+await as(maya, `select nx_finish_setup($1)`, [short]);
+await as(maya, `select nx_sign_pact($1)`, [short]);
+await as(jordan, `select nx_sign_pact($1)`, [short]);
+const shortStatus = async () =>
+  (await one(maya, `select status from challenges where id=$1`, [short]))
+    .status;
+assert.equal(await shortStatus(), 'running');
+const shortRule = (
+  await one(maya, `select id from rules where challenge_id=$1`, [short])
+).id;
+await clock('2026-12-03T09:00:00-05:00');
+for (const id of [maya, jordan])
+  await as(id, `select nx_save_checkin($1,$2,'2026-12-02',true)`, [
+    short,
+    shortRule,
+  ]);
+const mayaEntry = (
+  await one(maya, `select id from entries where rule_id=$1 and person_id=$2`, [
+    shortRule,
+    maya,
+  ])
+).id;
+await as(jordan, `select nx_review($1,'dispute','You were asleep')`, [
+  mayaEntry,
+]);
+await fails(
+  as(maya, `select nx_end_request($1,'ask')`, [short]),
+  /Settle the open disputes/,
+);
+await clock('2026-12-04T09:00:00-05:00');
+await as(maya, `select nx_sync($1)`, [short]);
+assert.equal(await shortStatus(), 'running', 'waits for the open dispute');
+const shortDispute = (
+  await one(maya, `select id from disputes where entry_id=$1`, [mayaEntry])
+).id;
+await as(maya, `select nx_resolve_dispute($1,'concede')`, [shortDispute]);
+assert.equal(
+  await shortStatus(),
+  'running',
+  "and for Jordan's answer, still to review",
+);
+await clock('2026-12-05T10:00:00-05:00');
+await as(maya, `select nx_sync($1)`, [short]);
+assert.equal(await shortStatus(), 'finished', 'unreviewed for 48 hours: over');
+const jordanEntry = (
+  await one(
+    jordan,
+    `select id from entries where rule_id=$1 and person_id=$2`,
+    [shortRule, jordan],
+  )
+).id;
+await fails(
+  as(maya, `select nx_review($1,'dispute','Too late')`, [jordanEntry]),
+  /is over/,
+);
+
+// Several partners: a challenge with someone new is its own couple, a person can be in two, and each
+// sees only their own. Inviting someone who's already a partner keeps them one couple.
+const { nx_create_challenge: withPriya } = await one(
+  maya,
+  `select nx_create_challenge('With Priya','classic',null,'2026-12-20',30,'America/Toronto',1,null,$1::jsonb,null,true)`,
+  [prayRule],
+);
+const coupleOf = async (id, challenge) =>
+  (await one(id, `select couple_id from challenges where id=$1`, [challenge]))
+    .couple_id;
+const priyaCouple = await coupleOf(maya, withPriya);
+assert.notEqual(priyaCouple, await coupleOf(maya, short));
+await as(maya, `select nx_finish_setup($1)`, [withPriya]);
+const priyaInvite = await one(maya, `select * from nx_create_invite($1)`, [
+  withPriya,
+]);
+await as(priya, `select nx_accept_invite($1)`, [priyaInvite.token]);
+assert.equal(
+  (
+    await one(
+      priya,
+      `select count(distinct couple_id)::int n from couple_members where person_id=$1`,
+      [priya],
+    )
+  ).n,
+  2,
+  'Priya has two partners',
+);
+assert.equal(
+  (await as(sam, `select id from challenges where id=$1`, [withPriya])).length,
+  0,
+  "Sam never sees Priya's challenge with Maya",
+);
+await fails(
+  as(
+    sam,
+    `select nx_create_challenge('Not yours','classic',null,'2026-12-20',30,'America/Toronto',1,null,'[]',$1)`,
+    [priyaCouple],
+  ),
+  /isn't yours/,
+);
+const mayaRows = await rowsFor(maya);
+const seen = (id) =>
+  buildWorld(
+    mayaRows,
+    '2026-12-05T15:00:00.000Z',
+    'America/Toronto',
+    links,
+    {},
+    id,
+  ).world;
+assert.equal(seen(withPriya).partner.name, 'Priya');
+assert.equal(seen(short).partner.name, 'Jordan');
+assert.deepEqual(
+  seen(withPriya)
+    .partners.map((p) => p.person.name)
+    .sort(),
+  ['Jordan', 'Priya'],
+);
+assert.ok(
+  seen(short).others.some((o) => o.id === withPriya && o.partner === 'Priya'),
+  'the other challenge is listed, with its partner',
+);
+const { nx_create_challenge: jordanAgain } = await one(
+  maya,
+  `select nx_create_challenge('Jordan again','classic',null,'2026-12-20',30,'America/Toronto',1,null,$1::jsonb,null,true)`,
+  [prayRule],
+);
+const stray = await coupleOf(maya, jordanAgain);
+await as(maya, `select nx_finish_setup($1)`, [jordanAgain]);
+const jordanInvite = await one(maya, `select * from nx_create_invite($1)`, [
+  jordanAgain,
+]);
+await as(jordan, `select nx_accept_invite($1)`, [jordanInvite.token]);
+assert.equal(
+  await coupleOf(maya, jordanAgain),
+  await coupleOf(maya, short),
+  'already a couple: it moves to theirs',
+);
+assert.equal(
+  (await as(maya, `select id from couples where id=$1`, [stray])).length,
+  0,
+);
+// An invitee setting something up with someone else keeps it when they accept.
+const { nx_create_challenge: samOwn } = await one(
+  sam,
+  `select nx_create_challenge('Sam alone','classic',null,'2026-12-20',30,'America/Toronto',1,null,$1::jsonb,null,true)`,
+  [prayRule],
+);
+const { nx_create_challenge: withSam } = await one(
+  blake,
+  `select nx_create_challenge('With Sam','classic',null,'2026-12-20',30,'America/Toronto',1,null,$1::jsonb,null,true)`,
+  [prayRule],
+);
+await as(blake, `select nx_finish_setup($1)`, [withSam]);
+const samInvite = await one(blake, `select * from nx_create_invite($1)`, [
+  withSam,
+]);
+await as(sam, `select nx_accept_invite($1)`, [samInvite.token]);
+assert.equal(
+  (await as(sam, `select id from challenges where id=$1`, [samOwn])).length,
+  1,
+);
 
 console.log('next database: ok');

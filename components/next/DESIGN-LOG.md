@@ -2,6 +2,19 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 4, 2026 (Erin's launch answers: settle everything now)
+
+Erin: "Things should not wait till after we start. We're settling everything now." Run `supabase/next/settle-and-many.sql` on PROD CHALLENGE before deploying.
+
+Erin's calls:
+
+- **The next challenge runs on the test address**, test.thechallenge.win.
+- **Pinch-zoom stays blocked.** The final result keeps leading with the winner. Check in doesn't offer "All yes except…". Deadlines don't show a time zone.
+- **Disputes must be settled, and nothing ends without it.** After the last deadline a challenge stays open, with no result, until every dispute is settled (the person who answered concedes, or the person who disputed it withdraws). It also waits for every answer to be reviewed, 48 hours at most, since a last-day answer could otherwise never be disputed; once it's finished, nothing can be disputed. Overview says what's left ("Settle 1 dispute to see who won"). Ending early is refused with a dispute open: the sheet says "Settle 1 dispute first" with Go to Review. When both agree to end early, answers still waiting for review stand. If nobody settles, there's no result; that's the rule.
+- **Several challenges at once, with the same partner or different ones.** The one-at-a-time limit is gone (it was there because the app could only show one, so a second hid the first while it kept adding misses). Start asks who it's with: each partner, or Someone new. Your challenges lists them all with where each stands ("Day 6 of 30 · 1 left to log", "Sign the pact"), and Open challenge switches to one; the app comes back to the last one opened on that device. A dot beside the challenge's name at the top says another one is waiting on you. A person can be in several couples, and each partner only ever sees their own challenge. Someone invited who's already your partner stays one couple. Accepting an invite no longer deletes a challenge you were setting up with someone else.
+
+Not checked in the live app: everything above was tested in the database tests and the preview, not with real accounts.
+
 ## Decisions, November 3, 2026 (the last leftovers, then a seventh audit and sixth critique)
 
 Erin: fix the three leftovers, then audit and critique again. The audit scored 16/20 again, now covering the pact, limit and Practice changes; the critique 30/40 (trend 28, 26, 27, 29, 30; `.impeccable/critique/`). Everything both found was fixed except what's listed for Erin below.

@@ -22,10 +22,13 @@ export function ChoiceSheet({
   open,
   choice,
   onOpenChange,
+  couple,
 }: {
   open: boolean;
   choice: Choice | null;
   onOpenChange: (open: boolean) => void;
+  /** Who it's with (see Host's startFrom). */
+  couple?: string;
 }) {
   const world = useWorld();
   const { navigate } = useNav();
@@ -36,8 +39,8 @@ export function ChoiceSheet({
     const theme = world.themes.find((t) => t.id === choice.id),
       saved = world.saved.find((s) => s.id === choice.id);
     if (choice.kind === 'theme' && theme)
-      void host.startFrom({ kind: 'theme', theme });
-    else if (saved) void host.startFrom({ kind: 'saved', saved });
+      void host.startFrom({ kind: 'theme', theme }, couple);
+    else if (saved) void host.startFrom({ kind: 'saved', saved }, couple);
   };
   return (
     <Sheet

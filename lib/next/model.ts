@@ -303,7 +303,7 @@ export type Verdict = {
   }[];
   /** Fewer points wins; null on a tie. */
   winner: string | null;
-  /** Disputes still open: none is a point unless it is conceded, which can still happen after the end. */
+  /** Disputes still open, from before a challenge had to be settled to finish. */
   openDisputes?: number;
 };
 
@@ -393,7 +393,28 @@ export type SayRulesDraft = {
 };
 
 /** A finished challenge and how it ended. */
-export type PastChallenge = { challenge: Challenge; verdict: Verdict };
+export type PastChallenge = {
+  challenge: Challenge;
+  verdict: Verdict;
+  /** Who it was with, when that isn't the partner on screen. */
+  partner?: Person;
+};
+
+/** Someone this person does challenges with. */
+export type Pairing = { coupleId: string; person: Person };
+
+/** Another unfinished challenge of this person's, for Your challenges. */
+export type OtherChallenge = {
+  id: string;
+  name: string;
+  status: ChallengeStatus;
+  /** The partner's name. */
+  partner: string;
+  /** Where it stands: "Day 6 of 30 · 2 left to log", "Sign the pact", "Waiting for Priya to sign". */
+  line: string;
+  /** Something in it waits on this person. */
+  needsYou: boolean;
+};
 
 /** Everything a page can show. The viewer is `me`; `partner` is the other person. */
 export type World = {
@@ -419,6 +440,10 @@ export type World = {
   pact: Pact;
   practice: PracticeScript;
   sayRules: SayRulesDraft;
+  /** This person's other unfinished challenges; `challenge` is the one on screen. */
+  others: OtherChallenge[];
+  /** Everyone this person does challenges with. */
+  partners: Pairing[];
   /** True while the partner has no account in the couple yet (the live app, before the invite is accepted). */
   partnerPending?: boolean;
 };
