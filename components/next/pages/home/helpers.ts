@@ -58,7 +58,12 @@ export function verdictLine(w: World, past: PastChallenge) {
 
 /** The saved challenge that runs a past one again, if it was saved (same name, ours). */
 export const savedFor = (w: World, past: PastChallenge) =>
-  w.saved.find((s) => s.source === 'mine' && s.name === past.challenge.name);
+  w.saved.find(
+    (s) =>
+      s.source === 'mine' &&
+      s.name === past.challenge.name &&
+      (!s.coupleId || s.coupleId === past.challenge.coupleId),
+  );
 
 /**
  * "Every day · Screenshot required", "Any 3 days, Monday to Sunday". A number the title already

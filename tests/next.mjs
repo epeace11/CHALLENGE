@@ -7,6 +7,7 @@ import {
   activePoints,
   asIfSignedToday,
   challengeSummary,
+  disputesRaisedBy,
   settling,
   targetFor,
   asViewer,
@@ -656,7 +657,13 @@ assert.ok(signPact(w, JORDAN).pact.signatures.every((s) => s.signedAt));
     createdAt: ended.now,
   };
   const idle = { ...ended, entries: [], disputes: [] };
-  assert.deepEqual(settling(idle), { disputes: 0, toReview: 0, yours: 0 });
+  assert.deepEqual(settling(idle), {
+    disputes: 0,
+    raised: 0,
+    onYours: 0,
+    toReview: 0,
+    yours: 0,
+  });
   const disputed = { ...idle, disputes: [open] };
   assert.equal(settling(disputed).disputes, 1);
   assert.equal(
@@ -683,6 +690,22 @@ assert.ok(signPact(w, JORDAN).pact.signatures.every((s) => s.signedAt));
   assert.equal(
     challengeSummary(signPact(signing, MAYA)).line,
     'Waiting for Jordan to sign',
+  );
+}
+// The person who raised a dispute can always see and withdraw it, replied to or not: from both sides.
+{
+  const open = w.disputes.find((d) => d.status === 'open');
+  const owner = w.entries.find((e) => e.id === open.entryId).personId;
+  const raiser = open.raisedBy;
+  assert.ok(disputesRaisedBy(w, raiser).some((i) => i.dispute.id === open.id));
+  const replied = replyToDispute(w, open.id, 'I did');
+  assert.ok(
+    disputesRaisedBy(replied, raiser).some((i) => i.dispute.id === open.id),
+    'still theirs to withdraw after the reply',
+  );
+  assert.equal(
+    disputesRaisedBy(replied, owner).some((i) => i.dispute.id === open.id),
+    false,
   );
 }
 // Hiding and deleting a finished challenge or a saved one are this person's own.

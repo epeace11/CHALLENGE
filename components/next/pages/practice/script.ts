@@ -246,6 +246,8 @@ export function usePractice() {
     },
     /** On to the gift, after reading what an approved answer's screenshot said. */
     toGift: () => setPhase('gift'),
+    /** Takes back the last decision, to try the other one. */
+    undoDecision: () => setDecided(decided.slice(0, -1)),
     restart: () => {
       setAnswers(firstAnswers(world));
       setSaved(0);

@@ -12,6 +12,7 @@ import {
   CircleUser,
   Clock3,
   Download,
+  EyeOff,
   Flag,
   LayoutGrid,
   LogOut,
@@ -19,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { AppFrame } from '@/components/next/frames';
+import { cn } from '@/lib/utils';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -121,8 +123,9 @@ export default function SettingsV1() {
   const backend = useBackend();
   const { navigate } = useNav();
   const account = useAccount(world);
-  // Reminders, proposed changes, leaving and deleting the account come later in the live app.
-  const later = backend.live;
+  // Reminders, proposed changes and deleting the account aren't in the live app yet, so the preview
+  // doesn't show them either: what's here is what ships.
+  const later = true;
   const [theme, setTheme] = useThemeChoice();
   const [open, setOpen] = useState<Open>(null);
   const [scope, setScope] = useState<'challenge' | 'all'>('challenge');
@@ -177,8 +180,8 @@ export default function SettingsV1() {
         el.focus();
       }}
       variant="quiet"
-      icon={LogOut}
-      className="-ml-3 self-start text-nx-danger"
+      icon={finished ? EyeOff : LogOut}
+      className={cn('-ml-3 self-start', !finished && 'text-nx-danger')}
       onClick={() =>
         running
           ? setOpen('ask')
@@ -208,7 +211,7 @@ export default function SettingsV1() {
               onChange={setScope}
               options={[
                 { value: 'challenge', label: 'This challenge' },
-                { value: 'all', label: 'All challenges' },
+                { value: 'all', label: 'Your account' },
               ]}
               className={styles.seg}
             />
@@ -224,8 +227,7 @@ export default function SettingsV1() {
           >
             <div className="flex flex-col gap-2.5">
               <RowButton
-                title="Challenge name"
-                detail={c.name}
+                title="Rename this challenge"
                 onClick={() => setOpen(later ? 'challengeName' : 'terms')}
               />
               {later ? (
@@ -256,6 +258,18 @@ export default function SettingsV1() {
                 </>
               )}
             </div>
+            <RowButton
+              leading={
+                <Download
+                  size={22}
+                  className="text-nx-accent"
+                  aria-hidden="true"
+                />
+              }
+              title="Export this challenge"
+              detail="A file of your answers, points and notes"
+              onClick={account.exportData}
+            />
             {!later &&
               (proposal ? (
                 <ProposalCard
@@ -288,8 +302,8 @@ export default function SettingsV1() {
         {(!c.id || scope === 'all') && (
           <Scope
             icon={CircleUser}
-            title="Your account"
-            detail="These apply to all your challenges."
+            title="All your challenges"
+            detail="These apply everywhere, not just to one challenge."
             index={1}
           >
             <RowButton
@@ -343,18 +357,6 @@ export default function SettingsV1() {
             </Section>
 
             <div className="flex flex-col gap-2.5">
-              <RowButton
-                leading={
-                  <Download
-                    size={22}
-                    className="text-nx-accent"
-                    aria-hidden="true"
-                  />
-                }
-                title="Export my data"
-                detail="A file of your answers, points and notes"
-                onClick={account.exportData}
-              />
               <RowButton
                 leading={
                   <LogOut

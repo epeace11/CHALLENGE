@@ -1905,14 +1905,16 @@
   .nx-topbar-title .nx-day-link {
     margin: 0 -6px 0 0;
   }
+  /* From 1024px the tabs fill most of the 720px column, so the name and day get a row above them:
+     with several challenges, the name is what says which one this is. */
   @media (min-width: 1024px) {
-    .nx-topbar-title {
-      flex: 0 1 auto;
-      justify-content: flex-start;
-      gap: 6px;
+    .nx-app-header .nx-topbar {
+      flex-wrap: wrap;
+      gap: 2px 12px;
     }
-    .nx-topbar-title .nx-day-link {
-      margin: 0;
+    .nx-topbar-title,
+    .nx-app-header .nx-topbar > .nx-brand {
+      flex: 0 0 100%;
     }
   }
   .nx-tabbar {
@@ -2007,7 +2009,6 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      margin-left: auto;
     }
     .nx-topnav .nx-tab {
       flex: none;

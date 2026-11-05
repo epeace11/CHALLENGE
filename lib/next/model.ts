@@ -239,6 +239,8 @@ export type SavedChallenge = {
   rules: Rule[];
   /** In this person's Hidden list. */
   hidden?: boolean;
+  /** The couple it was saved by: who "Run it again" starts it with. */
+  coupleId?: string;
   /** 'mine': saved by this couple. 'link': opened from a link another couple shared. */
   source: 'mine' | 'link';
   /** Who shared it, for 'link' ("Priya & Sam"). */
@@ -418,6 +420,21 @@ export type OtherChallenge = {
   line: string;
   /** Something in it waits on this person. */
   needsYou: boolean;
+  /** While it runs (not before Day 1, and not once the last day is over). */
+  running?: RunningSummary;
+};
+
+/** A running challenge as Your challenges shows it. */
+export type RunningSummary = {
+  range: string;
+  day: number;
+  days: number;
+  left: number;
+  /** "Thursday, 4h 29m left", "All logged", "Nothing to log". */
+  leftHint: string;
+  waiting: number;
+  /** "From Jordan", "Nothing waiting". */
+  waitingHint: string;
 };
 
 /** Everything a page can show. The viewer is `me`; `partner` is the other person. */

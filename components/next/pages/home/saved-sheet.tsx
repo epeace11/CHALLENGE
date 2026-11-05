@@ -4,6 +4,7 @@ import type { SavedChallenge } from '@/lib/next/model';
 import { plural } from '@/lib/next/selectors';
 import { useWorld } from '@/components/next/world';
 import { Button, Sheet } from '@/components/next/ui';
+import { ShareLink } from './share-link';
 import {
   ruleLine,
   rulesByWho,
@@ -57,6 +58,7 @@ export function SavedSheet({
           {rulesByWho(saved.rules, world.me, world.partner).map((g) => (
             <RuleGroup key={g.key} title={g.title} rules={g.rules} />
           ))}
+          {saved.source === 'mine' && <ShareLink saved={saved} />}
         </div>
       )}
     </Sheet>

@@ -56,8 +56,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const c = world.challenge;
   const waiting = reviewQueue(world, world.me.id).count;
   const moreActive = MORE_PAGES.some((p) => p.id === page);
-  // Another of this person's challenges waits on them: the name, which opens the list, says so.
-  const otherWaiting = world.others.filter((o) => o.needsYou).length;
 
   const tabs = (where: 'top' | 'bottom') => (
     <>
@@ -136,21 +134,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
               {/* The challenge's name leads to Your challenges, like the product's name before Day 1. */}
               <button
                 type="button"
-                className="nx-brand nx-press flex min-w-0 items-center gap-2 text-left"
+                className="nx-brand nx-press truncate text-left"
                 onClick={() => navigate('home')}
               >
-                <span className="truncate">{c.name}</span>
-                {otherWaiting > 0 && (
-                  <>
-                    <span
-                      className="size-2.5 shrink-0 rounded-full bg-nx-accent"
-                      aria-hidden="true"
-                    />
-                    <span className="sr-only">
-                      , another challenge is waiting for you
-                    </span>
-                  </>
-                )}
+                {c.name}
               </button>
               <button
                 type="button"

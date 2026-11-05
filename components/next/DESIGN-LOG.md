@@ -2,6 +2,33 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 5, 2026 (eighth audit and seventh critique, and everything they found)
+
+Erin asked for a final audit and critique before the run-through. They were the first to look at the several-challenges, settling and hide work, and both went down: the audit 14/20 (from 16) and the critique 28/40 (from 30), trend 26, 27, 29, 30, 28. The audit said not to start the real challenge until its one P0 and five P1s were fixed. They are; those scores were taken before these fixes. Run `supabase/next/fixes-nov-5.sql` on PROD CHALLENGE before deploying.
+
+What would have gone wrong in real use:
+
+- **A dispute could get stuck for ever (the P0).** Once a dispute was replied to, the person who raised it could neither see it nor withdraw it, so with "must be settled" a challenge could never finish. Everyone who raised a dispute now finds it, with the reply and Withdraw, in the Waiting list on Review, replied to or not.
+- **Delete for good left the challenge on screen,** and hiding your last challenge took away Your challenges, so Restore was out of reach. A hidden or deleted challenge is now never the one on screen, and with nothing on screen Your challenges still opens when anything is hidden or saved.
+- **An invite link locked out a signed-in person** with challenges of their own: the invite page was the only page. It now has Not now.
+- **Run it again and shared links could start with the wrong partner, or overwrite a draft.** A saved challenge now remembers its couple, starting from one never replaces a challenge being set up, and Set up says who it's with.
+- **The page froze every minute** once there was a finished challenge (about half a second each on a laptop, more on a phone). A finished challenge's numbers are now worked out once per load, and looking up an answer no longer scans the whole list.
+
+From the critique:
+
+- **Laptops never showed the challenge's name** (the tabs squeezed it to nothing). From 1024px the name and day have a row above the tabs.
+- **The dot is gone.** It sat beside the wrong challenge and didn't say what it meant. Overview now says it in words, "Morning Walks · Day 6 of 30 · 1 left to log", and tapping opens that challenge. Your challenges shows every running challenge the same way, what waits on you first, with the filled button on the first.
+- **The settling screen is kinder and clearer.** It opens "You finished Fall Reset", then "Settle 1 dispute to see who won.", then says what you can do: "You can concede it, or Jordan can withdraw it." It replaces the day's card, so there's one main action. Once settled, Overview and Review lead to See who won. See it at `/preview?page=overview&settling`.
+- **Start asks "Who's it with?"** in words, as chips with avatars that wrap for any number of partners; Someone new says "You'll send them an invite after you sign."
+- **Hide leaves a trace:** "Summer Sprint hidden" with Undo where the card was, and focus on Undo. Share link moved into the rules sheet, so finished cards are shorter.
+- **Settings:** the tabs are This challenge and Your account. Export moved to This challenge, since it only covers that one. The preview now shows only what ships, so reminders and proposing changes are gone from it until they're built.
+- **The limit step** says "This or less, each day it's asked." **Practice** offers "Dispute it instead" after you approve the mismatched answer.
+
+Also fixed: a late answer on an unreviewed day no longer holds up the result for ever, and a saved copy follows a rename (both in the script); the verdict opens the challenge on screen, not simply the newest; hidden saved ones stay off Start; one challenge failing to sync no longer stops the others loading; deleting pages through all of a challenge's screenshots.
+
+- **For later:** erasing can't retry if it fails partway (rows stay, invisible to both); each load still fetches everything; Progress's habit bars rest on colour with no number beside them; Landing is the least specific page; a saved challenge's sheet on Start still names the partner it was saved with; a hidden card leaves without an animation; on a 1280×800 laptop Review's screenshot is partly under the pinned bar.
+- **Questions from the critique:** should each person see the other's limit before signing, since neither can change it after? With several challenges, should there be one "today" across all of them?
+
 ## Decisions, November 4, 2026 (deleting a challenge, and which settings are which)
 
 Erin: "You should be able to fully delete a challenge, and it should not log the money on your challenges page. Also, it's not clear that the settings are for that challenge. I want it to be very obvious what settings are overarching and what settings are for each challenge." Then, on who a delete affects: "it should only delete from the person who deleted it. or it should go into hidden then you can fully delete from hidden like an archive, but it would only be within yours". Run `supabase/next/hide-challenges.sql` on PROD CHALLENGE before deploying.

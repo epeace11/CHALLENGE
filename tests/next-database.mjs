@@ -41,6 +41,7 @@ for (const script of [
   'pact-limits.sql',
   'settle-and-many.sql',
   'hide-challenges.sql',
+  'fixes-nov-5.sql',
 ])
   await db.exec(
     readFileSync(
@@ -1150,6 +1151,22 @@ await fails(
   /is over/,
 );
 
+// A saved copy follows a rename of its challenge.
+const { nx_save_challenge: copyOfDry } = await one(
+  priya,
+  `select nx_save_challenge($1,'Dry October')`,
+  [dry],
+);
+await as(priya, `select nx_update_challenge($1,p_name=>'Dry Again')`, [dry]);
+assert.equal(
+  (
+    await one(priya, `select name from saved_challenges where id=$1`, [
+      copyOfDry,
+    ])
+  ).name,
+  'Dry Again',
+);
+
 // Several partners: a challenge with someone new is its own couple, a person can be in two, and each
 // sees only their own. Inviting someone who's already a partner keeps them one couple.
 const { nx_create_challenge: withPriya } = await one(
@@ -1277,6 +1294,18 @@ const hideSeen = buildWorld(
   links,
 ).world;
 assert.equal(hideSeen.past.find((p) => p.challenge.id === short)?.hidden, true);
+assert.notEqual(
+  buildWorld(
+    await rowsFor(maya),
+    '2026-12-05T15:00:00.000Z',
+    'America/Toronto',
+    links,
+    {},
+    short,
+  ).current?.id,
+  short,
+  'a hidden one is never on screen, even if it was the one last open',
+);
 await as(maya, `select nx_hide_challenge($1,false)`, [short]);
 assert.deepEqual(await hiddenFor(maya), []);
 assert.equal(

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button, Sheet } from '@/components/next/ui';
 
@@ -25,6 +25,12 @@ export function HiddenSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const list = useRef<HTMLUListElement>(null);
+  /** Restoring removes the button in use: focus moves to what's next. */
+  const restore = (item: HiddenItem) => {
+    item.restore();
+    requestAnimationFrame(() => list.current?.querySelector('button')?.focus());
+  };
   // The last one restored or deleted: nothing left to show.
   useEffect(() => {
     if (open && !items.length) onOpenChange(false);
@@ -35,9 +41,8 @@ export function HiddenSheet({
       onOpenChange={onOpenChange}
       title="Hidden"
       description="Only on your account. Your partner still sees theirs."
-      footer={<Button onClick={() => onOpenChange(false)}>Close</Button>}
     >
-      <ul className="flex flex-col divide-y divide-nx-line">
+      <ul ref={list} className="flex flex-col divide-y divide-nx-line">
         {items.map((item) => (
           <li key={item.id} className="flex flex-col gap-2 py-3">
             <div className="flex flex-col gap-0.5">
@@ -47,7 +52,7 @@ export function HiddenSheet({
               <p className="text-nx-2 text-nx-ink-2">{item.detail}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={item.restore}>Restore</Button>
+              <Button onClick={() => restore(item)}>Restore</Button>
               <Button
                 variant="quiet"
                 icon={Trash2}

@@ -16,6 +16,7 @@ import type {
   Target,
   Weekday,
   OtherChallenge,
+  RunningSummary,
   World,
 } from './model.ts';
 import {
@@ -38,6 +39,8 @@ import {
 } from './calendar.ts';
 import {
   formatDate,
+  formatDuration,
+  formatRange,
   formatTime,
   formatValue,
   formatWeekday,
@@ -204,15 +207,26 @@ export const timeLeft = (w: World, day: DateString | null = openDay(w)) =>
 
 /* ── Entries and check-ins ─────────────────────────────────────────────── */
 
+const entryIndexes = new WeakMap<Entry[], Map<string, Entry>>();
+
+/** One person's answer to one rule on one day, from an index of `w.entries` built once per list. */
 export const entryFor = (
   w: World,
   personId: string,
   ruleId: string,
   day: DateString,
-) =>
-  w.entries.find(
-    (e) => e.personId === personId && e.ruleId === ruleId && e.day === day,
-  );
+) => {
+  let index = entryIndexes.get(w.entries);
+  if (!index) {
+    index = new Map();
+    for (const e of w.entries) {
+      const key = `${e.personId}|${e.ruleId}|${e.day}`;
+      if (!index.has(key)) index.set(key, e);
+    }
+    entryIndexes.set(w.entries, index);
+  }
+  return index.get(`${personId}|${ruleId}|${day}`);
+};
 
 export const entriesOn = (w: World, personId: string, day: DateString) =>
   w.entries.filter((e) => e.personId === personId && e.day === day);
@@ -425,6 +439,15 @@ function openDisputesOn(w: World, personId: string, replied: boolean) {
 export const repliedDisputes = (w: World, personId: string) =>
   openDisputesOn(w, personId, true);
 
+/** Every open dispute `personId` raised, replied to or not: they can always withdraw it. */
+export const disputesRaisedBy = (w: World, personId: string) => {
+  const other = partnerOf(w, personId).id;
+  return [
+    ...openDisputesOn(w, other, false),
+    ...openDisputesOn(w, other, true),
+  ];
+};
+
 /**
  * What waits on `personId`: the partner's answers to approve, their late corrections, their
  * forgiveness requests, and disputes the partner raised on this person's answers that this person
@@ -509,11 +532,51 @@ export function settling(w: World) {
   const toReview = w.entries.filter(
     (e) => e.status === 'pending' && e.personId !== w.me.id,
   ).length;
+  const raised = disputes.filter((d) => d.raisedBy === w.me.id).length;
   return {
     disputes: disputes.length,
+    /** Open disputes this person raised (they can withdraw) and on their answers (they can concede). */
+    raised,
+    onYours: disputes.length - raised,
     toReview,
     /** Open disputes: either person can settle one, by conceding or withdrawing. Answers: only the reviewer. */
     yours: disputes.length + toReview,
+  };
+}
+
+/** What settling asks of this person, said to them: "You can concede it, or Jordan can withdraw it." */
+export function settlingLine(w: World) {
+  const over = settling(w);
+  if (!over) return '';
+  const partner = w.partner.name,
+    it = over.disputes === 1 ? 'it' : 'them';
+  if (over.raised && over.onYours)
+    return `You can concede the ones on your answers, and withdraw the ones you raised.`;
+  if (over.onYours)
+    return `You can concede ${it}, or ${partner} can withdraw ${it}.`;
+  if (over.raised)
+    return `You can withdraw ${it}, or ${partner} can concede ${it}.`;
+  return 'Answers nobody reviews count as approved after 48 hours.';
+}
+
+/** A running challenge as Your challenges shows it. */
+export function runningSummary(w: World): RunningSummary {
+  const c = w.challenge;
+  const progress = checkinProgress(w, w.me.id);
+  const waiting = reviewQueue(w, w.me.id).count;
+  const day = progress.day;
+  return {
+    range: formatRange(c.start, lastDay(c)),
+    day: dayNumber(c, w.today),
+    days: c.days,
+    left: progress.left,
+    leftHint: !day
+      ? 'Nothing to log'
+      : progress.left
+        ? `${formatWeekday(day)}, ${formatDuration(timeLeft(w, day))} left`
+        : 'All logged',
+    waiting,
+    waitingHint: waiting ? `From ${w.partner.name}` : 'Nothing waiting',
   };
 }
 
@@ -552,18 +615,19 @@ export function challengeSummary(w: World): OtherChallenge {
     };
   if (w.today < c.start)
     return { ...base, line: `Starts ${formatDate(c.start)}`, needsYou: false };
-  const left = checkinProgress(w, me).left,
-    waiting = reviewQueue(w, me).count;
+  const running = runningSummary(w);
+  const { left, waiting } = running;
   return {
     ...base,
     line: [
-      `Day ${dayNumber(c, w.today)} of ${c.days}`,
+      `Day ${running.day} of ${c.days}`,
       left ? `${left} left to log` : null,
       waiting ? `${waiting} to review` : null,
     ]
       .filter(Boolean)
       .join(' · '),
     needsYou: left + waiting > 0,
+    running,
   };
 }
 

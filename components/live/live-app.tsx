@@ -236,7 +236,14 @@ function resolveAccount(
   )
     return 'invite';
   const c = built.current;
-  if (!c) return pick(['start', 'settings'], 'start');
+  // Nothing on screen, but hidden or saved ones: Your challenges is the way back to them.
+  if (!c) {
+    const kept = built.world.past.length + built.world.saved.length > 0;
+    return pick(
+      ['start', 'settings', 'home', 'verdict'],
+      kept ? 'home' : 'start',
+    );
+  }
   switch (c.status) {
     // Your challenges (and a past verdict from it) stay open while the next one is set up.
     case 'draft':
@@ -825,9 +832,9 @@ function Hosting({
         await reload();
         navigate('landing');
       },
-      openChallenge: (id: string) => {
+      openChallenge: (id: string, page?: PageId) => {
         setWantedChallenge(id);
-        navigate(null);
+        navigate(page ?? null);
       },
       startFrom: (template: Template, couple?: string) =>
         once(async () => {
@@ -837,12 +844,14 @@ function Hosting({
           const withWho =
             couple ??
             (template.kind === 'again' ? template.challenge.coupleId : shown);
-          // A draft is reused only for the same person, not one with someone else.
+          // Starting from scratch again opens the draft as it was left. A template always starts its
+          // own challenge: it never replaces one being set up.
           const same = withWho === 'new' ? !b?.hasPartner : withWho === shown;
-          const draft =
-            b?.current?.status === 'draft' && same ? b.current.id : null;
-          // Starting from scratch again opens the draft as it was left, instead of clearing it.
-          if (draft && template.kind === 'blank') {
+          if (
+            template.kind === 'blank' &&
+            same &&
+            b?.current?.status === 'draft'
+          ) {
             navigate('setup');
             return true;
           }
@@ -852,8 +861,7 @@ function Hosting({
               shift(w.today, 1),
               deviceZone(),
               w.me.id,
-              w.partner.id,
-              draft,
+              null,
               withWho,
             ),
           );
@@ -864,11 +872,11 @@ function Hosting({
           return true;
         }),
       saveDraft: async (draft: SetupDraft) => {
-        const { challenge, me, partner } = ids();
+        const { challenge, me } = ids();
         const { world: w } = latest.current;
         if (w.challenge.status !== 'draft') return false;
         const ok = await attempt(() =>
-          api.saveSetup(challenge, draft, me, partner, w.challenge),
+          api.saveSetup(challenge, draft, me, w.challenge),
         );
         if (ok === false) return false;
         await reload();
@@ -876,14 +884,13 @@ function Hosting({
       },
       finishSetup: (draft: SetupDraft) =>
         once(async () => {
-          const { challenge, me, partner } = ids();
+          const { challenge, me } = ids();
           const { world: w } = latest.current;
           const ok = await attempt(() =>
             api.finishSetup(
               challenge,
               draft,
               me,
-              partner,
               w.challenge.id === challenge ? w.challenge : null,
             ),
           );
@@ -926,10 +933,8 @@ function Hosting({
               shift(w.today, 1),
               deviceZone(),
               w.me.id,
-              w.partner.id,
-              latest.current.built?.current?.status === 'draft'
-                ? latest.current.built.current.id
-                : null,
+              null,
+              latest.current.built?.current?.couple_id,
             ),
           );
           if (id === false) return false;
@@ -958,6 +963,12 @@ function Hosting({
           await reload();
           return true;
         }),
+      dismissInvite: () => {
+        inviteToken = acceptAfter = lastInvite = null;
+        writeStored(INVITE_KEY, null);
+        writeStored(ACCEPT_KEY, null);
+        void reload().then(() => navigate(null));
+      },
       acceptInvite: () =>
         once(async () => {
           const t = inviteToken;

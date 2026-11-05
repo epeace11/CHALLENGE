@@ -242,7 +242,7 @@ function Limits({
               value={value}
               onChange={(v) => flow.setLimit(rule.id, v)}
               unit={rule.target?.unit}
-              hint={`${flow.other.name} sets their own. Yours can’t change after you sign.`}
+              hint={`${rule.target?.op === '<=' ? 'This or less' : 'This or more'}, each day it’s asked. ${flow.other.name} sets their own, and yours can’t change after you sign.`}
               error={
                 shown && !(value !== null && value > 0)
                   ? `Enter your ${word}.`

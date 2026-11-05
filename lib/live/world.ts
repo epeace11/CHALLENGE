@@ -423,15 +423,18 @@ export function savedOf(
 /* ── The world ─────────────────────────────────────────────────────────── */
 
 /**
- * The challenge to show: the one asked for, else the running one, else one being set up, else the
- * newest finished one. Null when the couple has none. (The database allows one unfinished challenge
- * per couple, so at most one is running or being set up.)
+ * The challenge to show: `wanted`, else the newest running one, then one being set up, then the newest
+ * finished one. Null when there are none. One this person has hidden or deleted is never on screen;
+ * `all` is only for working out a past challenge's own numbers.
  */
-export function currentChallenge(rows: Rows, wanted?: string | null) {
-  // Hidden or deleted ones are never on screen by themselves.
+export function currentChallenge(
+  rows: Rows,
+  wanted?: string | null,
+  all = false,
+) {
   const put = new Set(rows.hidden.map((h) => h.challenge_id));
   const list = rows.challenges
-    .filter((c) => !put.has(c.id) || c.id === wanted)
+    .filter((c) => all || !put.has(c.id))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
   return (
     list.find((c) => c.id === wanted) ??
@@ -496,6 +499,9 @@ export function verdictFor(w: World): Verdict {
   };
 }
 
+/** Each load's finished challenges, worked out once (see buildWorld). */
+const pastCache = new WeakMap<Rows, Map<string, PastChallenge>>();
+
 export type Built = {
   world: World;
   /** The challenge row on screen, if any. */
@@ -520,7 +526,7 @@ export function buildWorld(
   withPast = true,
 ): Built {
   const me = personOf(rows.me, rows.me.email);
-  const current = currentChallenge(rows, wanted);
+  const current = currentChallenge(rows, wanted, !withPast);
   const hiddenStatus = (id: string) =>
     rows.hidden.find((h) => h.challenge_id === id)?.status;
   const statusOfSaved = (id: string) =>
@@ -602,7 +608,14 @@ export function buildWorld(
       .filter((s) => statusOfSaved(s.id) !== 'deleted')
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .map((s) => ({
-        ...savedOf(s, me.id, partner.id, links),
+        // Its rules were saved with that couple's partner, who may not be the one on screen.
+        ...savedOf(
+          s,
+          me.id,
+          partnerOfCouple(s.couple_id)?.id ?? partner.id,
+          links,
+        ),
+        coupleId: s.couple_id,
         hidden: statusOfSaved(s.id) === 'hidden',
       })),
     past: [],
@@ -636,6 +649,11 @@ export function buildWorld(
         )
         .sort((a, b) => b.start_date.localeCompare(a.start_date))
         .map((row) => {
+          // A finished challenge doesn't change with the clock: once per load is enough.
+          const known = pastCache.get(rows) ?? new Map<string, PastChallenge>();
+          pastCache.set(rows, known);
+          const seen = known.get(row.id);
+          if (seen) return seen;
           const w = buildWorld(
             rows,
             now,
@@ -646,7 +664,7 @@ export function buildWorld(
             false,
           ).world;
           const verdict = verdictFor(w);
-          return {
+          const past: PastChallenge = {
             challenge: w.challenge,
             partner: w.partner,
             hidden: hiddenStatus(row.id) === 'hidden',
@@ -661,6 +679,8 @@ export function buildWorld(
               }),
             },
           };
+          known.set(row.id, past);
+          return past;
         })
     : [];
   // The viewer's other unfinished challenges, each seen from its own rows.

@@ -126,7 +126,8 @@ const MONTH = new Intl.DateTimeFormat('en-US', {
 
 /** Saved challenges: the couple's own first, then ones opened from a link. */
 export function savedChoices(w: World): Choice[] {
-  return [...w.saved]
+  return w.saved
+    .filter((s) => !s.hidden)
     .sort((a, b) => (a.source === b.source ? 0 : a.source === 'mine' ? -1 : 1))
     .map((s) => {
       const past = w.past.find((p) => p.challenge.name === s.name)?.challenge;

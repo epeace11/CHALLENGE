@@ -348,7 +348,7 @@ begin
   -- dispute settled, every answer reviewed (48 hours at most, above). Until then there's no verdict.
   if c.status = 'running' and nx_now() > nx_lock_time(c, nx_last_day(c))
      and not exists(select 1 from disputes where challenge_id = c.id and status = 'open')
-     and not exists(select 1 from entries where challenge_id = c.id and status = 'pending') then
+     and not exists(select 1 from entries where challenge_id = c.id and status = 'pending' and correction_at is null) then
     update challenges set status = 'finished' where id = c.id;
   end if;
 end $$;
@@ -451,7 +451,7 @@ create function public.nx_update_challenge(p_challenge uuid, p_name text default
   p_cap numeric default null, p_clear_cap boolean default false, p_deadline_days integer default null,
   p_deadline_time time default null, p_week_start integer default null, p_rules jsonb default null)
   returns void language plpgsql security definer set search_path = public as $$
-declare c challenges := nx_enter(p_challenge);
+declare c challenges := nx_enter(p_challenge); was text := c.name;
 begin
   -- Name and look can change at any time; everything else only before Day 1.
   if c.status in ('running','finished') and (p_start is not null or p_days is not null or p_time_zone is not null
@@ -475,6 +475,10 @@ begin
     week_start = coalesce(p_week_start, week_start)
   where id = c.id returning * into c;
   if p_rules is not null then perform nx_put_rules(c, p_rules); end if;
+  -- A saved copy goes by the challenge's name, so it follows a rename.
+  if c.name <> was then
+    update saved_challenges set name = c.name where couple_id = c.couple_id and name = was;
+  end if;
   if c.status in ('invited','signing') and (p_start is not null or p_days is not null or p_step is not null
      or p_cap is not null or p_clear_cap or p_rules is not null or p_deadline_days is not null or p_deadline_time is not null) then
     delete from signatures where challenge_id = c.id;

@@ -309,7 +309,10 @@ export default function SetupV1() {
 /** "Step 2 of 2 · Rules from Dry Month": says where the rules already in the list came from. */
 function setupDetail(world: World) {
   const theme = world.themes.find((t) => t.id === world.challenge.theme);
-  return theme ? `Step 2 of 2 · Rules from ${theme.name}` : 'Step 2 of 2';
+  const who = `With ${world.partner.name}`;
+  return theme
+    ? `Step 2 of 2 · ${who} · Rules from ${theme.name}`
+    : `Step 2 of 2 · ${who}`;
 }
 
 /** The first screen: one empty name field and Continue (Enter works too). */

@@ -25,7 +25,8 @@ import { updateChallenge } from '@/lib/next/actions';
 import { KitGallery } from './kit-gallery';
 import { NavContext, isPageId, type Nav, type PageId } from './nav';
 import { PAGES, PAGE_GROUPS, pageById, preloadPages } from './pages/registry';
-import { WorldProvider, useDemo } from './world';
+import { settlingSample } from '@/lib/next/demo';
+import { HostedWorld, WorldProvider, useDemo } from './world';
 import {
   Button,
   EmptyState,
@@ -79,6 +80,14 @@ const urlFor = (view: View) =>
     : view.kit
       ? `${location.pathname}?kit`
       : location.pathname;
+
+/**
+ * /preview?page=overview&settling: the last day over, with a dispute still open. Read as the page
+ * loads, because the address is tidied right after.
+ */
+const settlingView =
+  typeof location !== 'undefined' &&
+  new URLSearchParams(location.search).has('settling');
 
 /** The view the address bar describes. */
 function viewFromLocation(): View {
@@ -253,7 +262,13 @@ function PreviewShell({ initial }: { initial: View }) {
             />
             <div style={{ paddingTop: BAR_HEIGHT }}>
               <VersionBoundary key={`${entry.id}-${view.version}`}>
-                <Version />
+                {settlingView ? (
+                  <HostedWorld world={settlingSample(world)}>
+                    <Version />
+                  </HostedWorld>
+                ) : (
+                  <Version />
+                )}
               </VersionBoundary>
             </div>
           </>

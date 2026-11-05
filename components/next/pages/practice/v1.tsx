@@ -231,15 +231,27 @@ export default function PracticeV1() {
         Next
       </Button>
     ) : p.phase === 'yours' && !reviewing ? (
-      <Button
-        variant="primary"
-        size="lg"
-        full
-        iconEnd={ArrowRight}
-        onClick={p.toGift}
-      >
-        Next
-      </Button>
+      <>
+        <Button
+          variant="primary"
+          size="lg"
+          full
+          iconEnd={ArrowRight}
+          onClick={p.toGift}
+        >
+          Next
+        </Button>
+        <Button
+          variant="quiet"
+          onClick={() => {
+            setDisputed(toReview[toReview.length - 1]);
+            p.undoDecision();
+            setDisputing(true);
+          }}
+        >
+          Dispute it instead
+        </Button>
+      </>
     ) : p.phase === 'yours' ? (
       // As on Review: Dispute and Approve side by side, Approve the filled one.
       <>

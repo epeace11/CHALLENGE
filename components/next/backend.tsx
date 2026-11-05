@@ -10,6 +10,7 @@ import type {
   World,
 } from '@/lib/next/model';
 import type { CheckinInput } from '@/lib/next/actions';
+import type { PageId } from './nav';
 import { useDemo } from './world';
 
 /**
@@ -115,8 +116,8 @@ export type Host = {
    * couple's id, or 'new' for someone not in the app with you yet; left out, the partner on screen.
    */
   startFrom: (template: Template, couple?: string) => Promise<boolean>;
-  /** Shows another of this person's challenges. */
-  openChallenge: (id: string) => void;
+  /** Shows another of this person's challenges, at one of its pages if asked. */
+  openChallenge: (id: string, page?: PageId) => void;
   /** Saves a challenge still in setup without moving on, so leaving keeps it as a draft. */
   saveDraft: (draft: SetupDraft) => Promise<boolean>;
   /** Saves Set up and opens the pact, which the person who set it up signs before inviting. */
@@ -130,6 +131,8 @@ export type Host = {
   inviteLink: () => Promise<{ link: string; code: string } | null>;
   /** The partner accepts the invite they opened. */
   acceptInvite: () => Promise<boolean>;
+  /** Not now: forgets the invite and goes back to this person's own challenges. */
+  dismissInvite: () => void;
   /** Starts a new challenge from the shared link that was opened (after signing up, if needed). */
   startShared: () => Promise<boolean>;
   /** Saves a copy of the shared challenge to Your challenges (after signing up, if needed). */

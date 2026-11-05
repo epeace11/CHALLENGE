@@ -12,6 +12,8 @@ export function showVerdictFor(challengeId: string) {
   chosen = challengeId;
 }
 
-/** The finished challenge to show: the one chosen, or the newest. */
+/** The finished challenge to show: the one chosen, the one on screen, or the newest not hidden. */
 export const pastToShow = (w: World): PastChallenge | undefined =>
-  w.past.find((p) => p.challenge.id === chosen) ?? w.past[0];
+  w.past.find((p) => p.challenge.id === chosen) ??
+  w.past.find((p) => p.challenge.id === w.challenge.id) ??
+  w.past.find((p) => !p.hidden);

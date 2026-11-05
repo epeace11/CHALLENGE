@@ -2,6 +2,7 @@
 'use client';
 import { ArrowRight } from 'lucide-react';
 import { formatDate, formatWeekday } from '@/lib/next/selectors';
+import { useBackend } from '@/components/next/backend';
 import { PlainFrame } from '@/components/next/frames';
 import {
   ActionBar,
@@ -24,6 +25,7 @@ import { useInvite } from './use-invite';
 /** Invite, version 2. */
 export default function InviteV2() {
   const flow = useInvite();
+  const { host } = useBackend();
   const { challenge: c, inviter } = flow;
   return (
     <PlainFrame
@@ -121,6 +123,12 @@ export default function InviteV2() {
         >
           Accept and continue
         </Button>
+        {/* Signed in already, this person's own challenges are one tap away. */}
+        {host && !flow.signedOut && (
+          <Button variant="quiet" onClick={host.dismissInvite}>
+            Not now
+          </Button>
+        )}
         {flow.canSuggest && (
           <Button
             size="lg"

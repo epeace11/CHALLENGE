@@ -8,9 +8,12 @@ import {
   formatMoney,
   plural,
   settling,
+  settlingLine,
 } from '@/lib/next/selectors';
 import { AppFrame } from '@/components/next/frames';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
+import { showVerdictFor } from '../verdict/which';
 import { useWorld } from '@/components/next/world';
 import {
   Button,
@@ -19,6 +22,7 @@ import {
   GlassCard,
   PageTitle,
   ProgressBar,
+  RowButton,
   Section,
   StatButton,
 } from '@/components/next/ui';
@@ -64,11 +68,35 @@ function EndAsk() {
   );
 }
 
-/** The last day is over but it isn't settled: there's no result until it is. */
+/**
+ * The last day is over but it isn't settled: there's no result until it is. It starts with what the
+ * two of them just did, then says what's left, and it's the only thing to do here.
+ */
 function Settling() {
   const world = useWorld();
   const { navigate } = useNav();
   const over = settling(world);
+  const c = world.challenge;
+  if (c.status === 'finished')
+    return (
+      <Enter index={1}>
+        <GlassCard className="flex flex-col gap-4">
+          <h2 className="font-nx-serif text-nx-h2">You finished {c.name}</h2>
+          <Button
+            variant="primary"
+            size="lg"
+            iconEnd={ArrowRight}
+            className="w-full sm:w-auto sm:self-start"
+            onClick={() => {
+              showVerdictFor(c.id);
+              navigate('verdict');
+            }}
+          >
+            See who won
+          </Button>
+        </GlassCard>
+      </Enter>
+    );
   if (!over) return null;
   const partner = world.partner.name;
   return (
@@ -76,19 +104,16 @@ function Settling() {
       <GlassCard className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <h2 className="font-nx-serif text-nx-h2">
-            {over.disputes
-              ? `Settle ${plural(over.disputes, 'dispute')} to see who won`
-              : over.toReview
-                ? `Review ${plural(over.toReview, 'answer')} to see who won`
-                : `Waiting for ${partner} to review your answers`}
+            You finished {world.challenge.name}
           </h2>
-          <p className="text-nx-body text-nx-ink-2">
+          <p className="text-nx-lead text-nx-ink">
             {over.disputes
-              ? 'The last day is over. The person who answered concedes, or the person who disputed it withdraws.'
+              ? `Settle ${plural(over.disputes, 'dispute')} to see who won.`
               : over.toReview
-                ? 'The last day is over. Answers nobody reviews count as approved after 48 hours.'
-                : 'The last day is over. Answers nobody reviews count as approved after 48 hours, and then you’ll see who won.'}
+                ? `Review ${plural(over.toReview, 'answer')} to see who won.`
+                : `Waiting for ${partner} to review your answers.`}
           </p>
+          <p className="text-nx-body text-nx-ink-2">{settlingLine(world)}</p>
         </div>
         {over.yours > 0 && (
           <Button
@@ -106,10 +131,33 @@ function Settling() {
   );
 }
 
+/** Other challenges waiting on this person, in words, each opening that challenge. */
+function OthersWaiting() {
+  const world = useWorld();
+  const { navigate } = useNav();
+  const { host } = useBackend();
+  const waiting = world.others.filter((o) => o.needsYou);
+  if (!waiting.length) return null;
+  return (
+    <Enter index={2} className="flex flex-col gap-2.5">
+      {waiting.map((o) => (
+        <RowButton
+          key={o.id}
+          title={o.name}
+          detail={o.line}
+          onClick={() => (host ? host.openChallenge(o.id) : navigate('home'))}
+        />
+      ))}
+    </Enter>
+  );
+}
+
 function Running() {
   const world = useWorld();
   const { navigate } = useNav();
   const o = useMemo(() => overviewOf(world), [world]);
+  // Once the last day is over, this is the one thing here: the day's own actions are done.
+  const over = !!settling(world) || world.challenge.status === 'finished';
   const [day, setDay] = useState<DateString | null>(null);
   const partner = world.partner.name;
   const gym = o.gym;
@@ -125,120 +173,127 @@ function Running() {
         {/* One column in order of what matters now. */}
         <div className="flex flex-col gap-8">
           {/* What matters now: logging Thursday, or reviewing once it is logged. */}
-          <Enter index={1} className="flex flex-col gap-3">
-            {o.left > 0 ? (
-              <>
-                {/* What is left and the button that logs it, as one: the card itself does
+          {!over && (
+            <Enter index={1} className="flex flex-col gap-3">
+              {o.left > 0 ? (
+                <>
+                  {/* What is left and the button that logs it, as one: the card itself does
                     nothing, so there is one thing to tap. */}
-                <GlassCard className="flex flex-col gap-5">
-                  {/* The day is named once, on the button ("Log yesterday" under today's date). */}
-                  <div className="flex flex-col gap-2">
-                    <p className="flex flex-wrap items-baseline gap-x-3">
-                      <span className="font-nx-serif text-nx-num-lg leading-none text-nx-accent tabular-nums">
-                        <CountUp value={o.left} />
-                      </span>
-                      <span className="text-nx-lead text-nx-ink">
-                        left to log
-                      </span>
+                  <GlassCard className="flex flex-col gap-5">
+                    {/* The day is named once, on the button ("Log yesterday" under today's date). */}
+                    <div className="flex flex-col gap-2">
+                      <p className="flex flex-wrap items-baseline gap-x-3">
+                        <span className="font-nx-serif text-nx-num-lg leading-none text-nx-accent tabular-nums">
+                          <CountUp value={o.left} />
+                        </span>
+                        <span className="text-nx-lead text-nx-ink">
+                          left to log
+                        </span>
+                      </p>
+                      {/* Which ones, as plain words (they are not buttons); a name never breaks. */}
+                      <p className="text-nx-body text-nx-ink">
+                        {o.open.map((r, i) => (
+                          <Fragment key={r.id}>
+                            {i > 0 && '\u00a0· '}
+                            <span className="inline-block">
+                              {shortTitle(r)}
+                            </span>
+                          </Fragment>
+                        ))}
+                      </p>
+                      <p className="flex items-center gap-1.5 text-nx-2 text-nx-ink-2">
+                        <Clock3
+                          size={16}
+                          className="shrink-0"
+                          aria-hidden="true"
+                        />
+                        {formatDuration(o.msLeft)} left, until {o.closes}
+                      </p>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      full
+                      iconEnd={ArrowRight}
+                      onClick={() => navigate('log')}
+                    >
+                      Log {o.dayName}
+                    </Button>
+                  </GlassCard>
+                </>
+              ) : o.firstDay ? (
+                <>
+                  {/* Day 1: nothing can be logged until tomorrow, so the card says when, and what. */}
+                  <GlassCard className="flex flex-col gap-2">
+                    <p className="font-nx-serif text-nx-h3">
+                      Nothing to log yet
                     </p>
-                    {/* Which ones, as plain words (they are not buttons); a name never breaks. */}
-                    <p className="text-nx-body text-nx-ink">
-                      {o.open.map((r, i) => (
+                    <p className="text-nx-body text-nx-ink">{o.answerToday}</p>
+                    <p className="text-nx-2 text-nx-ink-2">
+                      {o.todayRules.map((r, i) => (
                         <Fragment key={r.id}>
                           {i > 0 && '\u00a0· '}
                           <span className="inline-block">{shortTitle(r)}</span>
                         </Fragment>
                       ))}
                     </p>
-                    <p className="flex items-center gap-1.5 text-nx-2 text-nx-ink-2">
-                      <Clock3
-                        size={16}
-                        className="shrink-0"
-                        aria-hidden="true"
-                      />
-                      {formatDuration(o.msLeft)} left, until {o.closes}
-                    </p>
-                  </div>
+                  </GlassCard>
                   <Button
                     variant="primary"
                     size="lg"
                     full
                     iconEnd={ArrowRight}
-                    onClick={() => navigate('log')}
+                    onClick={() => navigate('practice')}
                   >
-                    Log {o.dayName}
+                    Try a practice day
                   </Button>
-                </GlassCard>
-              </>
-            ) : o.firstDay ? (
-              <>
-                {/* Day 1: nothing can be logged until tomorrow, so the card says when, and what. */}
-                <GlassCard className="flex flex-col gap-2">
-                  <p className="font-nx-serif text-nx-h3">Nothing to log yet</p>
-                  <p className="text-nx-body text-nx-ink">{o.answerToday}</p>
-                  <p className="text-nx-2 text-nx-ink-2">
-                    {o.todayRules.map((r, i) => (
-                      <Fragment key={r.id}>
-                        {i > 0 && '\u00a0· '}
-                        <span className="inline-block">{shortTitle(r)}</span>
-                      </Fragment>
-                    ))}
-                  </p>
-                </GlassCard>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  full
-                  iconEnd={ArrowRight}
-                  onClick={() => navigate('practice')}
-                >
-                  Try a practice day
-                </Button>
-              </>
-            ) : (
-              <>
-                <GlassCard className="flex items-center gap-4">
-                  <span className="grid size-12 shrink-0 place-items-center rounded-full bg-nx-done-soft text-nx-done">
-                    <CircleCheck size={26} aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-nx-serif text-nx-h3">
-                      {o.day
-                        ? `${o.dayName[0].toUpperCase()}${o.dayName.slice(1)} is logged`
-                        : 'Nothing to log'}
-                    </p>
-                    {/* With something to review, the button under the card says what is next. */}
-                    {o.waiting === 0 && (
-                      <p className="text-nx-2 text-nx-ink-2">
-                        Nothing waits for you either.
+                </>
+              ) : (
+                <>
+                  <GlassCard className="flex items-center gap-4">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-full bg-nx-done-soft text-nx-done">
+                      <CircleCheck size={26} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-nx-serif text-nx-h3">
+                        {o.day
+                          ? `${o.dayName[0].toUpperCase()}${o.dayName.slice(1)} is logged`
+                          : 'Nothing to log'}
                       </p>
-                    )}
-                  </div>
-                </GlassCard>
-                {o.waiting > 0 ? (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    full
-                    iconEnd={ArrowRight}
-                    onClick={() => navigate('review')}
-                  >
-                    Review {partner}’s answers
-                  </Button>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    full
-                    iconEnd={ArrowRight}
-                    onClick={() => navigate('progress')}
-                  >
-                    See your progress
-                  </Button>
-                )}
-              </>
-            )}
-          </Enter>
+                      {/* With something to review, the button under the card says what is next. */}
+                      {o.waiting === 0 && (
+                        <p className="text-nx-2 text-nx-ink-2">
+                          Nothing waits for you either.
+                        </p>
+                      )}
+                    </div>
+                  </GlassCard>
+                  {o.waiting > 0 ? (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      full
+                      iconEnd={ArrowRight}
+                      onClick={() => navigate('review')}
+                    >
+                      Review {partner}’s answers
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      full
+                      iconEnd={ArrowRight}
+                      onClick={() => navigate('progress')}
+                    >
+                      See your progress
+                    </Button>
+                  )}
+                </>
+              )}
+            </Enter>
+          )}
+          <OthersWaiting />
 
           <div className="-mt-5 flex flex-col gap-8">
             {/* On Day 1 nobody has a point or anything to review yet, so those numbers wait. */}

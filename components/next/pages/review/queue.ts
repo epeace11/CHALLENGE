@@ -18,6 +18,7 @@ import {
   weekOf,
   weekTarget,
   type ReviewItem,
+  disputesRaisedBy,
 } from '@/lib/next/selectors';
 
 /**
@@ -38,7 +39,8 @@ export type DayGroup = { day: DateString; items: AnswerItem[] };
  * The viewer's review: `todo` is everything waiting on them, in the order the page meets it
  * (answers by day, late answers, forgiveness requests, then disputes on their own answers).
  * A dispute they already replied to waits on the partner, so it moves to `replied`.
- * `theirs` is the partner's queue: the viewer's own answers and requests still waiting.
+ * `theirs` is the partner's queue: the viewer's own answers and requests still waiting. `raised` is
+ * every open dispute the viewer raised, replied to or not: only they can withdraw one.
  */
 export function reviewState(w: World) {
   const q = reviewQueue(w, w.me.id);
@@ -61,6 +63,7 @@ export function reviewState(w: World) {
     ...disputes,
   ];
   const theirs = waitingOnPartner(w, w.me.id);
+  const raised = disputesRaisedBy(w, w.me.id);
   return {
     todo,
     days,
@@ -69,8 +72,10 @@ export function reviewState(w: World) {
     disputes,
     replied,
     theirs,
-    /** Everything waiting on the partner, the viewer's replied disputes included. */
-    waiting: theirs.count + replied.length,
+    raised,
+    /** Everything open between them that isn't the viewer's to decide first. */
+    waiting:
+      theirs.count - theirs.disputes.length + raised.length + replied.length,
   };
 }
 
@@ -136,7 +141,7 @@ export function waitingSummary(s: ReviewState) {
   if (answers) parts.push(plural(answers, 'answer'));
   if (s.theirs.forgiveness.length)
     parts.push(plural(s.theirs.forgiveness.length, 'forgiveness request'));
-  const disputes = s.theirs.disputes.length + s.replied.length;
+  const disputes = s.raised.length + s.replied.length;
   if (disputes) parts.push(plural(disputes, 'dispute'));
   return parts.join(', ');
 }

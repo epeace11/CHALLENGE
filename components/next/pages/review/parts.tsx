@@ -33,6 +33,7 @@ import {
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import { STAMP } from './motion';
+import { showVerdictFor } from '../verdict/which';
 import {
   approveAllLabel,
   concedeEffect,
@@ -761,7 +762,7 @@ export function WaitingForPartner({
   const { world, state, held } = review;
   const [open, setOpen] = useState(false);
   const partner = world.partner;
-  const { theirs, replied } = state;
+  const { theirs, raised, replied } = state;
   // Conceding here shows its Undo line here (the sheet stays open); focus goes to it, and back to
   // that Concede button after Undo. The sheet moves focus to itself on the next frame when the
   // focused button goes, so this waits one frame more.
@@ -845,7 +846,7 @@ export function WaitingForPartner({
                 <Quote person={world.me}>{i.request.reason}</Quote>
               </Card>
             ))}
-            {theirs.disputes.map((i) => (
+            {raised.map((i) => (
               <Card as="li" pad="sm" key={i.id} className="flex flex-col gap-3">
                 <div>
                   {answer(
@@ -854,6 +855,9 @@ export function WaitingForPartner({
                   )}
                 </div>
                 <Quote person={world.me}>{i.dispute.comment}</Quote>
+                {i.dispute.reply && (
+                  <Quote person={partner}>{i.dispute.reply}</Quote>
+                )}
                 <Button
                   icon={Undo2}
                   className="self-start"
@@ -924,7 +928,17 @@ export function CaughtUp({ world }: { world: World }) {
           {world.partner.name}’s next answers show up here.
         </p>
         <div className="mt-3">
-          {day && left > 0 ? (
+          {world.challenge.status === 'finished' ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                showVerdictFor(world.challenge.id);
+                navigate('verdict');
+              }}
+            >
+              See who won
+            </Button>
+          ) : day && left > 0 ? (
             <Button variant="primary" onClick={() => navigate('log')}>
               Log {formatWeekday(day)}
             </Button>

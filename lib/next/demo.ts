@@ -795,6 +795,21 @@ const SAY_RULES: SayRulesDraft = {
 
 /* ── The world ─────────────────────────────────────────────────────────── */
 
+/**
+ * The sample world a day after the last deadline with a dispute still open, for seeing the settling
+ * screen: /preview?page=overview&settling.
+ */
+export function settlingSample(w: World): World {
+  const end = shift(w.challenge.start, w.challenge.days + 1);
+  return {
+    ...w,
+    today: end,
+    now: `${end}T17:00:00.000Z`,
+    entries: w.entries.filter((e) => e.status !== 'pending'),
+    others: [],
+  };
+}
+
 /** Freezes the sample world so a page that mutates it fails loudly; use the actions in lib/next/actions.ts instead. */
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -832,6 +847,15 @@ export const world: World = deepFreeze({
       partner: 'Priya',
       line: 'Day 6 of 30 · 1 left to log',
       needsYou: true,
+      running: {
+        range: 'Nov 15 – Dec 14',
+        day: 6,
+        days: 30,
+        left: 1,
+        leftHint: 'Thursday, 4h 29m left',
+        waiting: 0,
+        waitingHint: 'Nothing waiting',
+      },
     },
   ],
   partners: [

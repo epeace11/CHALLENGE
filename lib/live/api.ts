@@ -67,7 +67,8 @@ export async function loadRows(): Promise<Rows | null> {
   const user = await currentUser();
   if (!user) return null;
   const challenges = await select<ChallengeRow>('challenges');
-  await Promise.all(
+  // One that can't run its deadlines now shouldn't stop the others loading.
+  await Promise.allSettled(
     challenges
       .filter((c) => c.status === 'running')
       .map((c) => rpc('nx_sync', { p_challenge: c.id })),
@@ -112,17 +113,17 @@ export async function loadRows(): Promise<Rows | null> {
     select<Rows['gifts'][number]>('gifts_given', '*', 'challenge_id').catch(
       () => [],
     ),
-    // Only the viewer's own (supabase/next/hide-challenges.sql).
+    // Only the viewer's own.
     select<Rows['hidden'][number]>(
       'hidden_challenges',
       'challenge_id,status',
       'challenge_id',
-    ).catch(() => []),
+    ),
     select<Rows['hiddenSaved'][number]>(
       'hidden_saved',
       'saved_id,status',
       'saved_id',
-    ).catch(() => []),
+    ),
   ]);
   const me = profiles.find((p) => p.id === user.id);
   if (!me) return null;
@@ -312,7 +313,7 @@ export const signOut = () => supabase.auth.signOut();
 /* ── Setting up ────────────────────────────────────────────────────────── */
 
 /** A rule as the database takes it: `who` is 'both', 'me', 'partner', or a member's id. */
-export function ruleInput(rule: Rule, meId: string, partnerId: string) {
+export function ruleInput(rule: Rule, meId: string) {
   return {
     title: rule.title,
     question: rule.question,
@@ -324,14 +325,8 @@ export function ruleInput(rule: Rule, meId: string, partnerId: string) {
       ? { weeklyTarget: rule.weeklyTarget }
       : {}),
     ...(rule.target ? { target: rule.target } : {}),
-    who:
-      rule.who === 'both'
-        ? 'both'
-        : rule.who === meId
-          ? 'me'
-          : rule.who === partnerId
-            ? 'partner'
-            : rule.who,
+    // Two people: a rule that isn't both's or the viewer's is the partner's, whoever that is now.
+    who: rule.who === 'both' ? 'both' : rule.who === meId ? 'me' : 'partner',
     proof: rule.proof,
     ...(rule.startsOn ? { startsOn: rule.startsOn } : {}),
     ...(rule.endsOn ? { endsOn: rule.endsOn } : {}),
@@ -405,13 +400,12 @@ export async function startChallenge(
   start: string,
   timeZone: string,
   meId: string,
-  partnerId: string,
   draftId: string | null,
   /** The couple it's with, or 'new' for someone who isn't in the app with you yet. */
   couple?: string,
 ) {
   const f = templateFields(template);
-  const rules = f.rules.map((r) => ruleInput(r, meId, partnerId));
+  const rules = f.rules.map((r) => ruleInput(r, meId));
   if (draftId) {
     await rpc('nx_update_challenge', {
       p_challenge: draftId,
@@ -452,10 +446,9 @@ export async function saveSetup(
   challengeId: string,
   d: SetupDraft,
   meId: string,
-  partnerId: string,
   was: Challenge | null,
 ) {
-  const rules = d.rules.map((r) => ruleInput(r, meId, partnerId));
+  const rules = d.rules.map((r) => ruleInput(r, meId));
   const same = <T>(a: T, b: T) =>
     !!was && JSON.stringify(a) === JSON.stringify(b);
   const changed = <T>(value: T, before: T | undefined) =>
@@ -477,7 +470,7 @@ export async function saveSetup(
     ),
     p_rules: changed(
       rules,
-      was?.rules.map((r) => ruleInput(r, meId, partnerId)),
+      was?.rules.map((r) => ruleInput(r, meId)),
     ),
   });
 }
@@ -487,10 +480,9 @@ export async function finishSetup(
   challengeId: string,
   d: SetupDraft,
   meId: string,
-  partnerId: string,
   was: Challenge | null,
 ) {
-  await saveSetup(challengeId, d, meId, partnerId, was);
+  await saveSetup(challengeId, d, meId, was);
   await rpc('nx_finish_setup', { p_challenge: challengeId });
 }
 
@@ -546,16 +538,20 @@ async function deleteChallenge(challengeId: string) {
     p_challenge: challengeId,
   });
   if (!gone) return;
-  const { data, error } = await supabase
-    .from('entries')
-    .select('proofs,correction_proofs')
-    .eq('challenge_id', challengeId);
-  if (error) throw new Error(error.message);
-  const paths = (data ?? []).flatMap((e) =>
-    [...(e.proofs ?? []), ...(e.correction_proofs ?? [])].map(
-      (p: { path: string }) => p.path,
-    ),
-  );
+  const paths: string[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('entries')
+      .select('proofs,correction_proofs')
+      .eq('challenge_id', challengeId)
+      .order('id')
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    for (const e of data ?? [])
+      for (const p of [...(e.proofs ?? []), ...(e.correction_proofs ?? [])])
+        paths.push((p as { path: string }).path);
+    if (!data || data.length < PAGE) break;
+  }
   if (paths.length) {
     const { error: failed } = await supabase.storage
       .from(PROOF_BUCKET)

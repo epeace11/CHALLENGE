@@ -12,13 +12,9 @@ import { AccountMenu, PlainFrame } from '@/components/next/frames';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
-import {
-  Glide,
-  PageTitle,
-  SegmentedControl,
-  Stagger,
-} from '@/components/next/ui';
+import { Glide, PageTitle, Stagger } from '@/components/next/ui';
 import { ChoiceSheet } from './choice-sheet';
+import { WhoWith } from './who-with';
 import { useChoiceSheet } from './use-choice-sheet';
 import { savedChoices, themeChoices, type Choice } from './choices';
 import { ChoiceRow } from './parts';
@@ -58,6 +54,9 @@ export default function Start() {
   const chosen = partners.find((p) => p.coupleId === who)?.person;
   // Without a partner yet, a first challenge is with someone new: nothing to choose.
   const couple = partners.length ? who : undefined;
+  /** A new account: nothing to go back to yet. */
+  const brandNew =
+    !!host && !world.challenge.id && !world.past.length && !world.saved.length;
 
   const go = (next: Step) => {
     moved.current = true;
@@ -77,7 +76,7 @@ export default function Start() {
       back={
         step !== 'how'
           ? { label: 'All ways to start', onClick: () => go('how') }
-          : host && !world.challenge.id
+          : brandNew
             ? undefined
             : { to: 'home', label: 'Your challenges' }
       }
@@ -89,18 +88,7 @@ export default function Start() {
           detail={partners.length ? undefined : `With ${world.partner.name}`}
         />
         {partners.length > 0 && step === 'how' && (
-          <SegmentedControl
-            label="Who with"
-            value={who}
-            onChange={setWho}
-            options={[
-              ...partners.map((p) => ({
-                value: p.coupleId,
-                label: p.person.name,
-              })),
-              { value: 'new', label: 'Someone new' },
-            ]}
-          />
+          <WhoWith value={who} onChange={setWho} partners={partners} />
         )}
         {partners.length > 0 && step !== 'how' && (
           <p className="-mt-3 text-nx-body text-nx-ink-2">
@@ -147,7 +135,7 @@ export default function Start() {
                 />
               </Stagger>
               {/* A brand-new account may belong to a partner who registered before opening the link. */}
-              {host && !world.challenge.id && (
+              {brandNew && (
                 <p className="text-nx-2 text-nx-ink-2">
                   Joining your partner’s challenge? Open the invite link they
                   sent you.
