@@ -415,23 +415,35 @@ export const renameChallenge = (w: World, name: string): World => ({
   challenge: { ...w.challenge, name: name.trim() },
 });
 
-/** Deletes a challenge that isn't running: it leaves Your challenges, with its saved copy. */
-export function deleteChallenge(w: World, challengeId: string): World {
-  const gone = w.past.find((p) => p.challenge.id === challengeId);
-  const past = w.past.filter((p) => p.challenge.id !== challengeId);
-  const name = gone?.challenge.name ?? w.challenge.name;
-  const shared = past.some((p) => p.challenge.name === name);
-  return {
-    ...w,
-    past,
-    others: w.others.filter((o) => o.id !== challengeId),
-    saved: shared
-      ? w.saved
-      : w.saved.filter((s) => !(s.source === 'mine' && s.name === name)),
-  };
-}
+/** Moves a finished challenge to this person's Hidden list, or back. */
+export const hideChallenge = (
+  w: World,
+  challengeId: string,
+  hidden: boolean,
+): World => ({
+  ...w,
+  past: w.past.map((p) =>
+    p.challenge.id === challengeId ? { ...p, hidden } : p,
+  ),
+});
 
-/** Deletes a saved challenge. */
+/** Moves a saved challenge to this person's Hidden list, or back. */
+export const hideSaved = (
+  w: World,
+  savedId: string,
+  hidden: boolean,
+): World => ({
+  ...w,
+  saved: w.saved.map((s) => (s.id === savedId ? { ...s, hidden } : s)),
+});
+
+/** Deletes a finished challenge from this person's account for good; the partner keeps theirs. */
+export const deleteChallenge = (w: World, challengeId: string): World => ({
+  ...w,
+  past: w.past.filter((p) => p.challenge.id !== challengeId),
+});
+
+/** Deletes a saved challenge from this person's account for good. */
 export const deleteSaved = (w: World, savedId: string): World => ({
   ...w,
   saved: w.saved.filter((s) => s.id !== savedId),

@@ -237,6 +237,8 @@ export type SavedChallenge = {
   step: number;
   cap: number | null;
   rules: Rule[];
+  /** In this person's Hidden list. */
+  hidden?: boolean;
   /** 'mine': saved by this couple. 'link': opened from a link another couple shared. */
   source: 'mine' | 'link';
   /** Who shared it, for 'link' ("Priya & Sam"). */
@@ -398,6 +400,8 @@ export type PastChallenge = {
   verdict: Verdict;
   /** Who it was with, when that isn't the partner on screen. */
   partner?: Person;
+  /** In this person's Hidden list. Only theirs: the partner's copy doesn't change. */
+  hidden?: boolean;
 };
 
 /** Someone this person does challenges with. */

@@ -5,8 +5,8 @@ import {
   ArrowRight,
   ChevronRight,
   ListChecks,
+  EyeOff,
   Plus,
-  Trash2,
   Trophy,
 } from 'lucide-react';
 import type { PastChallenge, SavedChallenge } from '@/lib/next/model';
@@ -18,8 +18,14 @@ import {
   GlassCard,
   PageTitle,
   ProgressBar,
+  RowButton,
 } from '@/components/next/ui';
-import { deleteChallenge, deleteSaved } from '@/lib/next/actions';
+import {
+  deleteChallenge,
+  deleteSaved,
+  hideChallenge,
+  hideSaved,
+} from '@/lib/next/actions';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -28,9 +34,11 @@ import {
   formatDate,
   formatRange,
   lastDay,
+  plural,
 } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
-import { DeleteChallengeSheet, deleteChallengeLine } from './delete-sheet';
+import { DeleteChallengeSheet, deletedForYouLine } from './delete-sheet';
+import { HiddenSheet, type HiddenItem } from './hidden-sheet';
 import { SavedSheet } from './saved-sheet';
 import { ShareLink } from './share-link';
 import {
@@ -65,6 +73,7 @@ export default function HomeV2() {
     remove: () => Promise<boolean>;
   } | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const ask = (d: NonNullable<typeof deleting>) => {
     setDeleting(d);
     setConfirming(true);
@@ -72,14 +81,82 @@ export default function HomeV2() {
   /** Starts a new challenge from a saved one (the live app), or opens Set up (the preview). */
   const startFrom = (saved: SavedChallenge) =>
     host ? void host.startFrom({ kind: 'saved', saved }) : navigate('setup');
-  // Each finished challenge with the saved copy that runs it again; then saved ones never run.
-  const finished = world.past.map((p) => ({
+  // Each finished challenge with the saved copy that runs it again; then saved ones never run. Hidden
+  // ones are only in this person's Hidden list.
+  const all = world.past.map((p) => ({
     past: p,
     saved: savedFor(world, p),
   }));
+  const finished = all.filter((f) => !f.past.hidden);
   const others = world.saved.filter(
-    (s) => !finished.some((f) => f.saved?.id === s.id),
+    (s) => !s.hidden && !all.some((f) => f.saved?.id === s.id),
   );
+  /** Takes a challenge off this person's list; the saved copy that goes with it follows it. */
+  const hidePast = (id: string, hidden: boolean) =>
+    backend.act({ type: 'hideChallenge', challengeId: id, hidden }, (w) =>
+      hideChallenge(w, id, hidden),
+    );
+  const hidden: HiddenItem[] = [
+    ...all
+      .filter((f) => f.past.hidden)
+      .map(({ past, saved }): HiddenItem => {
+        const id = past.challenge.id;
+        // Its saved copy goes too, unless another challenge of theirs still runs from it.
+        const copy =
+          saved &&
+          all.filter((f) => f.saved?.id === saved.id).length === 1 &&
+          saved;
+        return {
+          id,
+          name: past.challenge.name,
+          detail: finishedLine(past),
+          restore: () => hidePast(id, false),
+          remove: () =>
+            ask({
+              name: past.challenge.name,
+              description: deletedForYouLine(
+                (past.partner ?? world.partner).name,
+              ),
+              remove: () =>
+                backend.save(
+                  [
+                    { type: 'deleteChallenge', challengeId: id },
+                    ...(copy
+                      ? [{ type: 'deleteSaved', savedId: copy.id } as const]
+                      : []),
+                  ],
+                  (w) => {
+                    const gone = deleteChallenge(w, id);
+                    return copy ? deleteSaved(gone, copy.id) : gone;
+                  },
+                ),
+            }),
+        };
+      }),
+    ...world.saved
+      .filter((s) => s.hidden && !all.some((f) => f.saved?.id === s.id))
+      .map(
+        (s): HiddenItem => ({
+          id: s.id,
+          name: s.name,
+          detail: sizeLine(s),
+          restore: () =>
+            backend.act(
+              { type: 'hideSaved', savedId: s.id, hidden: false },
+              (w) => hideSaved(w, s.id, false),
+            ),
+          remove: () =>
+            ask({
+              name: s.name,
+              description: deletedForYouLine(world.partner.name),
+              remove: () =>
+                backend.save({ type: 'deleteSaved', savedId: s.id }, (w) =>
+                  deleteSaved(w, s.id),
+                ),
+            }),
+        }),
+      ),
+  ];
   const status = world.challenge.status;
   // Before Day 1 there is nothing for the tabs to show yet, so the page has the plain frame.
   const settingUp = status !== 'running' && status !== 'finished';
@@ -263,24 +340,7 @@ export default function HomeV2() {
                     </Button>
                   </>
                 )}
-                <DeleteButton
-                  onClick={() =>
-                    ask({
-                      name: past.challenge.name,
-                      description: deleteChallengeLine(
-                        (past.partner ?? world.partner).name,
-                      ),
-                      remove: () =>
-                        backend.save(
-                          {
-                            type: 'deleteChallenge',
-                            challengeId: past.challenge.id,
-                          },
-                          (w) => deleteChallenge(w, past.challenge.id),
-                        ),
-                    })
-                  }
-                />
+                <HideButton onClick={() => hidePast(past.challenge.id, true)} />
               </ChallengeCard>
             </Enter>
           ))}
@@ -307,26 +367,41 @@ export default function HomeV2() {
                 <Button className="self-start" onClick={() => startFrom(s)}>
                   {startLabel(s)}
                 </Button>
-                <DeleteButton
+                <HideButton
                   onClick={() =>
-                    ask({
-                      name: s.name,
-                      description:
-                        'It comes off Your challenges, and its share link stops working. This can’t be undone.',
-                      remove: () =>
-                        backend.save(
-                          { type: 'deleteSaved', savedId: s.id },
-                          (w) => deleteSaved(w, s.id),
-                        ),
-                    })
+                    backend.act(
+                      { type: 'hideSaved', savedId: s.id, hidden: true },
+                      (w) => hideSaved(w, s.id, true),
+                    )
                   }
                 />
               </ChallengeCard>
             </Enter>
           ))}
+          {hidden.length > 0 && (
+            <Enter index={3 + finished.length + others.length}>
+              <RowButton
+                leading={
+                  <EyeOff
+                    size={22}
+                    className="text-nx-accent"
+                    aria-hidden="true"
+                  />
+                }
+                title="Hidden"
+                detail={`${plural(hidden.length, 'challenge')}, only on your account`}
+                onClick={() => setShowHidden(true)}
+              />
+            </Enter>
+          )}
         </div>
       </div>
 
+      <HiddenSheet
+        items={hidden}
+        open={showHidden}
+        onOpenChange={setShowHidden}
+      />
       <DeleteChallengeSheet
         name={deleting?.name ?? ''}
         description={deleting?.description ?? ''}
@@ -431,16 +506,16 @@ function ChallengeCard({
   );
 }
 
-/** A card's quiet Delete, last in the card. */
-function DeleteButton({ onClick }: { onClick: () => void }) {
+/** A card's quiet Hide, last in the card: it moves to this person's Hidden list. */
+function HideButton({ onClick }: { onClick: () => void }) {
   return (
     <Button
       variant="quiet"
-      icon={Trash2}
-      className="-ml-3 self-start text-nx-danger"
+      icon={EyeOff}
+      className="-ml-3 self-start"
       onClick={onClick}
     >
-      Delete
+      Hide
     </Button>
   );
 }

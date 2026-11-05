@@ -195,6 +195,9 @@ export type Rows = {
   me: ProfileRow & { email: string };
   /** Who is in which couple: a person can have several partners. */
   couples: { couple_id: string; person_id: string; joined_at: string }[];
+  /** What the viewer has hidden or deleted, only ever their own. */
+  hidden: { challenge_id: string; status: 'hidden' | 'deleted' }[];
+  hiddenSaved: { saved_id: string; status: 'hidden' | 'deleted' }[];
   /** Everyone in the viewer's couples, the viewer included (one before the invite is accepted). */
   members: ProfileRow[];
   challenges: ChallengeRow[];
@@ -425,9 +428,11 @@ export function savedOf(
  * per couple, so at most one is running or being set up.)
  */
 export function currentChallenge(rows: Rows, wanted?: string | null) {
-  const list = [...rows.challenges].sort((a, b) =>
-    b.created_at.localeCompare(a.created_at),
-  );
+  // Hidden or deleted ones are never on screen by themselves.
+  const put = new Set(rows.hidden.map((h) => h.challenge_id));
+  const list = rows.challenges
+    .filter((c) => !put.has(c.id) || c.id === wanted)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
   return (
     list.find((c) => c.id === wanted) ??
     list.find((c) => c.status === 'running') ??
@@ -516,6 +521,10 @@ export function buildWorld(
 ): Built {
   const me = personOf(rows.me, rows.me.email);
   const current = currentChallenge(rows, wanted);
+  const hiddenStatus = (id: string) =>
+    rows.hidden.find((h) => h.challenge_id === id)?.status;
+  const statusOfSaved = (id: string) =>
+    rows.hiddenSaved.find((h) => h.saved_id === id)?.status;
   // The partner is whoever shares this challenge's couple; with no challenge, the latest couple's.
   const couples = rows.couples
     .filter((m) => m.person_id === rows.me.id)
@@ -590,9 +599,12 @@ export function buildWorld(
     disputes: mine(rows.disputes).map(disputeOf),
     journal: mine(rows.notes).map(noteOf),
     saved: rows.saved
-      .slice()
+      .filter((s) => statusOfSaved(s.id) !== 'deleted')
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .map((s) => savedOf(s, me.id, partner.id, links)),
+      .map((s) => ({
+        ...savedOf(s, me.id, partner.id, links),
+        hidden: statusOfSaved(s.id) === 'hidden',
+      })),
     past: [],
     themes: THEMES,
     library: LIBRARY,
@@ -619,7 +631,9 @@ export function buildWorld(
   // Finished challenges, newest first, each with its verdict worked out from its own rows.
   const past: PastChallenge[] = withPast
     ? rows.challenges
-        .filter((c) => c.status === 'finished')
+        .filter(
+          (c) => c.status === 'finished' && hiddenStatus(c.id) !== 'deleted',
+        )
         .sort((a, b) => b.start_date.localeCompare(a.start_date))
         .map((row) => {
           const w = buildWorld(
@@ -635,6 +649,7 @@ export function buildWorld(
           return {
             challenge: w.challenge,
             partner: w.partner,
+            hidden: hiddenStatus(row.id) === 'hidden',
             verdict: {
               ...verdict,
               people: verdict.people.map((p) => {

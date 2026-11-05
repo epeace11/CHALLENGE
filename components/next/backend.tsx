@@ -49,8 +49,10 @@ export type Command =
   | { type: 'rename'; name: string }
   /** Renames the challenge on screen. */
   | { type: 'renameChallenge'; name: string }
-  /** Deletes a challenge that isn't running, for both people, with its screenshots. */
+  /** Hiding and deleting are this person's own; the partner's copy doesn't change. */
+  | { type: 'hideChallenge'; challengeId: string; hidden: boolean }
   | { type: 'deleteChallenge'; challengeId: string }
+  | { type: 'hideSaved'; savedId: string; hidden: boolean }
   | { type: 'deleteSaved'; savedId: string }
   | { type: 'setShareLink'; savedId: string; on: boolean }
   | { type: 'saveAs'; challengeId: string; name: string }

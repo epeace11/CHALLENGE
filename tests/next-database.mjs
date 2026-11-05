@@ -40,7 +40,7 @@ for (const script of [
   'end-requests.sql',
   'pact-limits.sql',
   'settle-and-many.sql',
-  'delete-challenge.sql',
+  'hide-challenges.sql',
 ])
   await db.exec(
     readFileSync(
@@ -644,6 +644,8 @@ async function rowsFor(id) {
       id,
       `select couple_id, person_id, joined_at::text from couple_members`,
     ),
+    hidden: await as(id, `select challenge_id, status from hidden_challenges`),
+    hiddenSaved: await as(id, `select saved_id, status from hidden_saved`),
     members: (await all('profiles')).filter((p) =>
       members.some((m) => m.person_id === p.id),
     ),
@@ -1252,12 +1254,68 @@ assert.equal(
   1,
 );
 
-// Deleting: gone for both, with everything in it and its saved copy. Only a member can, and a running
-// challenge has to end first.
-await as(maya, `select nx_save_challenge($1,'Short')`, [short]);
+// Hiding and deleting are each person's own: the partner keeps theirs, and it's only erased once neither
+// has it. Only a member can, and a running challenge has to end first.
 await as(maya, `select nx_mark_gift($1,$2,true)`, [short, jordan]);
-await fails(as(sam, `select nx_delete_challenge($1)`, [short]), /isn't yours/);
-await as(jordan, `select nx_delete_challenge($1)`, [short]);
+const hiddenFor = async (id) =>
+  (
+    await as(id, `select status from hidden_challenges where challenge_id=$1`, [
+      short,
+    ])
+  ).map((r) => r.status);
+await fails(
+  as(sam, `select nx_hide_challenge($1,true)`, [short]),
+  /isn't yours/,
+);
+await as(maya, `select nx_hide_challenge($1,true)`, [short]);
+assert.deepEqual(await hiddenFor(maya), ['hidden']);
+assert.deepEqual(await hiddenFor(jordan), [], "Maya's hiding is only hers");
+const hideSeen = buildWorld(
+  await rowsFor(maya),
+  '2026-12-05T15:00:00.000Z',
+  'America/Toronto',
+  links,
+).world;
+assert.equal(hideSeen.past.find((p) => p.challenge.id === short)?.hidden, true);
+await as(maya, `select nx_hide_challenge($1,false)`, [short]);
+assert.deepEqual(await hiddenFor(maya), []);
+assert.equal(
+  (await one(maya, `select nx_delete_challenge($1) gone`, [short])).gone,
+  false,
+  'Jordan still has it',
+);
+assert.equal(
+  buildWorld(
+    await rowsFor(maya),
+    '2026-12-05T15:00:00.000Z',
+    'America/Toronto',
+    links,
+  ).world.past.some((p) => p.challenge.id === short),
+  false,
+  'gone from Maya',
+);
+assert.equal(
+  buildWorld(
+    await rowsFor(jordan),
+    '2026-12-05T15:00:00.000Z',
+    'America/Toronto',
+    links,
+  ).world.past.some((p) => p.challenge.id === short),
+  true,
+  'still there for Jordan',
+);
+await as(maya, `select nx_hide_challenge($1,false)`, [short]);
+assert.deepEqual(await hiddenFor(maya), ['deleted'], 'deleted is for good');
+await fails(
+  as(maya, `select nx_erase_challenge($1)`, [short]),
+  /still has this challenge/,
+);
+assert.equal(
+  (await one(jordan, `select nx_delete_challenge($1) gone`, [short])).gone,
+  true,
+  'now neither has it',
+);
+await as(jordan, `select nx_erase_challenge($1)`, [short]);
 for (const [table, column] of [
   ['challenges', 'id'],
   ['entries', 'challenge_id'],
@@ -1265,6 +1323,7 @@ for (const [table, column] of [
   ['disputes', 'challenge_id'],
   ['gifts_given', 'challenge_id'],
   ['rules', 'challenge_id'],
+  ['hidden_challenges', 'challenge_id'],
 ])
   assert.equal(
     (await db.query(`select 1 from ${table} where ${column}=$1`, [short])).rows
@@ -1272,11 +1331,6 @@ for (const [table, column] of [
     0,
     `nothing left in ${table}`,
   );
-assert.equal(
-  (await as(maya, `select id from saved_challenges where name='Short'`)).length,
-  0,
-  'its saved copy goes too',
-);
 const { nx_create_challenge: stillOn } = await one(
   maya,
   `select nx_create_challenge('Still on','classic',null,'2026-12-06',5,'America/Toronto',1,null,$1::jsonb)`,
@@ -1285,21 +1339,20 @@ const { nx_create_challenge: stillOn } = await one(
 await as(maya, `select nx_finish_setup($1)`, [stillOn]);
 await as(maya, `select nx_sign_pact($1)`, [stillOn]);
 await as(priya, `select nx_sign_pact($1)`, [stillOn]);
-await fails(
-  as(maya, `select nx_delete_challenge($1)`, [stillOn]),
-  /has to end first/,
-);
+for (const call of ['nx_delete_challenge($1)', 'nx_hide_challenge($1,true)'])
+  await fails(as(maya, `select ${call}`, [stillOn]), /has to end first/);
 const { nx_save_challenge: keptCopy } = await one(
   maya,
   `select nx_save_challenge($1,'Kept copy')`,
   [stillOn],
 );
 await fails(as(sam, `select nx_delete_saved($1)`, [keptCopy]), /is gone/);
+const savedThere = async (id) =>
+  (await as(id, `select id from saved_challenges where id=$1`, [keptCopy]))
+    .length;
 await as(priya, `select nx_delete_saved($1)`, [keptCopy]);
-assert.equal(
-  (await as(maya, `select id from saved_challenges where id=$1`, [keptCopy]))
-    .length,
-  0,
-);
+assert.equal(await savedThere(maya), 1, 'Maya keeps her saved copy');
+await as(maya, `select nx_delete_saved($1)`, [keptCopy]);
+assert.equal(await savedThere(maya), 0, 'gone once neither has it');
 
 console.log('next database: ok');

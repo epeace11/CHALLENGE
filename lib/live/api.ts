@@ -86,6 +86,8 @@ export async function loadRows(): Promise<Rows | null> {
     invites,
     saved,
     gifts,
+    hidden,
+    hiddenSaved,
   ] = await Promise.all([
     select<Rows['members'][number]>('profiles', 'id,name,hue'),
     select<{ couple_id: string; person_id: string; joined_at: string }>(
@@ -110,6 +112,17 @@ export async function loadRows(): Promise<Rows | null> {
     select<Rows['gifts'][number]>('gifts_given', '*', 'challenge_id').catch(
       () => [],
     ),
+    // Only the viewer's own (supabase/next/hide-challenges.sql).
+    select<Rows['hidden'][number]>(
+      'hidden_challenges',
+      'challenge_id,status',
+      'challenge_id',
+    ).catch(() => []),
+    select<Rows['hiddenSaved'][number]>(
+      'hidden_saved',
+      'saved_id,status',
+      'saved_id',
+    ).catch(() => []),
   ]);
   const me = profiles.find((p) => p.id === user.id);
   if (!me) return null;
@@ -123,6 +136,8 @@ export async function loadRows(): Promise<Rows | null> {
   return {
     me: { ...me, email: user.email ?? '' },
     couples: members.filter((m) => mine.has(m.couple_id)),
+    hidden,
+    hiddenSaved,
     members: profiles.filter((p) => inCouple.has(p.id) || p.id === me.id),
     challenges: fresh.filter((c) => mine.has(c.couple_id)),
     rules,
@@ -522,8 +537,15 @@ export const saveShared = (token: string) =>
 
 /* ── Screenshots ───────────────────────────────────────────────────────── */
 
-/** Deletes a challenge for both people. Its screenshots go first, while they can still be found. */
+/**
+ * Deletes a challenge from this person's account. Once neither person has it, it's erased, and its
+ * screenshots go first, while they can still be found.
+ */
 async function deleteChallenge(challengeId: string) {
+  const gone = await rpc<boolean>('nx_delete_challenge', {
+    p_challenge: challengeId,
+  });
+  if (!gone) return;
   const { data, error } = await supabase
     .from('entries')
     .select('proofs,correction_proofs')
@@ -540,7 +562,7 @@ async function deleteChallenge(challengeId: string) {
       .remove(paths);
     if (failed) throw new Error(failed.message);
   }
-  await rpc('nx_delete_challenge', { p_challenge: challengeId });
+  await rpc('nx_erase_challenge', { p_challenge: challengeId });
 }
 
 /** Compresses and uploads one screenshot into the challenge's folder. Returns its path and when it was taken. */
@@ -656,8 +678,15 @@ export function send(challengeId: string, c: Command) {
         p_challenge: challengeId,
         p_name: c.name,
       });
+    case 'hideChallenge':
+      return rpc('nx_hide_challenge', {
+        p_challenge: c.challengeId,
+        p_hidden: c.hidden,
+      });
     case 'deleteChallenge':
       return deleteChallenge(c.challengeId);
+    case 'hideSaved':
+      return rpc('nx_hide_saved', { p_saved: c.savedId, p_hidden: c.hidden });
     case 'deleteSaved':
       return rpc('nx_delete_saved', { p_saved: c.savedId });
     case 'setShareLink':

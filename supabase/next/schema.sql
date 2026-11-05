@@ -873,25 +873,68 @@ begin
   return s;
 end $$;
 
--- Deletes a challenge for both people, with everything in it: answers, points, notes, gifts, and its
--- saved copy unless another challenge shares the name. The app removes its screenshots first. A running
--- challenge has to end first, which takes both.
-create function public.nx_delete_challenge(p_challenge uuid) returns void language plpgsql security definer set search_path = public as $$
+-- Hides a finished challenge from the viewer's own Your challenges, or brings it back. Their partner's
+-- stays as it is.
+create function public.nx_hide_challenge(p_challenge uuid, p_hidden boolean) returns void language plpgsql security definer set search_path = public as $$
 declare c challenges := nx_enter(p_challenge);
 begin
-  if c.status = 'running' then raise exception 'A running challenge has to end first. Ending takes you both.'; end if;
-  delete from saved_challenges s where s.couple_id = c.couple_id and s.name = c.name
-    and not exists(select 1 from challenges x where x.couple_id = c.couple_id and x.name = c.name and x.id <> c.id);
+  if c.status <> 'finished' then raise exception 'This challenge has to end first.'; end if;
+  if p_hidden then
+    insert into hidden_challenges(challenge_id, person_id, status) values (c.id, auth.uid(), 'hidden')
+    on conflict (challenge_id, person_id) do update set status = 'hidden', changed_at = nx_now();
+  else
+    delete from hidden_challenges where challenge_id = c.id and person_id = auth.uid() and status = 'hidden';
+  end if;
+end $$;
+
+-- Deletes a finished challenge from the viewer's account for good. Their partner keeps theirs. True once
+-- neither has it: the app then removes its screenshots and calls nx_erase_challenge.
+create function public.nx_delete_challenge(p_challenge uuid) returns boolean language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge);
+begin
+  if c.status <> 'finished' then raise exception 'This challenge has to end first.'; end if;
+  insert into hidden_challenges(challenge_id, person_id, status) values (c.id, auth.uid(), 'deleted')
+  on conflict (challenge_id, person_id) do update set status = 'deleted', changed_at = nx_now();
+  return not exists(select 1 from couple_members m where m.couple_id = c.couple_id
+    and not exists(select 1 from hidden_challenges h where h.challenge_id = c.id and h.person_id = m.person_id and h.status = 'deleted'));
+end $$;
+
+-- Erases a challenge both people have deleted, with everything in it.
+create function public.nx_erase_challenge(p_challenge uuid) returns void language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge);
+begin
+  if exists(select 1 from couple_members m where m.couple_id = c.couple_id
+    and not exists(select 1 from hidden_challenges h where h.challenge_id = c.id and h.person_id = m.person_id and h.status = 'deleted')) then
+    raise exception 'Your partner still has this challenge.';
+  end if;
   delete from challenges where id = c.id;
 end $$;
 
--- Deletes a saved challenge; its share link stops working.
+-- A saved challenge, the same way: hidden or deleted for the viewer only, and gone once neither has it.
+create function public.nx_hide_saved(p_saved uuid, p_hidden boolean) returns void language plpgsql security definer set search_path = public as $$
+declare s saved_challenges;
+begin
+  select * into s from saved_challenges where id = p_saved;
+  if s.id is null or not nx_in_couple(s.couple_id) then raise exception 'That saved challenge is gone.'; end if;
+  if p_hidden then
+    insert into hidden_saved(saved_id, person_id, status) values (s.id, auth.uid(), 'hidden')
+    on conflict (saved_id, person_id) do update set status = 'hidden', changed_at = nx_now();
+  else
+    delete from hidden_saved where saved_id = s.id and person_id = auth.uid() and status = 'hidden';
+  end if;
+end $$;
+
 create function public.nx_delete_saved(p_saved uuid) returns void language plpgsql security definer set search_path = public as $$
 declare s saved_challenges;
 begin
   select * into s from saved_challenges where id = p_saved;
   if s.id is null or not nx_in_couple(s.couple_id) then raise exception 'That saved challenge is gone.'; end if;
-  delete from saved_challenges where id = s.id;
+  insert into hidden_saved(saved_id, person_id, status) values (s.id, auth.uid(), 'deleted')
+  on conflict (saved_id, person_id) do update set status = 'deleted', changed_at = nx_now();
+  if not exists(select 1 from couple_members m where m.couple_id = s.couple_id
+    and not exists(select 1 from hidden_saved h where h.saved_id = s.id and h.person_id = m.person_id and h.status = 'deleted')) then
+    delete from saved_challenges where id = s.id;
+  end if;
 end $$;
 
 create function public.nx_set_share_link(p_saved uuid, p_on boolean) returns void language plpgsql security definer set search_path = public as $$
@@ -915,6 +958,30 @@ drop policy if exists read_own on public.gifts_given;
 create policy read_own on public.gifts_given for select to authenticated using (nx_in_challenge(challenge_id));
 grant select on public.gifts_given to authenticated;
 revoke insert, update, delete on public.gifts_given from anon, authenticated;
+
+-- What each person has hidden or deleted. It's their own: their partner's Your challenges doesn't change.
+create table if not exists public.hidden_challenges(
+  challenge_id uuid not null references public.challenges on delete cascade,
+  person_id uuid not null references public.profiles on delete cascade,
+  status text not null check (status in ('hidden','deleted')),
+  changed_at timestamptz not null default now(),
+  primary key (challenge_id, person_id)
+);
+create table if not exists public.hidden_saved(
+  saved_id uuid not null references public.saved_challenges on delete cascade,
+  person_id uuid not null references public.profiles on delete cascade,
+  status text not null check (status in ('hidden','deleted')),
+  changed_at timestamptz not null default now(),
+  primary key (saved_id, person_id)
+);
+alter table public.hidden_challenges enable row level security;
+alter table public.hidden_saved enable row level security;
+drop policy if exists read_own on public.hidden_challenges;
+drop policy if exists read_own on public.hidden_saved;
+create policy read_own on public.hidden_challenges for select to authenticated using (person_id = auth.uid());
+create policy read_own on public.hidden_saved for select to authenticated using (person_id = auth.uid());
+grant select on public.hidden_challenges, public.hidden_saved to authenticated;
+revoke insert, update, delete on public.hidden_challenges, public.hidden_saved from anon, authenticated;
 
 -- Marks the gift `p_recipient` gets as given (or not) once the challenge is over.
 create or replace function public.nx_mark_gift(p_challenge uuid, p_recipient uuid, p_given boolean) returns void
@@ -1087,7 +1154,7 @@ do $$ declare f text; begin
     'nx_save_checkin(uuid,uuid,date,boolean,numeric,text,jsonb,text)','nx_review(uuid,text,text)',
     'nx_resolve_dispute(uuid,text,text)','nx_ask_forgiveness(uuid,text)','nx_decide_forgiveness(uuid,boolean)',
     'nx_forgive_point(uuid)','nx_add_note(uuid,date,text)','nx_edit_note(uuid,text)','nx_remove_note(uuid)',
-    'nx_save_challenge(uuid,text)','nx_delete_challenge(uuid)','nx_delete_saved(uuid)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)',
+    'nx_save_challenge(uuid,text)','nx_hide_challenge(uuid,boolean)','nx_delete_challenge(uuid)','nx_erase_challenge(uuid)','nx_hide_saved(uuid,boolean)','nx_delete_saved(uuid)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)',
     'nx_end_request(uuid,text)'] loop
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
@@ -1109,7 +1176,7 @@ insert into storage.buckets(id, name, public, file_size_limit, allowed_mime_type
 values ('proofs', 'proofs', false, 5242880, array['image/jpeg','image/png','image/webp']);
 create policy proofs_read on storage.objects for select to authenticated
   using (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid));
--- Either member can remove a challenge's screenshots, so deleting it leaves none behind.
+-- Either member can remove a challenge's screenshots, so erasing it leaves none behind.
 create policy proofs_delete on storage.objects for delete to authenticated
   using (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid));
 create policy proofs_insert on storage.objects for insert to authenticated

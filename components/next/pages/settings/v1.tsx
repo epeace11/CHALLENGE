@@ -34,12 +34,9 @@ import {
   TextField,
   Toggle,
 } from '@/components/next/ui';
-import { deleteChallenge, renameChallenge } from '@/lib/next/actions';
+import { hideChallenge, renameChallenge } from '@/lib/next/actions';
 import { formatMoney, plural } from '@/lib/next/selectors';
-import {
-  DeleteChallengeSheet,
-  deleteChallengeLine,
-} from '../home/delete-sheet';
+import { DeleteChallengeSheet } from '../home/delete-sheet';
 import {
   DEFAULT_REMINDERS,
   TIMES,
@@ -149,6 +146,15 @@ export default function SettingsV1() {
     answer();
   };
   const running = c.status === 'running';
+  const finished = c.status === 'finished';
+  /** A finished one moves to this person's Hidden list on Your challenges. */
+  const hideThis = () => {
+    backend.act(
+      { type: 'hideChallenge', challengeId: c.id, hidden: true },
+      (w) => hideChallenge(w, c.id, true),
+    );
+    navigate('home');
+  };
   const theirAsk = endAskFrom(world);
   const myAsk = running && c.endAsk && !theirAsk;
   const endControls = theirAsk ? (
@@ -173,9 +179,19 @@ export default function SettingsV1() {
       variant="quiet"
       icon={LogOut}
       className="-ml-3 self-start text-nx-danger"
-      onClick={() => setOpen(running ? 'ask' : 'deleteChallenge')}
+      onClick={() =>
+        running
+          ? setOpen('ask')
+          : finished
+            ? hideThis()
+            : setOpen('deleteChallenge')
+      }
     >
-      {running ? 'End the challenge' : 'Delete this challenge'}
+      {running
+        ? 'End the challenge'
+        : finished
+          ? 'Hide this challenge'
+          : 'Delete this challenge'}
     </Button>
   );
 
@@ -424,18 +440,10 @@ export default function SettingsV1() {
       />
       <DeleteChallengeSheet
         name={c.name}
-        description={deleteChallengeLine(partner)}
+        description={`It’s deleted for you and ${partner}, since no day has counted yet. This can’t be undone.`}
         open={open === 'deleteChallenge'}
         onOpenChange={close}
-        onDelete={async () => {
-          // Before Day 1 cancelling deletes it; a finished one is deleted outright.
-          if (c.status !== 'finished') return account.leave();
-          await backend.save(
-            { type: 'deleteChallenge', challengeId: c.id },
-            (w) => deleteChallenge(w, c.id),
-          );
-          navigate('home');
-        }}
+        onDelete={account.leave}
       />
       <DeleteSheet
         world={world}

@@ -80,6 +80,8 @@ import {
   signPact,
   deleteChallenge,
   deleteSaved,
+  hideChallenge,
+  hideSaved,
   renameChallenge,
   updateChallenge,
   withdrawDispute,
@@ -683,12 +685,12 @@ assert.ok(signPact(w, JORDAN).pact.signatures.every((s) => s.signedAt));
     'Waiting for Jordan to sign',
   );
 }
-// Deleting a finished challenge takes its saved copy with it, unless another shares the name.
+// Hiding and deleting a finished challenge or a saved one are this person's own.
 {
-  const past = w.past[0];
-  const gone = deleteChallenge(w, past.challenge.id);
-  assert.equal(gone.past.length, w.past.length - 1);
-  assert.ok(!gone.saved.some((s) => s.name === past.challenge.name));
+  const id = w.past[0].challenge.id;
+  assert.equal(hideChallenge(w, id, true).past[0].hidden, true);
+  assert.equal(hideSaved(w, w.saved[0].id, true).saved[0].hidden, true);
+  assert.equal(deleteChallenge(w, id).past.length, w.past.length - 1);
   assert.equal(deleteSaved(w, w.saved[0].id).saved.length, w.saved.length - 1);
   assert.equal(renameChallenge(w, ' New ').challenge.name, 'New');
 }
