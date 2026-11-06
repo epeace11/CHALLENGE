@@ -937,7 +937,7 @@ function Hosting({
               deviceZone(),
               w.me.id,
               null,
-              couple ?? latest.current.built?.current?.couple_id,
+              couple,
             ),
           );
           if (id === false) return false;

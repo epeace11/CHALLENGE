@@ -436,6 +436,12 @@ begin
   elsif not coalesce(p_new_partner, false) then
     select couple_id into couple from couple_members where person_id = auth.uid() order by joined_at desc limit 1;
   end if;
+  -- A couple of one with a challenge is waiting on that invite. Whoever accepts joins the couple and
+  -- sees all of it, so another challenge gets a couple of its own.
+  if (select count(*) from couple_members where couple_id = couple) = 1
+     and exists(select 1 from challenges where couple_id = couple) then
+    couple := null;
+  end if;
   if couple is null then
     insert into couples default values returning id into couple;
     insert into couple_members(couple_id, person_id) values (couple, auth.uid());
@@ -447,7 +453,7 @@ begin
   return c.id;
 end $$;
 
--- Changes a challenge before Day 1. Any change clears both signatures. Null leaves a field as it is.
+-- Changes a challenge before Day 1. Any change to the terms clears both signatures. Null leaves a field as it is.
 create function public.nx_update_challenge(p_challenge uuid, p_name text default null, p_look text default null,
   p_start date default null, p_days integer default null, p_time_zone text default null, p_step numeric default null,
   p_cap numeric default null, p_clear_cap boolean default false, p_deadline_days integer default null,
@@ -477,8 +483,9 @@ begin
     week_start = coalesce(p_week_start, week_start)
   where id = c.id returning * into c;
   if p_rules is not null then perform nx_put_rules(c, p_rules); end if;
-  if c.status in ('invited','signing') and (p_start is not null or p_days is not null or p_step is not null
-     or p_cap is not null or p_clear_cap or p_rules is not null or p_deadline_days is not null or p_deadline_time is not null) then
+  if c.status in ('invited','signing') and (p_start is not null or p_days is not null or p_time_zone is not null or p_step is not null
+     or p_cap is not null or p_clear_cap or p_rules is not null or p_deadline_days is not null or p_deadline_time is not null
+     or p_week_start is not null) then
     delete from signatures where challenge_id = c.id;
   end if;
 end $$;
@@ -985,6 +992,15 @@ create policy read_own on public.hidden_saved for select to authenticated using 
 grant select on public.hidden_challenges, public.hidden_saved to authenticated;
 revoke insert, update, delete on public.hidden_challenges, public.hidden_saved from anon, authenticated;
 
+-- True once everyone in the challenge has deleted it: only then can its screenshots be removed.
+create or replace function public.nx_deleted_by_all(p_challenge uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select not exists(
+    select 1 from challenges c join couple_members m on m.couple_id = c.couple_id
+    where c.id = p_challenge and not exists(
+      select 1 from hidden_challenges h where h.challenge_id = c.id and h.person_id = m.person_id and h.status = 'deleted'))
+$$;
+
 -- Marks the gift `p_recipient` gets as given (or not) once the challenge is over.
 create or replace function public.nx_mark_gift(p_challenge uuid, p_recipient uuid, p_given boolean) returns void
 language plpgsql security definer set search_path = public as $$
@@ -1039,8 +1055,9 @@ end $$;
 /* ── Cancelling: deleted before Day 1, ended now while it runs ────────── */
 
 -- Ends a running challenge now: the days whose deadline has passed count, later days' answers and
--- points go, and the verdict opens. One that no day has closed on yet is deleted. Internal: it runs
--- once both have agreed. Returns 'deleted' or 'ended'.
+-- points go, and the verdict opens. One that no day has closed on yet is deleted; with screenshots,
+-- it's left deleted by both for the app to erase, because they can't be found once it's gone.
+-- Internal: it runs once both have agreed. Returns 'deleted', 'erase' or 'ended'.
 create function public.nx_end_now(p_challenge uuid) returns text
 language plpgsql security definer set search_path = public as $$
 declare c challenges; last_closed date;
@@ -1050,6 +1067,13 @@ begin
   -- The latest day whose deadline has passed (as in nx_tick).
   last_closed := least(nx_last_day(c), nx_today(c) - c.deadline_days - case when nx_now() > nx_lock_time(c, nx_today(c) - c.deadline_days) then 0 else 1 end);
   if last_closed < c.start_date then
+    if exists(select 1 from storage.objects where bucket_id = 'proofs' and name like c.id::text || '/%') then
+      insert into hidden_challenges(challenge_id, person_id, status)
+      select c.id, m.person_id, 'deleted' from couple_members m where m.couple_id = c.couple_id
+      on conflict (challenge_id, person_id) do update set status = 'deleted', changed_at = nx_now();
+      update challenges set status = 'finished', end_asked_by = null, end_asked_at = null where id = c.id;
+      return 'erase';
+    end if;
     delete from challenges where id = c.id;
     return 'deleted';
   end if;
@@ -1069,7 +1093,7 @@ end $$;
 
 -- Before Day 1, the challenge and everything in it is deleted, by either person. While it runs, it
 -- ends only once both agree: this is the partner accepting the other's request (nx_end_request).
--- Returns 'deleted' or 'ended'.
+-- Returns 'deleted', 'erase' (see nx_end_now) or 'ended'.
 create function public.nx_cancel_challenge(p_challenge uuid) returns text
 language plpgsql security definer set search_path = public as $$
 declare c challenges := nx_enter(p_challenge);
@@ -1087,7 +1111,7 @@ end $$;
 
 -- Asking to end a running challenge early: 'ask', 'withdraw' (the one who asked) or 'decline' (the
 -- other). Asking after the partner already asked means both agree, so it ends. Accepting is
--- nx_cancel_challenge. Returns 'asked', 'withdrawn', 'declined', 'ended' or 'deleted'.
+-- nx_cancel_challenge. Returns 'asked', 'withdrawn', 'declined', 'ended', 'deleted' or 'erase'.
 create function public.nx_end_request(p_challenge uuid, p_action text) returns text
 language plpgsql security definer set search_path = public as $$
 declare c challenges := nx_enter(p_challenge);
@@ -1149,7 +1173,7 @@ do $$ declare f text; begin
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
   end loop;
   -- What a signed-in person can call.
-  foreach f in array array['nx_sync(uuid)','nx_set_name(text)',
+  foreach f in array array['nx_sync(uuid)','nx_set_name(text)','nx_deleted_by_all(uuid)',
     'nx_create_challenge(text,text,text,date,integer,text,numeric,numeric,jsonb,uuid,boolean)',
     'nx_update_challenge(uuid,text,text,date,integer,text,numeric,numeric,boolean,integer,time,integer,jsonb)',
     'nx_finish_setup(uuid)','nx_create_invite(uuid,text,text)','nx_accept_invite(text)','nx_sign_pact(uuid,jsonb)',
@@ -1178,9 +1202,10 @@ insert into storage.buckets(id, name, public, file_size_limit, allowed_mime_type
 values ('proofs', 'proofs', false, 5242880, array['image/jpeg','image/png','image/webp']);
 create policy proofs_read on storage.objects for select to authenticated
   using (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid));
--- Either member can remove a challenge's screenshots, so erasing it leaves none behind.
+-- Nobody removes a screenshot during a challenge: they go when it's erased, once both have deleted it.
 create policy proofs_delete on storage.objects for delete to authenticated
-  using (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid));
+  using (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid)
+         and nx_deleted_by_all(((storage.foldername(name))[1])::uuid));
 create policy proofs_insert on storage.objects for insert to authenticated
   with check (bucket_id = 'proofs' and nx_in_challenge(((storage.foldername(name))[1])::uuid)
               and (storage.foldername(name))[2] = auth.uid()::text);

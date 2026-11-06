@@ -490,8 +490,23 @@ export async function finishSetup(
  * Cancels a challenge (supabase/next/cancel-challenge.sql): deleted before Day 1, ended now while it
  * runs. Says which.
  */
-export const cancelChallenge = (challengeId: string) =>
-  rpc<'deleted' | 'ended'>('nx_cancel_challenge', { p_challenge: challengeId });
+export async function cancelChallenge(challengeId: string) {
+  const done = await rpc<'deleted' | 'erase' | 'ended'>('nx_cancel_challenge', {
+    p_challenge: challengeId,
+  });
+  if (done !== 'erase') return done;
+  await eraseChallenge(challengeId);
+  return 'deleted' as const;
+}
+
+/** Asks to end a challenge, or answers the ask. Agreeing can leave screenshots to erase. */
+async function endRequest(challengeId: string, action: string) {
+  const done = await rpc<string>('nx_end_request', {
+    p_challenge: challengeId,
+    p_action: action,
+  });
+  if (done === 'erase') await eraseChallenge(challengeId);
+}
 
 /* ── Invites ───────────────────────────────────────────────────────────── */
 
@@ -530,33 +545,46 @@ export const saveShared = (token: string) =>
 /* ── Screenshots ───────────────────────────────────────────────────────── */
 
 /**
- * Deletes a challenge from this person's account. Once neither person has it, it's erased, and its
- * screenshots go first, while they can still be found.
+ * Deletes a challenge from this person's account. Once neither person has it, it's erased.
  */
 async function deleteChallenge(challengeId: string) {
   const gone = await rpc<boolean>('nx_delete_challenge', {
     p_challenge: challengeId,
   });
-  if (!gone) return;
-  const paths: string[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from('entries')
-      .select('proofs,correction_proofs')
-      .eq('challenge_id', challengeId)
-      .order('id')
-      .range(from, from + PAGE - 1);
-    if (error) throw new Error(error.message);
-    for (const e of data ?? [])
-      for (const p of [...(e.proofs ?? []), ...(e.correction_proofs ?? [])])
-        paths.push((p as { path: string }).path);
-    if (!data || data.length < PAGE) break;
-  }
-  if (paths.length) {
-    const { error: failed } = await supabase.storage
+  if (gone) await eraseChallenge(challengeId);
+}
+
+/** The names in a screenshot folder, a page at a time. */
+async function filesIn(folder: string) {
+  const names: string[] = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await supabase.storage
       .from(PROOF_BUCKET)
-      .remove(paths);
-    if (failed) throw new Error(failed.message);
+      .list(folder, { limit: PAGE, offset });
+    if (error) throw new Error(error.message);
+    names.push(...(data ?? []).map((f) => f.name));
+    if (!data || data.length < PAGE) return names;
+  }
+}
+
+/**
+ * Erases a challenge both people have deleted. Its screenshots go first, while they can still be
+ * found: everything in <challenge>/<person>/, so one that was replaced or never saved goes too.
+ */
+async function eraseChallenge(challengeId: string) {
+  const people = await filesIn(challengeId);
+  const files = await Promise.all(
+    people.map(async (person) => {
+      const folder = `${challengeId}/${person}`;
+      return (await filesIn(folder)).map((name) => `${folder}/${name}`);
+    }),
+  );
+  const paths = files.flat();
+  for (let from = 0; from < paths.length; from += PAGE) {
+    const { error } = await supabase.storage
+      .from(PROOF_BUCKET)
+      .remove(paths.slice(from, from + PAGE));
+    if (error) throw new Error(error.message);
   }
   await rpc('nx_erase_challenge', { p_challenge: challengeId });
 }
@@ -659,14 +687,12 @@ export function send(challengeId: string, c: Command) {
     case 'askToEnd':
     case 'withdrawEnd':
     case 'declineEnd':
-      return rpc('nx_end_request', {
-        p_challenge: challengeId,
-        p_action: {
-          askToEnd: 'ask',
-          withdrawEnd: 'withdraw',
-          declineEnd: 'decline',
-        }[c.type],
-      });
+      return endRequest(
+        challengeId,
+        { askToEnd: 'ask', withdrawEnd: 'withdraw', declineEnd: 'decline' }[
+          c.type
+        ],
+      );
     case 'rename':
       return setName(c.name);
     case 'renameChallenge':

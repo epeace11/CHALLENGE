@@ -38,7 +38,10 @@ export default function SharedV1() {
   );
   const start = () => {
     setSheet(null);
-    if (host) void host.startShared(world.partners.length ? who : undefined);
+    if (host)
+      void host.startShared(
+        world.partners.length ? who : world.challenge.id ? 'new' : undefined,
+      );
     else navigate('setup');
   };
 

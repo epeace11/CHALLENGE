@@ -17,7 +17,10 @@ const db = new PGlite();
 const maya = '00000000-0000-0000-0000-00000000000a',
   jordan = '00000000-0000-0000-0000-00000000000b',
   priya = '00000000-0000-0000-0000-00000000000c',
-  sam = '00000000-0000-0000-0000-00000000000d';
+  sam = '00000000-0000-0000-0000-00000000000d',
+  lee = '00000000-0000-0000-0000-0000000000a1',
+  kim = '00000000-0000-0000-0000-0000000000a2',
+  ana = '00000000-0000-0000-0000-0000000000a3';
 await db.exec(
   `create role anon;create role authenticated;create role service_role;create schema auth;create schema storage;
    grant usage on schema public, auth, storage to anon, authenticated, service_role;
@@ -26,7 +29,9 @@ await db.exec(
    create table storage.objects(bucket_id text,name text);
    create table storage.buckets(id text,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
    create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;
-   insert into auth.users values('${maya}','maya@example.com','{}'),('${jordan}','jordan@example.com','{}'),('${priya}','priya@example.com','{}'),('${sam}','sam@example.com','{}');`,
+   alter table storage.objects enable row level security;
+   grant select,insert,update,delete on storage.objects to authenticated;
+   insert into auth.users values('${maya}','maya@example.com','{}'),('${jordan}','jordan@example.com','{}'),('${priya}','priya@example.com','{}'),('${sam}','sam@example.com','{}'),('${lee}','lee@example.com','{}'),('${kim}','kim@example.com','{}'),('${ana}','ana@example.com','{}');`,
 );
 await db.exec(
   readFileSync(new URL('../supabase/next/schema.sql', import.meta.url), 'utf8'),
@@ -44,6 +49,7 @@ for (const script of [
   'hide-challenges.sql',
   'fixes-nov-5.sql',
   'saved-copies.sql',
+  'fixes-nov-6.sql',
 ])
   await db.exec(
     readFileSync(
@@ -78,6 +84,9 @@ for (const [id, name] of [
   [jordan, 'Jordan'],
   [priya, 'Priya'],
   [sam, 'Sam'],
+  [lee, 'Lee'],
+  [kim, 'Kim'],
+  [ana, 'Ana'],
 ])
   await as(id, `select nx_set_name($1)`, [name]);
 
@@ -1407,5 +1416,254 @@ await as(priya, `select nx_delete_saved($1)`, [keptCopy]);
 assert.equal(await savedThere(maya), 1, 'Maya keeps her saved copy');
 await as(maya, `select nx_delete_saved($1)`, [keptCopy]);
 assert.equal(await savedThere(maya), 0, 'gone once neither has it');
+
+// The November 6 security review. Lee and Kim's challenge, with Ana outside it.
+await clock('2027-03-01T12:00:00-05:00');
+const startSql = `select nx_create_challenge($1,'classic',null,'2027-03-08',14,'America/Toronto',1,null,$2::jsonb) id`;
+const { id: spring } = await one(lee, startSql, ['Spring', rules]);
+await as(lee, `select nx_finish_setup($1)`, [spring]);
+const springInvite = await one(lee, `select * from nx_create_invite($1)`, [
+  spring,
+]);
+await as(kim, `select nx_accept_invite($1)`, [springInvite.token]);
+
+// Every term clears a signature already there; the name doesn't.
+const signedBy = async () =>
+  (
+    await as(lee, `select person_id from signatures where challenge_id=$1`, [
+      spring,
+    ])
+  ).length;
+for (const change of [`p_time_zone=>'America/Vancouver'`, `p_week_start=>3`]) {
+  await as(kim, `select nx_sign_pact($1)`, [spring]);
+  assert.equal(await signedBy(), 1);
+  await as(lee, `select nx_update_challenge($1,${change})`, [spring]);
+  assert.equal(await signedBy(), 0, `${change} clears the signature`);
+}
+await as(kim, `select nx_sign_pact($1)`, [spring]);
+await as(lee, `select nx_update_challenge($1,p_name=>'Spring!')`, [spring]);
+assert.equal(await signedBy(), 1, 'a new name is not a new term');
+await as(lee, `select nx_sign_pact($1)`, [spring]);
+
+// Day 1 logged, its deadline still ahead: a dispute, a forgiveness ask, a note and a saved copy.
+await clock('2027-03-09T12:00:00-05:00');
+const { id: springPray } = await one(
+  lee,
+  `select id from rules where challenge_id=$1 and title='Pray daily'`,
+  [spring],
+);
+await as(lee, `select nx_save_checkin($1,$2,'2027-03-08',true)`, [
+  spring,
+  springPray,
+]);
+await as(
+  kim,
+  `select nx_save_checkin($1,$2,'2027-03-08',false,null,'','[]','please')`,
+  [spring, springPray],
+);
+const { id: leeEntry } = await one(
+  lee,
+  `select id from entries where challenge_id=$1 and person_id=$2`,
+  [spring, lee],
+);
+await as(kim, `select nx_review($1,'dispute','Not sure')`, [leeEntry]);
+const { id: springDispute } = await one(
+  lee,
+  `select id from disputes where challenge_id=$1`,
+  [spring],
+);
+const { id: kimPoint } = await one(
+  kim,
+  `select id from points where challenge_id=$1 and person_id=$2`,
+  [spring, kim],
+);
+const { id: kimAsk } = await one(
+  lee,
+  `select id from forgiveness_requests where challenge_id=$1`,
+  [spring],
+);
+const { id: leeNote } = await one(
+  lee,
+  `select nx_add_note($1,'2027-03-08','Mine') id`,
+  [spring],
+);
+const { id: springCopy } = await one(
+  lee,
+  `select nx_save_challenge($1,'Copy') id`,
+  [spring],
+);
+const { id: springCouple } = await one(
+  lee,
+  `select couple_id id from challenges where id=$1`,
+  [spring],
+);
+
+// Someone with an account and no part in it can do none of this, and nothing changes.
+const springState = async () =>
+  JSON.stringify(
+    (
+      await db.query(
+        `select (select count(*) from points where forgiven) forgiven,
+          (select string_agg(status,',') from disputes where challenge_id=$1) disputes,
+          (select string_agg(status,',') from forgiveness_requests where challenge_id=$1) asks,
+          (select count(*) from journal_notes where challenge_id=$1) notes,
+          (select count(*) from saved_challenges where couple_id=$2) saved,
+          (select count(*) from hidden_challenges where challenge_id=$1) hidden,
+          (select status||coalesce(end_asked_by::text,'') from challenges where id=$1) challenge`,
+        [spring, springCouple],
+      )
+    ).rows,
+  );
+const springBefore = await springState();
+for (const [sql, params] of [
+  [`select nx_finish_setup($1)`, [spring]],
+  [`select nx_cancel_challenge($1)`, [spring]],
+  [`select nx_end_request($1,'ask')`, [spring]],
+  [`select nx_hide_challenge($1,true)`, [spring]],
+  [`select nx_delete_challenge($1)`, [spring]],
+  [`select nx_erase_challenge($1)`, [spring]],
+  [`select nx_mark_gift($1,$2,true)`, [spring, ana]],
+  [`select nx_hide_saved($1,true)`, [springCopy]],
+  [`select nx_delete_saved($1)`, [springCopy]],
+  [`select nx_set_share_link($1,true)`, [springCopy]],
+  [`select nx_resolve_dispute($1,'concede')`, [springDispute]],
+  [`select nx_resolve_dispute($1,'withdraw')`, [springDispute]],
+  [`select nx_resolve_dispute($1,'reply','Hi')`, [springDispute]],
+  [`select nx_ask_forgiveness($1,'Hi')`, [kimPoint]],
+  [`select nx_decide_forgiveness($1,true)`, [kimAsk]],
+  [`select nx_forgive_point($1)`, [kimPoint]],
+  [`select nx_edit_note($1,'Hi')`, [leeNote]],
+  [`select nx_remove_note($1)`, [leeNote]],
+  [`select nx_review($1,'approve')`, [leeEntry]],
+  [
+    `select nx_create_challenge('Mine','classic',null,'2027-04-01',5,'America/Toronto',1,null,'[]'::jsonb,$1::uuid)`,
+    [springCouple],
+  ],
+])
+  await fails(as(ana, sql, params), /isn't yours|is gone|only change your own/);
+assert.equal(await springState(), springBefore, 'nothing changed');
+
+// The helpers behind those functions can't be called directly, even by someone in the challenge.
+for (const [sql, params] of [
+  [`select nx_enter($1)`, [spring]],
+  [`select nx_tick($1)`, [spring]],
+  [`select nx_tick_all()`, []],
+  [`select nx_end_now($1)`, [spring]],
+  [`select nx_forgive($1)`, [kimPoint]],
+  [`select nx_void_point_of($1)`, [leeEntry]],
+  [`select nx_partner($1,$2)`, [spring, lee]],
+  [`select nx_find_invite('x')`, []],
+  [`select nx_put_rules(null::public.challenges,'[]'::jsonb)`, []],
+  [`select nx_check_proofs(null::public.challenges,'[]'::jsonb)`, []],
+  [`select nx_add_point(null::public.entries,'missed')`, []],
+])
+  await fails(as(lee, sql, params), /permission denied/);
+
+// Screenshots: both can open them, nobody else, and nobody removes one during the challenge.
+const leeShot = `${spring}/${lee}/a.jpg`,
+  kimShot = `${spring}/${kim}/b.jpg`;
+await db.query(
+  `insert into storage.objects values('proofs',$1),('proofs',$2)`,
+  [leeShot, kimShot],
+);
+const shots = async (id) =>
+  (
+    await as(id, `select name from storage.objects where name like $1`, [
+      `${spring}/%`,
+    ])
+  ).length;
+assert.equal(await shots(kim), 2, 'both see both');
+assert.equal(await shots(ana), 0, 'an outsider sees none');
+await fails(
+  as(ana, `insert into storage.objects values('proofs',$1)`, [
+    `${spring}/${ana}/x.jpg`,
+  ]),
+  /row-level security/,
+);
+await fails(
+  as(kim, `insert into storage.objects values('proofs',$1)`, [
+    `${spring}/${lee}/x.jpg`,
+  ]),
+  /row-level security/,
+);
+const removed = async (id, name) =>
+  (
+    await as(id, `delete from storage.objects where name=$1 returning name`, [
+      name,
+    ])
+  ).length;
+assert.equal(await removed(ana, leeShot), 0, 'an outsider removes nothing');
+assert.equal(
+  await removed(kim, leeShot),
+  0,
+  'not the partner’s, mid-challenge',
+);
+assert.equal(await removed(lee, leeShot), 0, 'not your own, mid-challenge');
+
+// Both agree to end it before any day closed: with screenshots it waits to be erased, and only then
+// can they go.
+await as(kim, `select nx_resolve_dispute($1,'withdraw')`, [springDispute]);
+assert.equal(
+  (await one(lee, `select nx_end_request($1,'ask') r`, [spring])).r,
+  'asked',
+);
+assert.equal(
+  (await one(kim, `select nx_end_request($1,'ask') r`, [spring])).r,
+  'erase',
+);
+assert.deepEqual(
+  (
+    await as(
+      lee,
+      `select status from hidden_challenges where challenge_id=$1`,
+      [spring],
+    )
+  ).map((r) => r.status),
+  ['deleted'],
+);
+assert.equal(await removed(ana, leeShot), 0, 'still not an outsider');
+assert.equal(await removed(kim, leeShot), 1, 'now either can remove any');
+assert.equal(await removed(lee, kimShot), 1);
+await as(kim, `select nx_erase_challenge($1)`, [spring]);
+assert.equal(
+  (await as(lee, `select id from challenges where id=$1`, [spring])).length,
+  0,
+);
+
+// A couple of one with a challenge is waiting on its invite: another challenge never joins it, by
+// choice of couple or by default, so whoever accepts sees only what they were invited to.
+const { id: forLee } = await one(ana, startSql, ['For Lee', rules]);
+const { id: waiting } = await one(
+  ana,
+  `select couple_id id from challenges where id=$1`,
+  [forLee],
+);
+const { id: forKim } = await one(
+  ana,
+  `select nx_create_challenge('For Kim','classic',null,'2027-04-01',5,'America/Toronto',1,null,$1::jsonb,$2::uuid) id`,
+  [rules, waiting],
+);
+const { id: forAnyone } = await one(ana, startSql, ['For anyone', rules]);
+const anasCouple = async (id) =>
+  (await one(ana, `select couple_id id from challenges where id=$1`, [id])).id;
+assert.notEqual(await anasCouple(forKim), waiting);
+assert.notEqual(await anasCouple(forAnyone), waiting);
+for (const [who, challenge, name] of [
+  [lee, forLee, 'For Lee'],
+  [kim, forKim, 'For Kim'],
+]) {
+  await as(ana, `select nx_finish_setup($1)`, [challenge]);
+  const link = await one(ana, `select * from nx_create_invite($1)`, [
+    challenge,
+  ]);
+  await as(who, `select nx_accept_invite($1)`, [link.token]);
+  assert.deepEqual(
+    (
+      await as(who, `select name from challenges where created_by=$1`, [ana])
+    ).map((r) => r.name),
+    [name],
+    'only the challenge they were invited to',
+  );
+}
 
 console.log('next database: ok');
