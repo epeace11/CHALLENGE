@@ -55,7 +55,11 @@ export function SavedSheet({
           <p className="rounded-nx bg-nx-accent-soft px-5 py-4 text-nx-body">
             {plural(saved.days, 'day')} · {stakesLine(saved)}
           </p>
-          {rulesByWho(saved.rules, world.me, world.partner).map((g) => (
+          {rulesByWho(
+            saved.rules,
+            world.me,
+            saved.partner ?? world.partner,
+          ).map((g) => (
             <RuleGroup key={g.key} title={g.title} rules={g.rules} />
           ))}
           {saved.source === 'mine' && <ShareLink saved={saved} />}

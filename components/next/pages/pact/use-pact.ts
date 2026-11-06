@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Instant } from '@/lib/next/model';
-import { formatTarget, targetFor } from '@/lib/next/selectors';
+import { formatTarget } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
 import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
@@ -39,13 +39,10 @@ export function usePact() {
   const [ruleId, setRuleId] = useState<string | null>(null);
   // True once you press Sign here, so your name is written in rather than already there.
   const [justSigned, setJustSigned] = useState(false);
-  // Your own limits as typed, from the suggested target (or the one you set before).
+  // Your own limits as typed: empty until you've chosen one, so nobody signs a number they never set.
   const [limits, setLimits] = useState<Record<string, number | null>>(() =>
     Object.fromEntries(
-      view.limitRules.map((r) => [
-        r.id,
-        targetFor(r, view.you.id)?.value ?? null,
-      ]),
+      view.limitRules.map((r) => [r.id, r.limits?.[view.you.id] ?? null]),
     ),
   );
   const own = Object.fromEntries(

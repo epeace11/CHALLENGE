@@ -61,8 +61,10 @@ export const savedFor = (w: World, past: PastChallenge) =>
   w.saved.find(
     (s) =>
       s.source === 'mine' &&
-      s.name === past.challenge.name &&
-      (!s.coupleId || s.coupleId === past.challenge.coupleId),
+      (s.challengeId
+        ? s.challengeId === past.challenge.id
+        : s.name === past.challenge.name &&
+          (!s.coupleId || s.coupleId === past.challenge.coupleId)),
   );
 
 /**

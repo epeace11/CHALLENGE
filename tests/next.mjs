@@ -686,6 +686,23 @@ assert.ok(signPact(w, JORDAN).pact.signatures.every((s) => s.signedAt));
       signatures: w.pact.signatures.map((s) => ({ ...s, signedAt: null })),
     },
   };
+  // A draft the partner is setting up waits on them.
+  const theirDraft = {
+    ...w,
+    challenge: { ...w.challenge, status: 'draft', createdBy: w.partner.id },
+  };
+  assert.equal(
+    challengeSummary(theirDraft).line,
+    `${w.partner.name} is setting this up`,
+  );
+  assert.equal(challengeSummary(theirDraft).needsYou, false);
+  assert.equal(
+    challengeSummary({
+      ...w,
+      challenge: { ...w.challenge, status: 'draft', createdBy: w.me.id },
+    }).line,
+    'Keep setting up',
+  );
   assert.equal(challengeSummary(signing).line, 'Sign the pact');
   assert.equal(
     challengeSummary(signPact(signing, MAYA)).line,

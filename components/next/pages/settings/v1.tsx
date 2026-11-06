@@ -302,7 +302,7 @@ export default function SettingsV1() {
         {(!c.id || scope === 'all') && (
           <Scope
             icon={CircleUser}
-            title="All your challenges"
+            title="For every challenge"
             detail="These apply everywhere, not just to one challenge."
             index={1}
           >

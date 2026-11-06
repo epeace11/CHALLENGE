@@ -15,6 +15,9 @@ import {
   targetFor,
   openCheckins,
   openDay,
+  plural,
+  settling,
+  settlingLine,
   titleSays,
   whenUnlessTitled,
 } from '@/lib/next/selectors';
@@ -159,9 +162,9 @@ export function Quote({
 const SHOT_SIZE = {
   sm: 'h-[78px] w-12 rounded-[11px]',
   md: 'h-[124px] w-[76px] rounded-[14px]',
-  // The evidence on Review's card: the card's full width on phones (its top, where the totals
-  // are), a tall tile beside the answer on wider screens.
-  lg: 'h-[clamp(260px,80vw,340px)] w-full rounded-nx sm:h-[400px] sm:w-[236px]',
+  // The evidence on Review's card, shown whole: the card's full width on phones, a tall tile beside
+  // the answer on wider screens.
+  lg: 'h-[clamp(320px,110vw,440px)] w-full rounded-nx sm:h-[400px] sm:w-[236px]',
 } as const;
 
 /**
@@ -200,7 +203,10 @@ export function Shot({
           decoding="async"
           loading={eager ? 'eager' : 'lazy'}
           draggable={false}
-          className="size-full object-cover object-top"
+          className={cn(
+            'size-full',
+            size === 'lg' ? 'object-contain' : 'object-cover object-top',
+          )}
         />
         <span
           className={cn(
@@ -754,13 +760,17 @@ export function ReplySheet({
  */
 export function WaitingForPartner({
   review,
+  open,
+  setOpen,
   className,
 }: {
   review: Review;
+  /** The list's sheet, kept by the page so All caught up can open it too. */
+  open: boolean;
+  setOpen: (open: boolean) => void;
   className?: string;
 }) {
   const { world, state, held } = review;
-  const [open, setOpen] = useState(false);
   const partner = world.partner;
   const { theirs, raised, replied } = state;
   // Conceding here shows its Undo line here (the sheet stays open); focus goes to it, and back to
@@ -889,11 +899,20 @@ export function WaitingForPartner({
 /* ── All caught up ─────────────────────────────────────────────────────── */
 
 /** Nothing waits: a check that pops in, and the next useful thing to do (logging the open day, or Overview). */
-export function CaughtUp({ world }: { world: World }) {
+export function CaughtUp({
+  world,
+  onWaiting,
+}: {
+  world: World;
+  /** Opens what's waiting on the partner, where a dispute can be conceded or withdrawn. */
+  onWaiting: () => void;
+}) {
   const { navigate } = useNav();
   const still = useReducedMotion();
   const day = openDay(world);
   const left = day ? openCheckins(world, world.me.id, day).length : 0;
+  const over = settling(world);
+  const partner = world.partner.name;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -922,13 +941,23 @@ export function CaughtUp({ world }: { world: World }) {
           data-card-heading
           className="font-nx-serif text-nx-h2"
         >
-          All caught up
+          {over?.disputes
+            ? `${plural(over.disputes, 'dispute')} left to settle`
+            : 'All caught up'}
         </h2>
         <p className="max-w-sm text-nx-body text-nx-ink-2">
-          {world.partner.name}’s next answers show up here.
+          {over
+            ? over.disputes
+              ? settlingLine(world)
+              : `Waiting for ${partner} to review your answers. ${settlingLine(world)}`
+            : `${partner}’s next answers show up here.`}
         </p>
         <div className="mt-3">
-          {world.challenge.status === 'finished' ? (
+          {over?.disputes ? (
+            <Button variant="primary" onClick={onWaiting}>
+              See {over.disputes === 1 ? 'it' : 'them'}
+            </Button>
+          ) : world.challenge.status === 'finished' ? (
             <Button
               variant="primary"
               onClick={() => {

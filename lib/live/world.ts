@@ -166,6 +166,8 @@ export type InviteRow = {
   expires_at: string;
 };
 export type SavedRow = {
+  /** The challenge it was saved from (saved-copies.sql). */
+  challenge_id?: string | null;
   id: string;
   couple_id: string;
   name: string;
@@ -288,6 +290,7 @@ export function challengeOf(
     coupleId: c.couple_id,
     name: c.name,
     look: c.look,
+    createdBy: c.created_by,
     theme: c.theme,
     start: c.start_date,
     days: c.days,
@@ -439,7 +442,13 @@ export function currentChallenge(
   return (
     list.find((c) => c.id === wanted) ??
     list.find((c) => c.status === 'running') ??
-    list.find((c) => c.status !== 'finished') ??
+    // A draft the partner has only just started isn't where this person should land.
+    list.find(
+      (c) =>
+        c.status !== 'finished' &&
+        (c.status !== 'draft' || c.created_by === rows.me.id),
+    ) ??
+    list.find((c) => c.status === 'finished') ??
     list[0] ??
     null
   );
@@ -543,6 +552,10 @@ export function buildWorld(
         rows.couples.some((m) => m.couple_id === id && m.person_id === p.id),
     );
   const partnerRow = partnerOfCouple(coupleId);
+  const savedPartner = (id: string) => {
+    const row = partnerOfCouple(id);
+    return row ? personOf(row) : undefined;
+  };
   const invite = current
     ? rows.invites
         .filter((i) => i.challenge_id === current.id)
@@ -616,6 +629,10 @@ export function buildWorld(
           links,
         ),
         coupleId: s.couple_id,
+        ...(s.challenge_id ? { challengeId: s.challenge_id } : {}),
+        ...(savedPartner(s.couple_id)
+          ? { partner: savedPartner(s.couple_id) }
+          : {}),
         hidden: statusOfSaved(s.id) === 'hidden',
       })),
     past: [],

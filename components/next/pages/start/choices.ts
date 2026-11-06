@@ -42,6 +42,8 @@ export type Choice = {
   sharedBy: string | null;
   /** A saved challenge this couple already ran, so it has a verdict to open. */
   ran: boolean;
+  /** That finished challenge, for See how it ended. */
+  pastId?: string;
 };
 
 const LOOK_ICON: Record<Look, LucideIcon> = {
@@ -126,11 +128,25 @@ const MONTH = new Intl.DateTimeFormat('en-US', {
 
 /** Saved challenges: the couple's own first, then ones opened from a link. */
 export function savedChoices(w: World): Choice[] {
+  // A hidden challenge's saved copy is hidden with it.
+  const put = w.past.filter((p) => p.hidden);
   return w.saved
-    .filter((s) => !s.hidden)
+    .filter(
+      (s) =>
+        !s.hidden &&
+        !put.some(
+          (p) =>
+            s.challengeId === p.challenge.id ||
+            (!s.challengeId && s.name === p.challenge.name),
+        ),
+    )
     .sort((a, b) => (a.source === b.source ? 0 : a.source === 'mine' ? -1 : 1))
     .map((s) => {
-      const past = w.past.find((p) => p.challenge.name === s.name)?.challenge;
+      const past = w.past.find((p) =>
+        s.challengeId
+          ? p.challenge.id === s.challengeId
+          : p.challenge.name === s.name,
+      )?.challenge;
       return {
         kind: 'saved',
         id: s.id,
@@ -149,6 +165,7 @@ export function savedChoices(w: World): Choice[] {
         icon: s.source === 'link' ? Link2 : Bookmark,
         sharedBy: s.sharedBy,
         ran: !!past,
+        pastId: past?.id,
       };
     });
 }
@@ -179,7 +196,9 @@ export function ruleDetail(w: World, rule: Rule) {
   const parts: string[] = [];
   if (rule.who !== 'both')
     parts.push(
-      rule.who === w.me.id ? 'Only you' : `Only ${nameOf(w, rule.who)}`,
+      rule.who === w.me.id
+        ? 'Only you'
+        : `Only ${nameOf(w, rule.who) || w.partners.find((p) => p.person.id === rule.who)?.person.name || 'your partner'}`,
     );
   // A weekly rule's title already says how many days ("Gym, 4 days a week").
   if (rule.kind === 'weekly') parts.push('Yes or No', 'Counted each week');

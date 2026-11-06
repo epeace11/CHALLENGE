@@ -52,8 +52,9 @@ export default function Start() {
       : (partners[0]?.coupleId ?? 'new'),
   );
   const chosen = partners.find((p) => p.coupleId === who)?.person;
-  // Without a partner yet, a first challenge is with someone new: nothing to choose.
-  const couple = partners.length ? who : undefined;
+  // Without a partner yet there's nothing to choose. A further challenge still gets a couple of its
+  // own, so each invite brings its own person in.
+  const couple = partners.length ? who : world.challenge.id ? 'new' : undefined;
   /** A new account: nothing to go back to yet. */
   const brandNew =
     !!host && !world.challenge.id && !world.past.length && !world.saved.length;

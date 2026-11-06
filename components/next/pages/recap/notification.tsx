@@ -83,9 +83,6 @@ export function NotificationSheet({
       }
     >
       <Toggle checked={on} onChange={onChange} label="Send it every Monday" />
-      <p className="mt-3 text-nx-2 text-nx-ink-2">
-        Evening reminders to check in are in Settings.
-      </p>
     </Sheet>
   );
 }

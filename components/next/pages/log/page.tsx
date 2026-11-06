@@ -33,6 +33,7 @@ import {
   formatDate,
   formatDay,
   formatWeekday,
+  lastDay,
 } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
 import { Bar } from './bar';
@@ -99,7 +100,9 @@ export function CheckinPage({
               ? `Day 1 is ${formatDay(ci.world.challenge.start)}. ${answerLine(ci.world, ci.world.challenge.start)}`
               : ci.world.today === ci.world.challenge.start
                 ? answerLine(ci.world, ci.world.today)
-                : 'The next day opens at midnight.'}
+                : ci.world.today > lastDay(ci.world.challenge)
+                  ? 'That was the last day.'
+                  : 'The next day opens at midnight.'}
           </EmptyState>
         </GlassCard>
       </AppFrame>

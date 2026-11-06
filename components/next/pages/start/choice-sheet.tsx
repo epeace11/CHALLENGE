@@ -1,4 +1,5 @@
 'use client';
+import { showVerdictFor } from '../verdict/which';
 import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
@@ -51,7 +52,12 @@ export function ChoiceSheet({
       footer={
         <>
           {choice.ran && (
-            <Button onClick={() => navigate('verdict')}>
+            <Button
+              onClick={() => {
+                if (choice.pastId) showVerdictFor(choice.pastId);
+                navigate('verdict');
+              }}
+            >
               See how it ended
             </Button>
           )}

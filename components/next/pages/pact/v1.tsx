@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import { AccountMenu, PlainFrame } from '@/components/next/frames';
+import { formatTarget } from '@/lib/next/selectors';
 import {
   ActionBar,
   Button,
@@ -242,7 +243,7 @@ function Limits({
               value={value}
               onChange={(v) => flow.setLimit(rule.id, v)}
               unit={rule.target?.unit}
-              hint={`${rule.target?.op === '<=' ? 'This or less' : 'This or more'}, each day it’s asked. ${flow.other.name} sets their own, and yours can’t change after you sign.`}
+              hint={`${rule.target ? `Suggested: ${formatTarget(rule.target)}. ` : ''}${flow.other.name} sets their own and sees yours, and yours can’t change after you sign.`}
               error={
                 shown && !(value !== null && value > 0)
                   ? `Enter your ${word}.`

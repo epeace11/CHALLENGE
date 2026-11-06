@@ -202,6 +202,8 @@ create index journal_notes_challenge on public.journal_notes(challenge_id, day);
 create table public.saved_challenges(
   id uuid primary key default gen_random_uuid(),
   couple_id uuid not null references public.couples on delete cascade,
+  -- The challenge it was saved from, while that still exists. Its name can change; this can't.
+  challenge_id uuid references public.challenges on delete set null,
   name text not null check (length(trim(name)) between 1 and 60),
   look text not null default 'classic',
   days integer not null,
@@ -451,7 +453,7 @@ create function public.nx_update_challenge(p_challenge uuid, p_name text default
   p_cap numeric default null, p_clear_cap boolean default false, p_deadline_days integer default null,
   p_deadline_time time default null, p_week_start integer default null, p_rules jsonb default null)
   returns void language plpgsql security definer set search_path = public as $$
-declare c challenges := nx_enter(p_challenge); was text := c.name;
+declare c challenges := nx_enter(p_challenge);
 begin
   -- Name and look can change at any time; everything else only before Day 1.
   if c.status in ('running','finished') and (p_start is not null or p_days is not null or p_time_zone is not null
@@ -475,10 +477,6 @@ begin
     week_start = coalesce(p_week_start, week_start)
   where id = c.id returning * into c;
   if p_rules is not null then perform nx_put_rules(c, p_rules); end if;
-  -- A saved copy goes by the challenge's name, so it follows a rename.
-  if c.name <> was then
-    update saved_challenges set name = c.name where couple_id = c.couple_id and name = was;
-  end if;
   if c.status in ('invited','signing') and (p_start is not null or p_days is not null or p_step is not null
      or p_cap is not null or p_clear_cap or p_rules is not null or p_deadline_days is not null or p_deadline_time is not null) then
     delete from signatures where challenge_id = c.id;
@@ -864,8 +862,8 @@ create function public.nx_save_challenge(p_challenge uuid, p_name text) returns 
 declare c challenges := nx_enter(p_challenge); s uuid;
 begin
   if length(trim(coalesce(p_name, ''))) = 0 then raise exception 'Give it a name.'; end if;
-  insert into saved_challenges(couple_id, name, look, days, step, cap, rules, saved_by)
-  values (c.couple_id, left(trim(p_name), 60), c.look, c.days, c.step, c.cap, coalesce((
+  insert into saved_challenges(couple_id, challenge_id, name, look, days, step, cap, rules, saved_by)
+  values (c.couple_id, c.id, left(trim(p_name), 60), c.look, c.days, c.step, c.cap, coalesce((
     select jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
       'title', r.title, 'question', r.question, 'description', r.description, 'group', r.rule_group, 'kind', r.kind,
       'days', to_jsonb(r.days), 'weeklyTarget', r.weekly_target,

@@ -14,6 +14,7 @@ import {
   plural,
   repliedDisputes,
   reviewQueue,
+  settling,
   waitingOnPartner,
   weekOf,
   weekTarget,
@@ -37,7 +38,8 @@ export type DayGroup = { day: DateString; items: AnswerItem[] };
 
 /**
  * The viewer's review: `todo` is everything waiting on them, in the order the page meets it
- * (answers by day, late answers, forgiveness requests, then disputes on their own answers).
+ * (answers by day, late answers, forgiveness requests, then disputes on their own answers; disputes
+ * first once the last day is over).
  * A dispute they already replied to waits on the partner, so it moves to `replied`.
  * `theirs` is the partner's queue: the viewer's own answers and requests still waiting. `raised` is
  * every open dispute the viewer raised, replied to or not: only they can withdraw one.
@@ -56,12 +58,15 @@ export function reviewState(w: World) {
   }
   const disputes = q.disputes;
   const replied = repliedDisputes(w, w.me.id);
-  const todo: ReviewItem[] = [
+  const rest = [
     ...days.flatMap((g) => g.items),
     ...q.corrections,
     ...q.forgiveness,
-    ...disputes,
   ];
+  // After the last day the disputes are what hold up the result, so they come first.
+  const todo: ReviewItem[] = settling(w)
+    ? [...disputes, ...rest]
+    : [...rest, ...disputes];
   const theirs = waitingOnPartner(w, w.me.id);
   const raised = disputesRaisedBy(w, w.me.id);
   return {

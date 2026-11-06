@@ -247,6 +247,9 @@ function resolveAccount(
   switch (c.status) {
     // Your challenges (and a past verdict from it) stay open while the next one is set up.
     case 'draft':
+      // One the partner is setting up is theirs: this person waits on Your challenges.
+      if (c.created_by !== loaded.rows.me.id)
+        return pick(['start', 'settings', 'home', 'verdict'], 'home');
       return pick(['setup', 'start', 'settings', 'home', 'verdict'], 'setup');
     case 'invited':
     case 'signing':
@@ -915,7 +918,7 @@ function Hosting({
         (making ??= makeLink().finally(() => {
           making = null;
         })),
-      startShared: () =>
+      startShared: (couple?: string) =>
         once(async () => {
           const { world: w } = latest.current;
           const shared = w.saved.find((x) => x.source === 'link');
@@ -934,7 +937,7 @@ function Hosting({
               deviceZone(),
               w.me.id,
               null,
-              latest.current.built?.current?.couple_id,
+              couple ?? latest.current.built?.current?.couple_id,
             ),
           );
           if (id === false) return false;

@@ -96,6 +96,7 @@ export default function ReviewV2() {
   const review = useReview();
   const { world, state } = review;
   const todo = state.todo;
+  const [waitingOpen, setWaitingOpen] = useState(false);
   const ids = todo.map((i) => i.id);
   const open = new Set(ids);
 
@@ -307,7 +308,12 @@ export default function ReviewV2() {
                     </GlassCard>
                   )}
                 </Deck>
-                {!current && <CaughtUp world={world} />}
+                {!current && (
+                  <CaughtUp
+                    world={world}
+                    onWaiting={() => setWaitingOpen(true)}
+                  />
+                )}
               </div>
             </Enter>
 
@@ -325,7 +331,11 @@ export default function ReviewV2() {
             )}
 
             <Enter index={3}>
-              <WaitingForPartner review={review} />
+              <WaitingForPartner
+                review={review}
+                open={waitingOpen}
+                setOpen={setWaitingOpen}
+              />
             </Enter>
 
             <Enter index={4}>

@@ -54,20 +54,31 @@ export function dateIn(timeZone: string, instant: Instant | number) {
   }).format(new Date(ms(instant)));
 }
 
+/** Building a formatter is slow and this runs thousands of times a load, so each zone keeps its own. */
+const zoneFormats = new Map<string, Intl.DateTimeFormat>();
+function zoneFormat(timeZone: string) {
+  let format = zoneFormats.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    });
+    zoneFormats.set(timeZone, format);
+  }
+  return format;
+}
+
 /** Epoch milliseconds of wall-clock `time` ('HH:MM', 24-hour) on `date` in `timeZone`, daylight saving included. */
 export function zonedTime(date: DateString, time: string, timeZone: string) {
   const [y, mo, d] = date.split('-').map(Number),
     [h, mi] = time.split(':').map(Number);
   const wanted = Date.UTC(y, mo - 1, d, h, mi);
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  });
+  const parts = zoneFormat(timeZone);
   let guess = wanted;
   for (let i = 0; i < 3; i++) {
     const p = Object.fromEntries(

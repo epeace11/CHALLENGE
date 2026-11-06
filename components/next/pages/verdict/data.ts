@@ -57,10 +57,7 @@ export type VerdictSide = {
   badges: { id: string; title: string; how: string }[];
 };
 
-export function verdictOf(
-  seen: World,
-  past: PastChallenge | undefined = seen.past[0],
-) {
+export function verdictOf(seen: World, past: PastChallenge | undefined) {
   if (!past) return null;
   // Seen from a challenge with someone else: the people are this one's.
   const w = past.partner

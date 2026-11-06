@@ -1,5 +1,6 @@
 // The whole page wears the challenge's own look; its length and what misses cost come first as two big numbers, then the rules, with Start pinned to the bottom.
 'use client';
+import { WhoWith } from '../start/who-with';
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
@@ -29,9 +30,15 @@ export default function SharedV1() {
   const shared = sharedChallenge(world);
   const { saved, toggle } = useSaveForLater();
   const [sheet, setSheet] = useState<string | null>(null);
+  // With a partner or two already, who this one is with.
+  const [who, setWho] = useState(
+    world.partners.find((p) => p.coupleId === world.couple.id)?.coupleId ??
+      world.partners[0]?.coupleId ??
+      'new',
+  );
   const start = () => {
     setSheet(null);
-    if (host) void host.startShared();
+    if (host) void host.startShared(world.partners.length ? who : undefined);
     else navigate('setup');
   };
 
@@ -75,6 +82,10 @@ export default function SharedV1() {
             ))}
           </Stagger>
         </Section>
+
+        {world.partners.length > 0 && (
+          <WhoWith value={who} onChange={setWho} partners={world.partners} />
+        )}
 
         <ActionBar className="mt-0">
           <Button

@@ -224,6 +224,8 @@ export type Challenge = {
   rules: Rule[];
   /** First day of each week, for weekly rules and the Monday recap. */
   weekStart: Weekday;
+  /** Who started it. */
+  createdBy?: string;
   /** One person asked to end it early; it ends once the other accepts. */
   endAsk?: { by: string; at: Instant };
 };
@@ -241,6 +243,10 @@ export type SavedChallenge = {
   hidden?: boolean;
   /** The couple it was saved by: who "Run it again" starts it with. */
   coupleId?: string;
+  /** That couple's partner, who may not be the one on screen. */
+  partner?: Person;
+  /** The challenge it was saved from, when known. */
+  challengeId?: string;
   /** 'mine': saved by this couple. 'link': opened from a link another couple shared. */
   source: 'mine' | 'link';
   /** Who shared it, for 'link' ("Priya & Sam"). */

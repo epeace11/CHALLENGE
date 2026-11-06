@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   ChartNoAxesColumn,
   ChevronRight,
+  ChevronsUpDown,
   CircleCheckBig,
   Ellipsis,
   Gift,
@@ -14,7 +15,12 @@ import {
   Settings,
   type LucideIcon,
 } from 'lucide-react';
-import { dayNumber, formatDayShort, reviewQueue } from '@/lib/next/selectors';
+import {
+  dayNumber,
+  formatDayShort,
+  reviewQueue,
+  settling,
+} from '@/lib/next/selectors';
 import { useNav, type PageId } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Menu } from '@/components/next/ui/menu';
@@ -54,7 +60,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const world = useWorld();
   const { page, navigate } = useNav();
   const c = world.challenge;
-  const waiting = reviewQueue(world, world.me.id).count;
+  const queue = reviewQueue(world, world.me.id);
+  const over = settling(world);
+  // After the last day every open dispute holds up the result, whoever's move it is.
+  const waiting =
+    queue.count + (over ? over.disputes - queue.disputes.length : 0);
   const moreActive = MORE_PAGES.some((p) => p.id === page);
 
   const tabs = (where: 'top' | 'bottom') => (
@@ -134,10 +144,22 @@ export function AppFrame({ children }: { children: ReactNode }) {
               {/* The challenge's name leads to Your challenges, like the product's name before Day 1. */}
               <button
                 type="button"
-                className="nx-brand nx-press truncate text-left"
+                className="nx-brand nx-press flex min-w-0 items-center gap-1 text-left"
+                aria-label={
+                  world.others.length
+                    ? `${c.name}. Switch challenge`
+                    : undefined
+                }
                 onClick={() => navigate('home')}
               >
-                {c.name}
+                <span className="truncate">{c.name}</span>
+                {world.others.length > 0 && (
+                  <ChevronsUpDown
+                    size={16}
+                    className="shrink-0"
+                    aria-hidden="true"
+                  />
+                )}
               </button>
               <button
                 type="button"

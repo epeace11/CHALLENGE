@@ -2,6 +2,30 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 5, 2026 (ninth audit and eighth critique, and everything they found)
+
+Erin asked to rerun both after the last round of fixes. The audit came back 14/20 with no critical issues and one major one (from one critical and five major), and the critique 29/40 (trend 27, 29, 30, 28, 29). Of the last round's six fixes, two fully held and four partly did. All of it is fixed here.
+
+What would have gone wrong in real use:
+
+- **The page still froze on each load.** Three-quarters of the time went on building a date formatter thousands of times. Each time zone now keeps one.
+- **Settling gave the result away.** Overview said "see who won" above the gift amounts, who's ahead, and the week. After the last day it now shows only what's left to settle.
+- **Settling's signposts pointed the wrong way.** Disputes now come first in Review while settling, Review's tab counts every open dispute, and when only a dispute you raised or replied to is left, Review says so and opens it instead of "All caught up".
+- **Review cropped the proof.** The screenshot on the card is now shown whole, and a little taller on phones.
+- **A second challenge before a partner joined shared the first one's invite.** It now gets its own, and the Shared page asks who it's with as Start does.
+- **A saved copy went by its name,** so renaming could lose it or change another copy with the same name. It now knows its challenge (`saved-copies.sql`), and it shows the partner it was saved with.
+- **A hidden challenge could still be opened** through its verdict or saved copy, and "See how it ended" could open the wrong one.
+- **A draft your partner is setting up looked like yours.** It now says "Jordan is setting this up", asks nothing of you, and never opens by itself.
+
+From the critique:
+
+- **Another challenge's result can't be missed.** A finished challenge that isn't on screen gets a row on Overview for two weeks, or until the gifts are given. Rows on Overview name the partner.
+- **The challenge's name shows it can be switched** when there are others, and the end of Check in goes on to another challenge that's waiting.
+- **Your limit starts empty,** with the suggestion beside it, and says your partner sees it.
+- **Smaller:** one filled button on Your challenges, "That was the last day." on Check in, Settings' account tab is titled "For every challenge", Start says "You'll invite them once it's set up", the recap sheet no longer points to reminders that aren't built, and Undo takes focus once.
+
+Kept on purpose: the detector flags the small tiles inside Your challenges' cards as nested cards. They are tappable numbers inside one challenge, so they stay.
+
 ## Decisions, November 5, 2026 (eighth audit and seventh critique, and everything they found)
 
 Erin asked for a final audit and critique before the run-through. They were the first to look at the several-challenges, settling and hide work, and both went down: the audit 14/20 (from 16) and the critique 28/40 (from 30), trend 26, 27, 29, 30, 28. The audit said not to start the real challenge until its one P0 and five P1s were fixed. They are; those scores were taken before these fixes. Run `supabase/next/fixes-nov-5.sql` on PROD CHALLENGE before deploying.

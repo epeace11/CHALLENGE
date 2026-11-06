@@ -134,7 +134,7 @@ export type Host = {
   /** Not now: forgets the invite and goes back to this person's own challenges. */
   dismissInvite: () => void;
   /** Starts a new challenge from the shared link that was opened (after signing up, if needed). */
-  startShared: () => Promise<boolean>;
+  startShared: (couple?: string) => Promise<boolean>;
   /** Saves a copy of the shared challenge to Your challenges (after signing up, if needed). */
   saveShared: () => Promise<boolean>;
 };

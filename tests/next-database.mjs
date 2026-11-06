@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import {
   buildWorld,
+  currentChallenge,
   nextLock,
   personOf,
   verdictFor,
@@ -42,6 +43,7 @@ for (const script of [
   'settle-and-many.sql',
   'hide-challenges.sql',
   'fixes-nov-5.sql',
+  'saved-copies.sql',
 ])
   await db.exec(
     readFileSync(
@@ -1151,21 +1153,43 @@ await fails(
   /is over/,
 );
 
-// A saved copy follows a rename of its challenge.
+// A saved copy knows its challenge, and keeps the name it was saved under through a rename.
 const { nx_save_challenge: copyOfDry } = await one(
   priya,
   `select nx_save_challenge($1,'Dry October')`,
   [dry],
 );
 await as(priya, `select nx_update_challenge($1,p_name=>'Dry Again')`, [dry]);
-assert.equal(
-  (
-    await one(priya, `select name from saved_challenges where id=$1`, [
-      copyOfDry,
-    ])
-  ).name,
-  'Dry Again',
+const dryCopy = await one(
+  priya,
+  `select name, challenge_id from saved_challenges where id=$1`,
+  [copyOfDry],
 );
+assert.equal(dryCopy.name, 'Dry October');
+assert.equal(dryCopy.challenge_id, dry);
+
+// Nobody lands on a draft their partner is setting up, unless it's all there is or they open it.
+{
+  const me = { id: 'me' };
+  const theirs = {
+    id: 'theirs',
+    status: 'draft',
+    created_by: 'them',
+    created_at: '2026-11-02',
+  };
+  const done = {
+    id: 'done',
+    status: 'finished',
+    created_by: 'me',
+    created_at: '2026-01-01',
+  };
+  const on = (challenges, wanted) =>
+    currentChallenge({ me, challenges, hidden: [] }, wanted)?.id;
+  assert.equal(on([theirs, done]), 'done');
+  assert.equal(on([theirs]), 'theirs');
+  assert.equal(on([theirs, done], 'theirs'), 'theirs');
+  assert.equal(on([{ ...theirs, created_by: 'me' }, done]), 'theirs');
+}
 
 // Several partners: a challenge with someone new is its own couple, a person can be in two, and each
 // sees only their own. Inviting someone who's already a partner keeps them one couple.

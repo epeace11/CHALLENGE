@@ -1,6 +1,6 @@
 // One card per challenge with everything about it together (Summer Sprint's verdict, rules and share link in one place); the main action sits under the title.
 'use client';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowRight,
   ChevronRight,
@@ -173,7 +173,7 @@ export default function HomeV2() {
           remove: () =>
             ask({
               name: s.name,
-              description: deletedForYouLine(world.partner.name),
+              description: deletedForYouLine((s.partner ?? world.partner).name),
               remove: () =>
                 backend.save({ type: 'deleteSaved', savedId: s.id }, (w) =>
                   deleteSaved(w, s.id),
@@ -203,8 +203,8 @@ export default function HomeV2() {
   const startNew = (
     <Enter index={finishedNow ? 1 : 3}>
       <Button
-        variant={finishedNow ? 'primary' : 'secondary'}
-        size={finishedNow ? 'lg' : 'md'}
+        variant={finishedNow && !cards.length ? 'primary' : 'secondary'}
+        size={finishedNow && !cards.length ? 'lg' : 'md'}
         icon={Plus}
         className="w-full sm:w-auto"
         onClick={() => navigate('start')}
@@ -413,6 +413,16 @@ function NotStarted() {
   const partner = world.partner.name;
   const signed = (id: string) =>
     world.pact.signatures.some((s) => s.personId === id && s.signedAt);
+  if (c.status === 'draft' && c.createdBy && c.createdBy !== world.me.id)
+    return (
+      <ChallengeCard
+        kicker="Not started yet"
+        name={c.name}
+        detail={`${partner} is setting this up`}
+      >
+        {null}
+      </ChallengeCard>
+    );
   const step =
     c.status === 'draft'
       ? { label: 'Keep setting up', to: 'setup' as const }
@@ -491,14 +501,12 @@ function HideButton({ onClick }: { onClick: () => void }) {
 
 /** Where a hidden card was: says so, with Undo, which takes focus so keyboards aren't lost. */
 function HiddenLine({ name, onUndo }: { name: string; onUndo: () => void }) {
+  const undo = useRef<HTMLButtonElement>(null);
+  useEffect(() => undo.current?.focus({ preventScroll: true }), []);
   return (
     <output className="flex items-center justify-between gap-3 rounded-nx border border-nx-line px-4 py-1.5">
       <span className="min-w-0 text-nx-body text-nx-ink-2">{name} hidden</span>
-      <Button
-        ref={(el) => el?.focus({ preventScroll: true })}
-        variant="quiet"
-        onClick={onUndo}
-      >
+      <Button ref={undo} variant="quiet" onClick={onUndo}>
         Undo
       </Button>
     </output>
@@ -533,7 +541,7 @@ function OpenCard({
   if (!run)
     return (
       <ChallengeCard kicker={`With ${o.partner}`} name={o.name} detail={o.line}>
-        {button}
+        {o.status === 'draft' && !o.needsYou ? null : button}
       </ChallengeCard>
     );
   return (

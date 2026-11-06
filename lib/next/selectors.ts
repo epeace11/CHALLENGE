@@ -590,7 +590,9 @@ export function challengeSummary(w: World): OtherChallenge {
     (s) => s.personId === me && !!s.signedAt,
   );
   if (c.status === 'draft')
-    return { ...base, line: 'Keep setting up', needsYou: true };
+    return c.createdBy && c.createdBy !== me
+      ? { ...base, line: `${partner} is setting this up`, needsYou: false }
+      : { ...base, line: 'Keep setting up', needsYou: true };
   if (c.status === 'invited' || c.status === 'signing')
     return signed
       ? {
