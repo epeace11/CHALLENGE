@@ -3,8 +3,8 @@ import { useId, useState } from 'react';
 import { ChevronRight, Flag, Pencil, Plus } from 'lucide-react';
 import type { Goal } from '@/lib/next/model';
 import {
-  Avatar,
   Button,
+  IconButton,
   DURATION,
   EASE,
   Presence,
@@ -30,11 +30,11 @@ function keyed(list: Goal[]) {
 
 /**
  * Your goals in a card of their own, the first thing under the day's title: the one tinted card on
- * the page, so the eye goes there first. Each goal is a small numbered card inside it ("1. Run a
- * 10K before New Year"), side by side, in the page's serif. Change sits in
- * its corner and the partner's goals are one tap away at its foot. With none yet, the card holds
- * "Add your goals". It has no filled button: Log yesterday stays the page's one main action. After a
- * save the list shows the change: a new or changed goal fades in, a removed one fades out.
+ * the page, so the eye goes there first, kept small. One line says what it is, with the partner's
+ * goals and Change on its right; under it each goal is a small outlined, numbered card ("1. Run a
+ * 10K before New Year"), side by side, in the page's serif. With none yet, the card holds "Add your
+ * goals". It has no filled button: Log yesterday stays the page's one main action. After a save the
+ * list shows the change: a new or changed goal fades in, a removed one fades out.
  */
 export function GoalsFirst() {
   const goals = useGoals();
@@ -61,25 +61,35 @@ export function GoalsFirst() {
   return (
     <section
       aria-labelledby={title}
-      className="nx-enter flex flex-col gap-3 rounded-nx-lg border border-nx-accent-line bg-nx-accent-soft px-5 pt-3 pb-2 shadow-nx-lift sm:px-6"
+      className="nx-enter flex flex-col gap-2 rounded-nx-lg border border-nx-accent-line bg-nx-accent-soft px-4 pt-1 pb-4 shadow-nx-lift sm:px-5"
     >
-      <div className="-mr-2 flex items-center justify-between gap-3">
+      <div className="-mr-2 flex items-center gap-1">
         <h2
           id={title}
-          className="flex items-center gap-2 font-nx-sans text-nx-2 font-semibold text-nx-accent"
+          className="mr-auto flex items-center gap-2 font-nx-sans text-nx-2 font-semibold text-nx-accent"
         >
           <Flag size={18} strokeWidth={2.25} aria-hidden />
           Your goals
         </h2>
-        {has && (
-          <Button
-            variant="quiet"
-            icon={Pencil}
-            aria-label="Change your goals"
-            onClick={() => setEditing(true)}
+        {goals.hasPartner && (
+          <button
+            type="button"
+            className="nx-press inline-flex min-h-11 items-center gap-0.5 rounded-nx-sm px-2 text-nx-2 font-semibold text-nx-accent hover:bg-nx-surface-2"
+            aria-haspopup="dialog"
+            onClick={() => setTheirs(true)}
           >
-            Change
-          </Button>
+            {goals.partner.name}’s goals
+            <ChevronRight size={18} className="shrink-0" aria-hidden />
+          </button>
+        )}
+        {has && (
+          <IconButton
+            icon={Pencil}
+            label="Change your goals"
+            plain
+            className="text-nx-accent"
+            onClick={() => setEditing(true)}
+          />
         )}
       </div>
 
@@ -100,8 +110,9 @@ export function GoalsFirst() {
                 transition={{ duration: still ? 0 : DURATION.base, ease: EASE }}
                 className={cn(
                   // The size first: a font size after leading-snug would drop it in cn().
-                  many ? 'text-nx-body' : 'text-nx-body sm:text-nx-lead',
-                  'flex gap-1.5 rounded-nx border border-nx-accent-line bg-nx-surface px-3 py-3 font-nx-serif leading-snug text-nx-ink shadow-nx-glass',
+                  // 15px on a phone, where two goals share a row, so a long one fits; 17px from 640px.
+                  'text-nx-2 sm:text-nx-body',
+                  'flex gap-1.5 rounded-nx border border-nx-accent-line px-3 py-2 font-nx-serif leading-snug text-nx-ink',
                   many && 'w-[44%] shrink-0 snap-start sm:w-auto',
                 )}
               >
@@ -128,23 +139,6 @@ export function GoalsFirst() {
         >
           Add your goals
         </Button>
-      )}
-
-      {goals.hasPartner && (
-        <button
-          type="button"
-          className="nx-press -mx-2 mt-1 flex min-h-11 items-center gap-3 rounded-nx border-t border-nx-accent-line px-2 pt-2 pb-1 text-left text-nx-body text-nx-ink"
-          aria-haspopup="dialog"
-          onClick={() => setTheirs(true)}
-        >
-          <Avatar person={goals.partner} size="sm" decorative />
-          <span className="min-w-0 flex-1">{goals.partner.name}’s goals</span>
-          <ChevronRight
-            size={20}
-            className="shrink-0 text-nx-accent"
-            aria-hidden
-          />
-        </button>
       )}
 
       <GoalsSheet open={editing} onOpenChange={setEditing} goals={goals} />
