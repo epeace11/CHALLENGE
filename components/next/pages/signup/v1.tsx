@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowRight, Mail } from 'lucide-react';
 import { PlainFrame } from '@/components/next/frames';
+import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 import {
   Button,
@@ -34,6 +35,14 @@ export default function SignupV2() {
   const world = useWorld();
   // The live app names someone who opened an invite from it, with no email until they sign up.
   const invited = !world.me.email;
+  const { live } = useBackend();
+  // Back returns to what brought them here: the invite, a shared challenge, or the landing page.
+  const backTo =
+    live && invited
+      ? ('invite' as const)
+      : live && world.saved.some((s) => s.source === 'link')
+        ? ('shared' as const)
+        : ('landing' as const);
   const still = useReducedMotion();
   const [method, setMethod] = useState<Method>('password');
   const [resetting, setResettingState] = useState(false);
@@ -50,9 +59,7 @@ export default function SignupV2() {
 
   return (
     <PlainFrame
-      back={
-        resetting ? { onClick: () => setResetting(false) } : { to: 'landing' }
-      }
+      back={resetting ? { onClick: () => setResetting(false) } : { to: backTo }}
       center
       aside={
         f.sentTo || resetting ? undefined : (

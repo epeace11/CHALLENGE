@@ -332,7 +332,17 @@ function Signed({ flow, focus }: { flow: PactFlow; focus: boolean }) {
   const ref = useFocusOnMount<HTMLHeadingElement>(focus);
   return (
     <div className="flex flex-col gap-8 pt-2">
-      {flow.bothSigned ? (
+      {flow.bothSigned && flow.started ? (
+        // Read back after Day 1 (Rules and help's The pact): what was signed, and by whom.
+        <header className="flex flex-col gap-2">
+          <h1 ref={ref} tabIndex={-1} className="nx-page-title outline-none">
+            The {c.name} pact
+          </h1>
+          <p className="text-nx-body text-nx-ink-2">
+            Signed by you and {flow.theirs.person.name}.
+          </p>
+        </header>
+      ) : flow.bothSigned ? (
         // The heading is the countdown itself, and the countdown opens what happens on Day 1.
         <h1
           ref={ref}

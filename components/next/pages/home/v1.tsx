@@ -437,8 +437,9 @@ function NotStarted() {
             { label: 'Sign the pact', to: 'pact' as const }
         : signed(world.me.id)
           ? {
-              label: 'See the rules',
-              to: 'setup' as const,
+              // What you signed, read only: changing it is Set up's job, and it would clear both signatures.
+              label: 'See the pact',
+              to: 'pact' as const,
               note: `Waiting for ${partner} to sign`,
             }
           : { label: 'Sign the pact', to: 'pact' as const };
@@ -562,8 +563,13 @@ function OpenCard({
         kicker={`With ${o.partner}`}
         name={o.name}
         detail={o.line}
-        // One the partner is still setting up has nothing to open yet.
-        onOpen={o.status === 'draft' && !o.needsYou ? undefined : () => open()}
+        // One the partner is still setting up has nothing to open yet; one being signed opens its pact
+        // (to sign, or to read while the partner signs); your own draft opens Set up.
+        onOpen={
+          o.status === 'draft' && !o.needsYou
+            ? undefined
+            : () => open(o.status === 'draft' ? undefined : 'pact')
+        }
       >
         {null}
       </ChallengeCard>

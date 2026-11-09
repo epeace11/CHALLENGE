@@ -86,6 +86,8 @@ export function useSetup() {
   // leaving keeps it on Your challenges with its name and rules.
   const autosave = !!host && world.challenge.status === 'draft';
   const first = useRef(draft);
+  // The draft as Set up opened, kept in state so rendering can compare with it.
+  const [opened] = useState(draft);
   const pending = useRef<SetupDraft | null>(null);
   const flush = useRef(() => {});
   useEffect(() => {
@@ -210,6 +212,14 @@ export function useSetup() {
     ...drafted,
     /** Setup is already done (invited or signing): no name screen, and Back leaves Set up. */
     done: setupDone(world.challenge.status, !!host),
+    /**
+     * Something changed on a challenge someone has already signed: Read the pact saves it and clears
+     * both signatures, and leaving without it keeps the pact as signed.
+     */
+    clearsSignatures:
+      setupDone(world.challenge.status, !!host) &&
+      world.pact.signatures.some((s) => !!s.signedAt) &&
+      draft !== opened,
     patch,
     saveRule,
     world,

@@ -544,7 +544,32 @@ export function settling(w: World) {
     toReview,
     /** Open disputes: either person can settle one, by conceding or withdrawing. Answers: only the reviewer. */
     yours: disputes.length + toReview,
+    /** A timer still going holds the end too (nx_tick): this person's, which they can stop, or the partner's. */
+    myTimer: timerOf(w, w.me.id),
+    theirTimer: timerOf(w, w.partner.id),
   };
+}
+
+/**
+ * What stands between the last day and who won, as one sentence without its full stop: disputes,
+ * then answers to review, then a timer still going, then the partner's reviews.
+ */
+export function settlingStep(
+  w: World,
+  over: NonNullable<ReturnType<typeof settling>>,
+) {
+  const partner = w.partner.name;
+  const timer = (run: TimerRun) =>
+    (ruleById(w.challenge, run.ruleId)?.title ?? 'timed').split(',')[0];
+  if (over.disputes)
+    return `Settle ${plural(over.disputes, 'dispute')} to see who won`;
+  if (over.toReview)
+    return `Review ${plural(over.toReview, 'answer')} to see who won`;
+  if (over.myTimer)
+    return `Your ${timer(over.myTimer)} timer is still running. Stop it to see who won`;
+  if (over.theirTimer)
+    return `Waiting for ${partner} to stop their ${timer(over.theirTimer)} timer`;
+  return `Waiting for ${partner} to review your answers`;
 }
 
 /** What settling asks of this person, said to them: "You can concede it, or Jordan can withdraw it." */
@@ -559,6 +584,8 @@ export function settlingLine(w: World) {
     return `You can concede ${it}, or ${partner} can withdraw ${it}.`;
   if (over.raised)
     return `You can withdraw ${it}, or ${partner} can concede ${it}.`;
+  // A timer is all that's left: the sentence above says so.
+  if (!over.toReview && (over.myTimer || over.theirTimer)) return '';
   return 'Answers nobody reviews count as approved after 48 hours.';
 }
 
@@ -611,12 +638,8 @@ export function challengeSummary(w: World): OtherChallenge {
   if (over)
     return {
       ...base,
-      line: over.disputes
-        ? `Settle ${plural(over.disputes, 'dispute')} to see who won`
-        : over.toReview
-          ? `Review ${plural(over.toReview, 'answer')} to see who won`
-          : `Waiting for ${partner} to review your answers`,
-      needsYou: over.yours > 0,
+      line: settlingStep(w, over),
+      needsYou: over.yours > 0 || !!over.myTimer,
     };
   if (w.today < c.start)
     return { ...base, line: `Starts ${formatDate(c.start)}`, needsYou: false };

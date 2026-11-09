@@ -9,6 +9,7 @@ import {
   Inbox,
   CircleCheckBig,
   type LucideIcon,
+  ScrollText,
 } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
 import { setTimed } from '@/lib/next/actions';
@@ -312,7 +313,7 @@ function TimerToggle({ ruleId }: { ruleId: string }) {
 
 /* ── Deadline and stakes ───────────────────────────────────────────────── */
 
-/** The deadline (it opens Check in, what the deadline is for) and what each point costs (Gifts). */
+/** The deadline (it opens Check in, what the deadline is for), what each point costs (Gifts), and the signed pact. */
 export function StakesRows({ glass = true }: { glass?: boolean }) {
   const world = useWorld();
   const { navigate } = useNav();
@@ -338,6 +339,16 @@ export function StakesRows({ glass = true }: { glass?: boolean }) {
         detail={`The first costs ${formatMoney(c.step)}, the second ${formatMoney(2 * c.step)}, and so on${c.cap !== null ? `, up to ${formatMoney(c.cap)} a gift` : ''}`}
         onClick={() => navigate('gifts')}
       />
+      {/* Once both have signed, the pact you signed stays one tap away. */}
+      {(c.status === 'running' || c.status === 'finished') && (
+        <RowButton
+          glass={glass}
+          leading={lead(ScrollText)}
+          title="The pact"
+          detail={`What you and ${world.partner.name} signed`}
+          onClick={() => navigate('pact')}
+        />
+      )}
     </div>
   );
 }

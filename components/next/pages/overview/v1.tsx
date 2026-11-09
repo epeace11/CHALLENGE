@@ -1,7 +1,7 @@
 // Your goals first, in a card of their own: the one tinted card on the page, under the day's title, each goal a small numbered card side by side; then the check-ins as one big number with the Log button, number buttons for review, gym and both gifts, and the week.
 'use client';
 import { Fragment, useMemo, useState } from 'react';
-import { ArrowRight, CircleCheck, Clock3 } from 'lucide-react';
+import { ArrowRight, CircleCheck, Clock3, Square } from 'lucide-react';
 import type { DateString } from '@/lib/next/model';
 import {
   formatDuration,
@@ -9,9 +9,13 @@ import {
   plural,
   settling,
   settlingLine,
+  settlingStep,
 } from '@/lib/next/selectors';
 import { AppFrame } from '@/components/next/frames';
+import { useBackend } from '@/components/next/backend';
+import { useClock } from '@/components/next/clock';
 import { useNav } from '@/components/next/nav';
+import { stopTimer } from '@/lib/next/actions';
 import { showVerdictFor } from '../verdict/which';
 import { useWorld } from '@/components/next/world';
 import {
@@ -78,6 +82,8 @@ function EndAsk() {
 function Settling() {
   const world = useWorld();
   const { navigate } = useNav();
+  const backend = useBackend();
+  const { at } = useClock(false);
   const over = settling(world);
   const c = world.challenge;
   if (c.status === 'finished')
@@ -101,7 +107,6 @@ function Settling() {
       </Enter>
     );
   if (!over) return null;
-  const partner = world.partner.name;
   return (
     <Enter index={1}>
       <GlassCard className="flex flex-col gap-4">
@@ -110,14 +115,29 @@ function Settling() {
             You finished {world.challenge.name}
           </h2>
           <p className="text-nx-lead text-nx-ink">
-            {over.disputes
-              ? `Settle ${plural(over.disputes, 'dispute')} to see who won.`
-              : over.toReview
-                ? `Review ${plural(over.toReview, 'answer')} to see who won.`
-                : `Waiting for ${partner} to review your answers.`}
+            {settlingStep(world, over)}.
           </p>
-          <p className="text-nx-body text-nx-ink-2">{settlingLine(world)}</p>
+          {settlingLine(world) && (
+            <p className="text-nx-body text-nx-ink-2">{settlingLine(world)}</p>
+          )}
         </div>
+        {/* A timer left going is all that holds it up: stopping it saves the session and finishes. */}
+        {over.yours === 0 && over.myTimer && (
+          <Button
+            variant="primary"
+            size="lg"
+            icon={Square}
+            className="w-full sm:w-auto sm:self-start"
+            onClick={() => {
+              const t = at();
+              backend.act({ type: 'stopTimer' }, (w) =>
+                stopTimer(w, world.me.id, t),
+              );
+            }}
+          >
+            Stop and save
+          </Button>
+        )}
         {over.yours > 0 && (
           <Button
             variant="primary"

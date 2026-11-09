@@ -137,6 +137,19 @@ export default function PracticeV1() {
   // In the live app the partner may already be in; the button then goes back to the challenge.
   const { live } = useBackend();
   const joined = live && !p.world.partnerPending;
+  const signedByMe = p.world.pact.signatures.some(
+    (s) => s.personId === p.world.me.id && !!s.signedAt,
+  );
+  // Where practice was opened from, which the live app's default page already is: the pact before
+  // signing, the invite link while the partner hasn't joined, Overview before Day 1.
+  const leave = () => (live ? navigate(null) : navigate('pact'));
+  const done = joined
+    ? { label: 'Back to your challenge', icon: ArrowRight }
+    : !live
+      ? { label: `Invite ${partner} for real`, icon: UserPlus }
+      : signedByMe
+        ? { label: `Invite ${partner}`, icon: UserPlus }
+        : { label: 'Back to the pact', icon: ArrowRight };
   const at = ORDER.indexOf(p.phase);
   const state = (phase: Phase): State => {
     const i = ORDER.indexOf(phase);
@@ -282,10 +295,10 @@ export default function PracticeV1() {
           variant="primary"
           size="lg"
           full
-          icon={joined ? ArrowRight : UserPlus}
+          icon={done.icon}
           onClick={() => (live ? navigate(null) : navigate('invite'))}
         >
-          {joined ? 'Back to your challenge' : `Invite ${partner} for real`}
+          {done.label}
         </Button>
         <Button variant="quiet" icon={RotateCcw} onClick={p.restart}>
           Practice again
@@ -295,7 +308,7 @@ export default function PracticeV1() {
 
   return (
     // The marker sits in the top bar beside Back, so each step fits under it.
-    <PlainFrame back={{ to: 'setup' }} aside={<PracticeBanner />}>
+    <PlainFrame back={{ onClick: leave }} aside={<PracticeBanner />}>
       <div className="flex flex-col gap-6">
         {/* The marker says what this is; the title is for screen readers. */}
         <h1 className="sr-only">Practice day</h1>

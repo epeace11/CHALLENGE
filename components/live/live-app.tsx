@@ -182,6 +182,8 @@ const RUNNING: PageId[] = [
   'log',
   // Every page inside a running challenge belongs here (tests/next.mjs checks it).
   'timer',
+  // The pact stays open to read once both have signed (Rules and help's The pact).
+  'pact',
   'review',
   'progress',
   'gifts',
@@ -279,10 +281,14 @@ export function LiveApp() {
   const [wantedChallenge, setWanted] = useState<string | null>(() =>
     readStored(OPEN_KEY),
   );
-  const setWantedChallenge = useCallback((id: string | null) => {
-    writeStored(OPEN_KEY, id);
-    setWanted(id);
-  }, []);
+  /** The challenge to show; remembered on this device unless `remember` is false (for now only). */
+  const setWantedChallenge = useCallback(
+    (id: string | null, remember = true) => {
+      if (remember) writeStored(OPEN_KEY, id);
+      setWanted(id);
+    },
+    [],
+  );
   /** Changes on screen whose writes aren't in the loaded rows yet, oldest first (see `Pending`). */
   const [pending, setPending] = useState<Pending[]>([]);
   /** The clock: set when rows land and every minute between, so a tab left open keeps up. */
@@ -644,7 +650,7 @@ function Hosting({
   reload: () => Promise<void>;
   navigate: Nav['navigate'];
   setPending: (f: (list: Pending[]) => Pending[]) => void;
-  setWantedChallenge: (id: string | null) => void;
+  setWantedChallenge: (id: string | null, remember?: boolean) => void;
   children: (host: Host) => ReactNode;
 }) {
   const toast = useToast();
@@ -839,7 +845,14 @@ function Hosting({
         navigate('landing');
       },
       openChallenge: (id: string, page?: PageId) => {
-        setWantedChallenge(id);
+        // One only waiting on the partner (signed, or the invite not yet accepted) opens for now but
+        // isn't remembered, so the app doesn't keep reopening on it instead of the one running.
+        const other = latest.current.world?.others.find((o) => o.id === id);
+        const waiting =
+          !!other &&
+          (other.status === 'invited' || other.status === 'signing') &&
+          !other.needsYou;
+        setWantedChallenge(id, !waiting);
         navigate(page ?? null);
       },
       startFrom: (template: Template, couple?: string) =>

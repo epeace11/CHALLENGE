@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Instant } from '@/lib/next/model';
 import { formatTarget } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
@@ -39,6 +39,9 @@ export function usePact() {
   const [ruleId, setRuleId] = useState<string | null>(null);
   // True once you press Sign here, so your name is written in rather than already there.
   const [justSigned, setJustSigned] = useState(false);
+  // The signature's save, which the invite waits for: the live app shows the invite link once the
+  // database has the signature, so leaving before it lands would come straight back here.
+  const signing = useRef<Promise<boolean> | null>(null);
   // Your own limits as typed: empty until you've chosen one, so nobody signs a number they never set.
   const [limits, setLimits] = useState<Record<string, number | null>>(() =>
     Object.fromEntries(
@@ -99,7 +102,7 @@ export function usePact() {
     sign: () => {
       setJustSigned(true);
       if (drafted) return setSignedHere(view.signAt);
-      backend.act(
+      signing.current = backend.save(
         {
           type: 'signPact',
           ...(view.limitRules.length ? { limits: own } : {}),
@@ -119,8 +122,13 @@ export function usePact() {
       : world.partnerPending
         ? {
             label: `Invite ${partner}`,
-            // The live app shows the invite link until the partner joins.
-            go: () => navigate(backend.live ? 'overview' : 'invite'),
+            // The live app shows the invite link (its default page) once the signature is saved.
+            go: () => {
+              if (!backend.live) return navigate('invite');
+              void (signing.current ?? Promise.resolve(true)).then(
+                (ok) => ok && navigate(null),
+              );
+            },
           }
         : { label: 'Go to Your challenges', go: () => navigate('home') },
     practice: () => navigate('practice'),

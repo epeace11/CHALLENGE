@@ -663,7 +663,34 @@ assert.ok(signPact(w, JORDAN).pact.signatures.every((s) => s.signedAt));
     onYours: 0,
     toReview: 0,
     yours: 0,
+    myTimer: null,
+    theirTimer: null,
   });
+  // A timer still going holds the end: this person's, which they stop, or the partner's.
+  {
+    const S = await import('../lib/next/selectors.ts');
+    const run = (personId) => ({
+      personId,
+      ruleId: 'arabic',
+      day: last,
+      startedAt: ended.now,
+      runningSince: ended.now,
+      banked: 0,
+    });
+    const mine = { ...idle, timers: [run(MAYA)] };
+    assert.equal(
+      S.settlingStep(mine, settling(mine)),
+      'Your Arabic timer is still running. Stop it to see who won',
+    );
+    assert.equal(challengeSummary(mine).needsYou, true);
+    assert.equal(S.settlingLine(mine), '');
+    const theirs = { ...idle, timers: [run(JORDAN)] };
+    assert.equal(
+      challengeSummary(theirs).line,
+      'Waiting for Jordan to stop their Arabic timer',
+    );
+    assert.equal(challengeSummary(theirs).needsYou, false);
+  }
   const disputed = { ...idle, disputes: [open] };
   assert.equal(settling(disputed).disputes, 1);
   assert.equal(

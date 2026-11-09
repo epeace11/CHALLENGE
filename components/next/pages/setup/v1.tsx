@@ -54,9 +54,13 @@ export default function SetupV1() {
   const setup = useSetup();
   const { world, draft, patch, errors, clear } = setup;
   const still = useReducedMotion();
-  // The name gets its own screen only while the challenge is first built; once setup is done, Set
-  // up opens on the checklist (the name can still be changed under Name and dates).
-  const [named, setNamed] = useState(setup.done);
+  // The name gets its own screen only while the challenge has none: once it has one (setup done, a
+  // draft reopened, or a theme or saved challenge that brought its name), Set up opens on the
+  // checklist, where Name and dates can still change it, and Back goes to Your challenges.
+  const [skipName] = useState(
+    () => setup.done || setup.draft.name.trim() !== '',
+  );
+  const [named, setNamed] = useState(skipName);
   const [open, setOpen] = useState<Key | null>(null);
 
   const problem = (key: Key) =>
@@ -234,7 +238,7 @@ export default function SetupV1() {
   return (
     <PlainFrame
       back={
-        setup.done
+        skipName
           ? { to: 'home' }
           : named
             ? {
@@ -291,7 +295,16 @@ export default function SetupV1() {
       </Glide>
 
       {named && (
-        <ActionBar>
+        // The note about signatures sits over the button, on a laptop too.
+        <ActionBar
+          className={setup.clearsSignatures ? 'sm:flex-col' : undefined}
+        >
+          {setup.clearsSignatures && (
+            <p className="text-center text-nx-2 text-nx-ink-2">
+              Read the pact to save these changes. It clears both signatures, so
+              you both sign again.
+            </p>
+          )}
           <Button
             variant="primary"
             size="lg"

@@ -178,6 +178,8 @@ export function pactView(world: World, you: Person) {
       days: Math.floor(left / 864e5),
       hours: Math.floor((left % 864e5) / 36e5),
     },
+    /** Day 1 has come: the pact is read back from Rules and help, so there is no countdown. */
+    started: left === 0,
     groups,
     /** Day 1 moved from the planned day: it's the day after both sign. */
     moved: c.start !== world.challenge.start,
