@@ -6,7 +6,7 @@ import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { openPactAsSetter } from '../pact/entry';
 import { draftCap, draftDays, matchingRule, type Draft } from './draft';
-import { useDraft } from './use-draft';
+import { setupDone, useDraft } from './use-draft';
 
 /** The draft as the live app saves it; a length still being typed keeps the saved one. */
 const toSetup = (d: Draft, savedDays: number): SetupDraft => ({
@@ -208,6 +208,8 @@ export function useSetup() {
 
   return {
     ...drafted,
+    /** Setup is already done (invited or signing): no name screen, and Back leaves Set up. */
+    done: setupDone(world.challenge.status, !!host),
     patch,
     saveRule,
     world,

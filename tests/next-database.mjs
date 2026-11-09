@@ -76,6 +76,7 @@ for (const script of [
   'saved-copies.sql',
   'fixes-nov-6.sql',
   'timer.sql',
+  'rule-limit.sql',
 ])
   await db.exec(
     readFileSync(
@@ -83,7 +84,7 @@ for (const script of [
       'utf8',
     ),
   );
-// Run last, timer.sql leaves every function it replaces as the fresh install has it.
+// Run last, timer.sql and rule-limit.sql leave every function they replace as the fresh install has it.
 assert.deepEqual(await definitions(), freshDefinitions);
 
 /** Runs SQL as `id` (row-level security on), at `now` when given. */
@@ -2361,5 +2362,51 @@ await fails(
   timer(kim, tonight, 'start', tRead),
   /while the challenge is running/,
 );
+
+// Up to 30 rules (rule-limit.sql): Erin and Kazzy's next challenge has 22.
+{
+  const many = (n) =>
+    JSON.stringify(
+      Array.from({ length: n }, (_, i) => ({
+        title: `Rule ${i + 1}`,
+        question: `Did you do rule ${i + 1}?`,
+        kind: 'yesno',
+        days: [0, 1, 2, 3, 4, 5, 6],
+        who: 'both',
+      })),
+    );
+  const big = (
+    await one(
+      ana,
+      `select nx_create_challenge('Thirty','classic',null,'2027-06-01',30,'America/Toronto',1,null,$1::jsonb,null,true) id`,
+      [many(30)],
+    )
+  ).id;
+  assert.equal(
+    (
+      await one(
+        ana,
+        `select count(*)::int n from rules where challenge_id = $1`,
+        [big],
+      )
+    ).n,
+    30,
+  );
+  await fails(
+    as(ana, `select nx_update_challenge($1, p_rules => $2::jsonb)`, [
+      big,
+      many(31),
+    ]),
+    /30 rules or fewer/,
+  );
+  await fails(
+    as(
+      ana,
+      `select nx_create_challenge('Too many','classic',null,'2027-06-01',30,'America/Toronto',1,null,$1::jsonb,null,true)`,
+      [many(31)],
+    ),
+    /30 rules or fewer/,
+  );
+}
 
 console.log('next database: ok');

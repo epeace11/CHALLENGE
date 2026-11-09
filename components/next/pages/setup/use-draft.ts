@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import type { Rule } from '@/lib/next/model';
+import { useBackend } from '@/components/next/backend';
 import { useWorld } from '@/components/next/world';
 import { BLANK_NAME } from '@/lib/next/catalog';
 import { draftFrom, draftStakes, type Draft } from './draft';
@@ -11,12 +12,16 @@ import { draftFrom, draftStakes, type Draft } from './draft';
  */
 export function useDraft() {
   const world = useWorld();
+  const { host } = useBackend();
   const { me, partner } = world;
-  // The name starts empty, as it is the first thing asked, unless a draft left earlier has one.
+  // The name starts empty, as it is the first thing asked, unless a draft left earlier has one. A
+  // challenge whose setup is done (the live app, invited or signing) keeps its name.
   const [draft, setDraft] = useState<Draft>(() => ({
     ...draftFrom(world.challenge),
-    name:
-      world.challenge.status === 'draft' && world.challenge.name !== BLANK_NAME
+    name: setupDone(world.challenge.status, !!host)
+      ? world.challenge.name
+      : world.challenge.status === 'draft' &&
+          world.challenge.name !== BLANK_NAME
         ? world.challenge.name
         : '',
   }));
@@ -57,3 +62,11 @@ export function useDraft() {
     putBackRule,
   };
 }
+
+/**
+ * True once the challenge has been set up (invited or signing) in the live app: Set up then opens on
+ * its checklist, where the name can still be changed, and never asks for the name again. The
+ * preview's sample challenge is a running one, so there Set up always shows building a new one.
+ */
+export const setupDone = (status: string, live: boolean) =>
+  live && (status === 'invited' || status === 'signing');

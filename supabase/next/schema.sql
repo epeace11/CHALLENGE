@@ -448,7 +448,7 @@ create function public.nx_put_rules(c public.challenges, p_rules jsonb) returns 
 declare x jsonb; i integer := 0; who uuid; partner uuid := nx_partner(c.id, auth.uid());
 begin
   if jsonb_typeof(p_rules) <> 'array' then raise exception 'Rules must be a list.'; end if;
-  if jsonb_array_length(p_rules) > 20 then raise exception 'Keep it to 20 rules or fewer.'; end if;
+  if jsonb_array_length(p_rules) > 30 then raise exception 'Keep it to 30 rules or fewer.'; end if;
   delete from rules where challenge_id = c.id;
   for x in select * from jsonb_array_elements(p_rules) loop
     who := case

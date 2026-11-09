@@ -54,7 +54,9 @@ export default function SetupV1() {
   const setup = useSetup();
   const { world, draft, patch, errors, clear } = setup;
   const still = useReducedMotion();
-  const [named, setNamed] = useState(false);
+  // The name gets its own screen only while the challenge is first built; once setup is done, Set
+  // up opens on the checklist (the name can still be changed under Name and dates).
+  const [named, setNamed] = useState(setup.done);
   const [open, setOpen] = useState<Key | null>(null);
 
   const problem = (key: Key) =>
@@ -232,14 +234,16 @@ export default function SetupV1() {
   return (
     <PlainFrame
       back={
-        named
-          ? {
-              onClick: () => {
-                setOpen(null);
-                setNamed(false);
-              },
-            }
-          : { to: 'start' }
+        setup.done
+          ? { to: 'home' }
+          : named
+            ? {
+                onClick: () => {
+                  setOpen(null);
+                  setNamed(false);
+                },
+              }
+            : { to: 'start' }
       }
       aside={<AccountMenu cancel />}
     >
