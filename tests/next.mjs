@@ -824,13 +824,12 @@ const PLANNED = {
   timer: 1,
   rules: 1,
   review: 1,
-  gifts: 1,
   progress: 1,
   recap: 1,
   verdict: 1,
   settings: 1,
 };
-assert.equal(Object.keys(PLANNED).length, 20);
+assert.equal(Object.keys(PLANNED).length, 19);
 const pagesDir = join(root, 'components/next/pages');
 const registry = readFileSync(join(pagesDir, 'registry.ts'), 'utf8');
 for (const [id, count] of Object.entries(PLANNED)) {

@@ -504,7 +504,7 @@ function GiftsLink({ children }: { children: ReactNode }) {
     <button
       type="button"
       className="nx-press -mx-2 -my-1 flex min-h-11 items-center gap-2 rounded-nx-sm px-2 py-1.5 text-left text-nx-2 text-nx-ink-2 hover:bg-nx-accent-soft"
-      onClick={() => navigate('gifts')}
+      onClick={() => navigate('progress')}
     >
       <span className="min-w-0 flex-1">
         {children}

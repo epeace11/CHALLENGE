@@ -8,7 +8,6 @@ import {
   ChevronsUpDown,
   CircleCheckBig,
   Ellipsis,
-  Gift,
   House,
   Inbox,
   LayoutGrid,
@@ -41,7 +40,6 @@ const TABS: { id: PageId; label: string; icon: LucideIcon }[] = [
 /** Reached from More. Timer is listed only while the viewer has a timed rule or a timer going. */
 export const MORE_PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
   { id: 'timer', label: 'Timer', icon: Timer },
-  { id: 'gifts', label: 'Gifts', icon: Gift },
   { id: 'rules', label: 'Rules and help', icon: BookOpen },
   { id: 'recap', label: 'Monday recap', icon: CalendarCheck },
   { id: 'settings', label: 'Settings', icon: Settings },

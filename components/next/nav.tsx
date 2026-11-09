@@ -18,7 +18,6 @@ export const PAGE_IDS = [
   'timer',
   'rules',
   'review',
-  'gifts',
   'progress',
   'recap',
   'verdict',

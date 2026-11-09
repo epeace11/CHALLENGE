@@ -155,13 +155,13 @@ const { navigate } = useNav(); // from '@/components/next/nav'
 navigate('review'); // opens Review on the version last chosen for it
 ```
 
-Page ids: `landing signup shared start say setup home invite pact practice overview log timer rules review gifts progress recap verdict settings`. Every number, row and "See all" that leads somewhere calls `navigate`, or opens a `Sheet` for details. There is no router and no `<a href>` between pages.
+Page ids: `landing signup shared start say setup home invite pact practice overview log timer rules review progress recap verdict settings`. The gifts live at the top of Progress. Every number, row and "See all" that leads somewhere calls `navigate`, or opens a `Sheet` for details. There is no router and no `<a href>` between pages.
 
 ## Frames
 
 Each version renders its frame (see `components/next/pages/meta.ts` for which one; the placeholder already uses it).
 
-- **`<AppFrame>`** for pages inside the running challenge (Your challenges, Overview, Check in, Rules and help, Review, Gifts, Progress, Monday recap, Settings). It shows the challenge's name and "Day 19 of 30" (which opens Progress) and the navigation: Overview, Check in, Review (with the count of what waits), Progress, and More (Gifts, Rules and help, Monday recap, Settings, Your challenges). Bottom tab bar on phones, tabs in the top bar from 1024px. Content is 720px wide.
+- **`<AppFrame>`** for pages inside the running challenge (Your challenges, Overview, Check in, Timer, Rules and help, Review, Progress, Monday recap, Settings). It shows the challenge's name and "Day 19 of 30" (which opens Progress) and the navigation: Overview, Check in, Review (with the count of what waits), Progress, and More (Timer, Rules and help, Monday recap, Settings, Your challenges). Bottom tab bar on phones, tabs in the top bar from 1024px. Content is 720px wide.
 - **`<PlainFrame back? aside? center?>`** for everything before or outside a running challenge (Landing, Sign up, Shared link, Start, Say your rules, Set up, Invite, Pact, Practice, Verdict). A quiet top bar with "The Challenge", or a Back button with `back={{ to: 'start' }}`; `aside` for something small on the right; `center` centres short content vertically. Content is 720px wide.
 
 Every page, in either frame, is the same width (720px) with the same side margins, on phones and laptops (Kazzy's pick). There is no wider or narrower page and no two-column laptop layout.

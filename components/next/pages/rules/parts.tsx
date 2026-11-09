@@ -337,7 +337,7 @@ export function StakesRows({ glass = true }: { glass?: boolean }) {
         leading={lead(Gift)}
         title="What a point costs"
         detail={`The first costs ${formatMoney(c.step)}, the second ${formatMoney(2 * c.step)}, and so on${c.cap !== null ? `, up to ${formatMoney(c.cap)} a gift` : ''}`}
-        onClick={() => navigate('gifts')}
+        onClick={() => navigate('progress')}
       />
       {/* Once both have signed, the pact you signed stays one tap away. */}
       {(c.status === 'running' || c.status === 'finished') && (
@@ -437,7 +437,7 @@ export function HowItWorks({ className }: { className?: string }) {
       q: 'How does the gift work?',
       a: `Your points set the gift you give ${partner}, and ${partner}’s points set the gift you get. You give them when the challenge ends. Fewer points wins.`,
       more: (
-        <AnswerLink icon={Gift} onClick={() => navigate('gifts')}>
+        <AnswerLink icon={Gift} onClick={() => navigate('progress')}>
           {mine > 0 ? (
             <>
               Your {mine} points: {c.cap === null ? `${sum} = ` : ''}

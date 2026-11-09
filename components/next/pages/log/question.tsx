@@ -325,7 +325,7 @@ export function QuestionFields({
                         icon={Gift}
                         tone="missed"
                         className="-mx-2 w-[calc(100%+16px)]"
-                        onClick={() => navigate('gifts')}
+                        onClick={() => navigate('progress')}
                       >
                         {/* The card says it's a miss and the line under it names the partner. */}
                         Adds {formatMoney(nextMissCost(world, me))} to the gift

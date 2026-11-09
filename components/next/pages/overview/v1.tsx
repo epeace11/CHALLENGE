@@ -298,21 +298,21 @@ function Running() {
                     value={o.mine.gets}
                     format={formatMoney}
                     hint={`From ${partner}’s points`}
-                    onClick={() => navigate('gifts')}
+                    onClick={() => navigate('progress')}
                   />
                   <StatButton
                     label={`${partner} gets`}
                     value={o.theirs.gets}
                     format={formatMoney}
                     hint="From your points"
-                    onClick={() => navigate('gifts')}
+                    onClick={() => navigate('progress')}
                   />
                 </div>
                 {/* Both numbers and who's ahead (fewer points is ahead); it wraps on narrow phones. */}
                 <Button
                   variant="quiet"
                   className="-ml-3 self-start text-left whitespace-normal"
-                  onClick={() => navigate('gifts')}
+                  onClick={() => navigate('progress')}
                 >
                   {o.aheadLine}
                 </Button>

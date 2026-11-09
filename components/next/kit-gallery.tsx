@@ -158,7 +158,7 @@ export function KitGallery() {
             value={gets(world, me)}
             format={formatMoney}
             hint="From Jordan’s 9 points"
-            onClick={() => navigate('gifts')}
+            onClick={() => navigate('progress')}
           />
           <StatButton
             label="Gym this week"
@@ -348,7 +348,7 @@ export function KitGallery() {
             trigger={<Button icon={Plus}>Menu</Button>}
             align="start"
             items={[
-              { label: 'Gifts', onSelect: () => navigate('gifts') },
+              { label: 'Gifts', onSelect: () => navigate('progress') },
               { label: 'Rules and help', onSelect: () => navigate('rules') },
             ]}
           />
@@ -361,7 +361,7 @@ export function KitGallery() {
           footer={
             <>
               <Button onClick={() => setSheet(false)}>Close</Button>
-              <Button variant="primary" onClick={() => navigate('gifts')}>
+              <Button variant="primary" onClick={() => navigate('progress')}>
                 See the gifts
               </Button>
             </>

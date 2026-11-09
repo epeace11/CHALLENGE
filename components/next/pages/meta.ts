@@ -159,15 +159,6 @@ export const PAGE_META: Record<PageId, PageMeta> = {
     brief:
       'Jordan’s answers to approve or dispute, his forgiveness request, and the dispute on Maya’s answer.',
   },
-  gifts: {
-    id: 'gifts',
-    title: 'Gifts',
-    group: 'Every day',
-    frame: 'app',
-    versions: 1,
-    brief:
-      'What each gift is at and why: each point’s cost (the nth costs n times the step), forgiven points, the next miss.',
-  },
   progress: {
     id: 'progress',
     title: 'Progress',
@@ -175,7 +166,7 @@ export const PAGE_META: Record<PageId, PageMeta> = {
     frame: 'app',
     versions: 1,
     brief:
-      'The calendar, streaks per rule, weekly targets, and badges earned and next.',
+      'The gifts first (who gets what, and the points behind them), then the calendar, streaks per rule, weekly targets, and badges earned and next.',
   },
   recap: {
     id: 'recap',

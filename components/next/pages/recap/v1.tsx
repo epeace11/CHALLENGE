@@ -104,7 +104,7 @@ export default function RecapV2() {
               format={points}
               tone={v.winner === world.me.id ? 'accent' : 'default'}
               hint={v.winner === world.me.id ? wonHint : undefined}
-              onClick={() => navigate('gifts')}
+              onClick={() => navigate('progress')}
             />
             <StatButton
               label={`${partner} added`}
@@ -112,7 +112,7 @@ export default function RecapV2() {
               format={points}
               tone={v.winner === world.partner.id ? 'accent' : 'default'}
               hint={v.winner === world.partner.id ? wonHint : undefined}
-              onClick={() => navigate('gifts')}
+              onClick={() => navigate('progress')}
             />
             {/* The gifts as they are now (what Gifts shows), and how much of each last week added. */}
             <StatButton
@@ -120,14 +120,14 @@ export default function RecapV2() {
               value={v.gifts.me}
               format={formatMoney}
               hint={lastWeek(v.theirs.dollars)}
-              onClick={() => navigate('gifts')}
+              onClick={() => navigate('progress')}
             />
             <StatButton
               label={`${partner} gets`}
               value={v.gifts.partner}
               format={formatMoney}
               hint={lastWeek(v.mine.dollars)}
-              onClick={() => navigate('gifts')}
+              onClick={() => navigate('progress')}
             />
           </div>
         </Section>

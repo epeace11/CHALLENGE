@@ -186,7 +186,6 @@ const RUNNING: PageId[] = [
   'pact',
   'review',
   'progress',
-  'gifts',
   'rules',
   'recap',
   'settings',

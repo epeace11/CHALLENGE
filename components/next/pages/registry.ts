@@ -31,7 +31,6 @@ const LOAD: Record<PageId, () => Promise<Folder>> = {
   timer: () => import('./timer'),
   rules: () => import('./rules'),
   review: () => import('./review'),
-  gifts: () => import('./gifts'),
   progress: () => import('./progress'),
   recap: () => import('./recap'),
   verdict: () => import('./verdict'),
@@ -131,7 +130,6 @@ export const PAGES: PageEntry[] = [
   entry('timer'),
   entry('rules'),
   entry('review'),
-  entry('gifts'),
   entry('progress'),
   entry('recap'),
   // Last day

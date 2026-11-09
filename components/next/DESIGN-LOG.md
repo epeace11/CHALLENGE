@@ -619,6 +619,8 @@ Round 2, October 20, 2026 (version 1 is the page above; `v2.tsx` and `v3.tsx` ar
 
 Pick: 1, October 21, 2026, without the forgiveness request card: "the forgiveness ask should not be on this page" (it is decided on Review). Built: versions 2 and 3 are deleted. Then forgiveness only on Review: a point's sheet no longer forgives, declines or asks; it explains the point, shows any request, and a request waiting on you has Open Review.
 
+November 9, 2026 (Erin): Gifts and Progress are one page. The gifts (both cards and how a point is priced) sit at the top of Progress, under its main action; the points behind them are the last section, where a gift card scrolls to them. Gifts left the More menu, and every link that opened Gifts opens Progress.
+
 ### Progress (`progress`)
 
 1. Calendar first, with Log Thursday on the calendar card and a You/Jordan switch; habits (streak and hit rate) and badges beside it on laptops; days and habits open drill-down sheets.

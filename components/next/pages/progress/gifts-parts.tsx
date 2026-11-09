@@ -20,7 +20,7 @@ import {
   StatusPill,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
-import { forgiveEffect, type Gift, type PointRow } from './ledger';
+import { forgiveEffect, type Gift, type PointRow } from './gifts-ledger';
 
 /* ── Hooks ─────────────────────────────────────────────────────────────── */
 
