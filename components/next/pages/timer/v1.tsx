@@ -1,4 +1,4 @@
-// The clock first: one rule's stopwatch inside a ring that closes at today's target, then today's sessions and past days.
+// The clock first: one rule's stopwatch inside a ring that closes at today's target (the rule a small dropdown inside it when there are several), then today's sessions and past days.
 'use client';
 import {
   useId,
@@ -8,7 +8,15 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { Check, CircleHelp, Pause, Play, Square, Timer } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  CircleHelp,
+  Pause,
+  Play,
+  Square,
+  Timer,
+} from 'lucide-react';
 import type { DateString, TimerSession } from '@/lib/next/model';
 import { AppFrame } from '@/components/next/frames';
 import { useNav } from '@/components/next/nav';
@@ -17,6 +25,7 @@ import {
   EmptyState,
   GlassCard,
   IconButton,
+  Menu,
   PageTitle,
   Toggle,
 } from '@/components/next/ui';
@@ -98,7 +107,8 @@ export default function TimerV1() {
     <AppFrame>
       <div className="flex flex-col gap-5">
         {t.rules.length > 1 ? (
-          <RuleChips t={t} />
+          // The rule's name is the dropdown inside the dial, so the page's title is for screen readers.
+          <h1 className="sr-only">Timer</h1>
         ) : (
           <PageTitle
             title={
@@ -115,6 +125,7 @@ export default function TimerV1() {
           t={t}
           toggleRef={toggle}
           corner={t.rules.length > 1 ? help : undefined}
+          picker={t.rules.length > 1 ? <RulePicker t={t} /> : undefined}
         />
 
         {(todayShown || shown.length > 0) && (
@@ -227,11 +238,14 @@ function Clock({
   t,
   toggleRef: toggle,
   corner,
+  picker,
 }: {
   t: TimerFlow;
   toggleRef: RefObject<HTMLButtonElement | null>;
-  /** Beside the dial, top right: How the timer works, when the rule chips take the title's place. */
+  /** Beside the dial, top right: How the timer works, when the rule's dropdown takes the title's place. */
   corner?: ReactNode;
+  /** Inside the dial, above the clock: the dropdown for which rule to time. */
+  picker?: ReactNode;
 }) {
   const rule = t.rule!;
   const short = shortTitle(rule);
@@ -282,6 +296,7 @@ function Clock({
         progress={p}
         state={state}
         label={`${short} ${day === t.today ? 'today' : formatWeekday(day)}`}
+        top={picker}
         status={
           state === 'idle' ? (
             togo
@@ -346,48 +361,40 @@ function Clock({
 }
 
 /**
- * Several timed rules: a chip each, the one on screen selected (and a check on any at its target
- * today). The chips name the rule, so the page's title is for screen readers only, and How the
- * timer works moves beside the dial. While a timer is going the others are off, with the reason
- * under them: stop first, then time another.
+ * Several timed rules: the one on screen, named inside the dial, as a small dropdown of the others
+ * (a tick on any at its target today). While a timer is going it is just the name: stop first, then
+ * time another.
  */
-function RuleChips({ t }: { t: TimerFlow }) {
-  const name = useId();
-  const going = t.run ? t.rules.find((r) => r.id === t.run!.ruleId) : null;
+function RulePicker({ t }: { t: TimerFlow }) {
+  const rule = t.rule!;
+  const name = shortTitle(rule);
+  const pill =
+    'inline-flex min-h-11 max-w-full items-center gap-1 rounded-full px-3 text-nx-2 font-semibold text-nx-accent';
+  if (t.run) return <span className={pill}>{name}</span>;
   return (
-    <div className="nx-enter flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:pt-2">
-      <h1 className="sr-only">Timer</h1>
-      <fieldset className="flex min-w-0 flex-wrap gap-2" disabled={!!going}>
-        <legend className="sr-only">Rule to time</legend>
-        {t.rules.map((r) => {
-          const today = t.todayOf(r);
-          const reached = !today.limit && today.met;
-          return (
-            <label
-              key={r.id}
-              className={styles.chip}
-              data-off={(going && going.id !== r.id) || undefined}
-            >
-              <input
-                type="radio"
-                name={name}
-                className="sr-only"
-                checked={r.id === t.rule?.id}
-                onChange={() => t.pick(r.id)}
-              />
-              {reached && <Check size={18} strokeWidth={2.5} aria-hidden />}
-              {shortTitle(r)}
-              {reached && <span className="sr-only">, target reached</span>}
-            </label>
-          );
-        })}
-      </fieldset>
-      {going && (
-        <p className="text-nx-2 text-nx-ink-2">
-          Stop {shortTitle(going)} to time another rule.
-        </p>
-      )}
-    </div>
+    <Menu
+      side="bottom"
+      align="center"
+      trigger={
+        <button
+          type="button"
+          className={cn(pill, 'nx-press hover:bg-nx-accent-soft')}
+          aria-label={`${name}. Choose what to time`}
+        >
+          <span className="truncate">{name}</span>
+          <ChevronDown size={16} className="shrink-0" aria-hidden="true" />
+        </button>
+      }
+      items={t.rules.map((r) => {
+        const today = t.todayOf(r);
+        return {
+          label: shortTitle(r),
+          icon: !today.limit && today.met ? Check : undefined,
+          current: r.id === rule.id,
+          onSelect: () => t.pick(r.id),
+        };
+      })}
+    />
   );
 }
 

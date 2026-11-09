@@ -33,6 +33,7 @@ export function Dial({
   state,
   label,
   status,
+  top,
 }: {
   progress: Progress;
   state: 'idle' | 'running' | 'paused';
@@ -40,6 +41,8 @@ export function Dial({
   label: string;
   /** The third line: the session going, or what's left to go. */
   status?: ReactNode;
+  /** Above the clock, inside the ring: which rule it times (a small dropdown with several). */
+  top?: ReactNode;
 }) {
   const tone = toneOf(p);
   const over = overOf(p);
@@ -99,6 +102,7 @@ export function Dial({
         </g>
       </svg>
       <div className={styles.face}>
+        {top && <div className="mb-1 max-w-[80%]">{top}</div>}
         <span
           className={styles.digits}
           data-long={clock.length > 5 || undefined}

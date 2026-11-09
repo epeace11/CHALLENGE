@@ -1,4 +1,4 @@
-/* Timer, version 1 (the clock first): the dial, the rule chips and the past days. Tokens only, so
+/* Timer, version 1 (the clock first): the dial, the session chips and the past days. Tokens only, so
    light, dark and every look work; motion uses the --nx-* durations, which are 0 under reduced
    motion. */
 /* Tailwind's layer order, stated first: if this sheet is registered before app/globals.css, the
@@ -172,55 +172,6 @@
   .session:hover {
     border-color: var(--nx-accent-line);
     background: var(--nx-accent-soft);
-  }
-
-  /* ── The rule chips (several timed rules) ─────────────────────────────── */
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 44px;
-    max-width: 100%;
-    padding: 8px 16px;
-    border-radius: 999px;
-    border: 1.5px solid var(--nx-line-strong);
-    background: var(--nx-surface-2);
-    color: var(--nx-ink);
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.25;
-    text-align: left;
-    cursor: pointer;
-    transition:
-      background var(--nx-base) var(--nx-ease),
-      border-color var(--nx-base) var(--nx-ease),
-      color var(--nx-base) var(--nx-ease),
-      opacity var(--nx-base) var(--nx-ease),
-      transform var(--nx-fast) var(--nx-ease);
-  }
-  .chip:hover:not([data-off]) {
-    border-color: var(--nx-accent-line);
-  }
-  .chip:active:not([data-off]) {
-    transform: scale(0.97);
-  }
-  .chip:has(input:checked) {
-    border-color: var(--nx-accent);
-    background: var(--nx-accent-soft);
-    color: var(--nx-accent);
-    box-shadow: 0 0 0 1px var(--nx-accent) inset;
-  }
-  .chip:has(input:focus-visible) {
-    outline: 2px solid var(--nx-accent);
-    outline-offset: 2px;
-  }
-  .chip[data-off] {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-  .chip svg {
-    flex-shrink: 0;
-    color: var(--nx-done);
   }
 
   /* ── Past days: one tile per day, the minutes and how the answer stands ── */
