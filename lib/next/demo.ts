@@ -940,4 +940,13 @@ export const world: World = deepFreeze({
   ],
   timers: [],
   sessions: SESSIONS,
+  goals: [
+    { id: 'goal-maya-1', personId: 'maya', text: 'Run a 10K before New Year' },
+    { id: 'goal-maya-2', personId: 'maya', text: 'Read two books a month' },
+    {
+      id: 'goal-jordan-1',
+      personId: 'jordan',
+      text: 'Sleep 7 hours most nights',
+    },
+  ],
 });

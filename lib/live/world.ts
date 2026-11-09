@@ -712,6 +712,8 @@ export function buildWorld(
     // Empty on a project that hasn't run timer.sql (the loader reads none).
     timers: mine(rows.timers ?? []).map(timerRunOf),
     sessions: mine(rows.sessions ?? []).map(sessionOf),
+    // Filled in from the goals table (goals.sql).
+    goals: [],
   };
 
   // Finished challenges, newest first, each with its verdict worked out from its own rows.
@@ -887,6 +889,7 @@ export function inviteWorld(
     partnerPending: false,
     timers: [],
     sessions: [],
+    goals: [],
   };
 }
 

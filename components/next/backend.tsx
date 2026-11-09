@@ -75,7 +75,9 @@ export type Command =
   | { type: 'stopTimer' }
   | { type: 'removeSession'; sessionId: string }
   /** Turns the timer on or off for a rule counted in minutes, at any time; signatures stay. */
-  | { type: 'setTimed'; ruleId: string; timed: boolean };
+  | { type: 'setTimed'; ruleId: string; timed: boolean }
+  /** The viewer's goals for the challenge on screen, replacing the ones they had, in order. */
+  | { type: 'setGoals'; goals: string[] };
 
 /** Where a new challenge starts from on the Start page. */
 export type Template =

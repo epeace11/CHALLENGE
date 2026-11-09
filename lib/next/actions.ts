@@ -10,6 +10,8 @@ import type {
 } from './model.ts';
 import { isClosed, shift } from './calendar.ts';
 import {
+  GOAL_LENGTH,
+  GOALS_MAX,
   canTime,
   entryFor,
   meetsTarget,
@@ -571,5 +573,29 @@ export function setTimed(
         r.id === ruleId ? { ...r, timed } : r,
       ),
     },
+  };
+}
+
+/* ── Goals ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Replaces `personId`'s goals with `texts`, in that order: trimmed, empty ones dropped, at most
+ * GOALS_MAX of GOAL_LENGTH characters each (nx_set_goals does the same). The partner's stay.
+ */
+export function setGoals(w: World, personId: string, texts: string[]): World {
+  const kept = texts
+    .map((t) => t.trim().slice(0, GOAL_LENGTH))
+    .filter(Boolean)
+    .slice(0, GOALS_MAX);
+  return {
+    ...w,
+    goals: [
+      ...w.goals.filter((g) => g.personId !== personId),
+      ...kept.map((text, i) => ({
+        id: `goal-${personId}-${i + 1}`,
+        personId,
+        text,
+      })),
+    ],
   };
 }

@@ -254,9 +254,10 @@ function resolveAccount(
     case 'invited':
     case 'signing':
       // Signed: Your challenges says who it waits for; before the partner joins, the invite link.
+      // The pact stays open to read (Set up's Read the pact goes there).
       if (built.iSigned)
         return pick(
-          ['setup', 'practice', 'settings', 'home', 'verdict', 'start'],
+          ['setup', 'pact', 'practice', 'settings', 'home', 'verdict', 'start'],
           c.status === 'signing' ? 'home' : 'waiting',
         );
       return pick(
@@ -899,7 +900,8 @@ function Hosting({
           );
           if (ok === false) return false;
           await reload();
-          navigate(null);
+          // The pact, to read and sign; already signed (nothing in the terms changed), it shows that.
+          navigate('pact');
           return true;
         }),
       cancelChallenge: () =>

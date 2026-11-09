@@ -6,6 +6,7 @@ import type {
   Dispute,
   Entry,
   ForgivenessRequest,
+  Goal,
   Instant,
   Look,
   Person,
@@ -1349,3 +1350,13 @@ export function timedDays(
       entry: entryFor(w, personId, rule.id, day) ?? null,
     }));
 }
+
+/* ── Goals ─────────────────────────────────────────────────────────────── */
+
+/** How many goals a person can have on a challenge, and how long each can be. */
+export const GOALS_MAX = 5;
+export const GOAL_LENGTH = 100;
+
+/** One person's goals for the challenge, in their order. */
+export const goalsOf = (w: World, personId: string): Goal[] =>
+  w.goals.filter((g) => g.personId === personId);

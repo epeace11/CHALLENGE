@@ -151,6 +151,16 @@ export type Entry = {
 };
 
 /**
+ * One of a person's goals for the challenge, in their own words ("Run a 10K before New Year"). Their
+ * Overview shows them to keep them going; the partner sees them one tap away. Nothing is scored.
+ */
+export type Goal = {
+  id: string;
+  personId: string;
+  text: string;
+};
+
+/**
  * One stretch of timing a timed rule, from Start to Stop. It counts toward the day it started on, in
  * the challenge's time zone, even if it ran past midnight. The partner sees these when reviewing.
  */
@@ -518,4 +528,6 @@ export type World = {
   timers: TimerRun[];
   /** Both people's finished timer sessions on this challenge. */
   sessions: TimerSession[];
+  /** Both people's goals for this challenge, each person's in their own order. */
+  goals: Goal[];
 };
