@@ -7,6 +7,7 @@ import {
   ImagePlus,
   NotebookPen,
   Pencil,
+  Timer,
   type LucideIcon,
 } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
@@ -31,6 +32,7 @@ import {
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
 import { Bar } from './bar';
+import { timedLine, TimedSheet } from './timed';
 import {
   fieldControls,
   outcomeOf,
@@ -147,6 +149,8 @@ export function QuestionFields({
     missCard = useRef<HTMLDivElement>(null);
   /** The sheet that asks why the miss should be forgiven is open; each opening starts from the reason as it is. */
   const [asking, setAsking] = useState(false);
+  /** The sheet with a timed rule's sessions is open. */
+  const [timing, setTiming] = useState(false);
   const [opened, setOpened] = useState(0);
   const ask = () => {
     setOpened((n) => n + 1);
@@ -171,6 +175,8 @@ export function QuestionFields({
     : 0;
   const more = week ? Math.max(0, week.need - have) : 0;
   const shots = draft.proofs.length;
+  /** Where a timed rule's number came from: its sessions, opened in a sheet. */
+  const timed = timedLine(ci, rule);
   /** The miss card can show here: a late answer never asks to forgive, and a weekly No costs nothing. */
   const canMiss = !late && rule.kind !== 'weekly';
   const missed = canMiss && outcome === 'miss';
@@ -203,14 +209,34 @@ export function QuestionFields({
     >
       <div {...field('answer')} className="sm:col-start-1 sm:row-start-1">
         {rule.kind === 'number' ? (
-          <NumberField
-            label={unitLabel(rule)}
-            value={draft.value}
-            onChange={(value) => ci.change(rule, { value })}
-            target={rule.target}
-            step={stepFor(rule)}
-            decimals={stepFor(rule) < 1}
-          />
+          <>
+            <NumberField
+              label={unitLabel(rule)}
+              value={draft.value}
+              onChange={(value) => ci.change(rule, { value })}
+              target={rule.target}
+              step={stepFor(rule)}
+              decimals={stepFor(rule) < 1}
+            />
+            {timed && (
+              <>
+                <LinkLine
+                  icon={Timer}
+                  popup
+                  className="-mx-3 mt-1 -mb-2 w-[calc(100%+24px)]"
+                  onClick={() => setTiming(true)}
+                >
+                  {timed}
+                </LinkLine>
+                <TimedSheet
+                  ci={ci}
+                  rule={rule}
+                  open={timing}
+                  onOpenChange={setTiming}
+                />
+              </>
+            )}
+          </>
         ) : (
           <YesNo
             label={rule.question}

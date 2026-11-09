@@ -28,6 +28,7 @@ const LOAD: Record<PageId, () => Promise<Folder>> = {
   practice: () => import('./practice'),
   overview: () => import('./overview'),
   log: () => import('./log'),
+  timer: () => import('./timer'),
   rules: () => import('./rules'),
   review: () => import('./review'),
   gifts: () => import('./gifts'),
@@ -109,7 +110,7 @@ const entry = (id: PageId): PageEntry => ({
 });
 
 /**
- * Every page of the new product (19 pages, one picked version each), in the preview's order. Workers
+ * Every page of the new product (20 pages, one picked version each), in the preview's order. Workers
  * edit only their own page folder; this file never needs to change.
  */
 export const PAGES: PageEntry[] = [
@@ -127,6 +128,7 @@ export const PAGES: PageEntry[] = [
   // Every day
   entry('overview'),
   entry('log'),
+  entry('timer'),
   entry('rules'),
   entry('review'),
   entry('gifts'),

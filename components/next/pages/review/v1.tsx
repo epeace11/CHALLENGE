@@ -389,7 +389,7 @@ export default function ReviewV2() {
         <ReplySheet sheet={replying} review={review} onDone={focusCard} />
         <ApproveDaySheet
           sheet={approving}
-          partner={world.partner}
+          world={world}
           onApprove={approveGroup}
         />
       </AppFrame>

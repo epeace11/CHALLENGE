@@ -6,6 +6,7 @@ import type {
   Rule,
 } from '@/lib/next/model';
 import {
+  canTime,
   formatDayShort,
   formatMoney,
   formatTarget,
@@ -186,6 +187,7 @@ export function ruleSummary(rule: Rule) {
     else if (!titleSays(rule.title, rule.target.value))
       parts.push(formatTarget(rule.target));
   }
+  if (rule.timed && canTime(rule)) parts.push('Timer on');
   if (rule.proof === 'required') parts.push('Screenshot required');
   else if (rule.proof === 'optional') parts.push('Screenshot optional');
   return parts.join(' · ');

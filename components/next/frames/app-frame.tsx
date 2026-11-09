@@ -13,6 +13,7 @@ import {
   Inbox,
   LayoutGrid,
   Settings,
+  Timer,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -20,10 +21,13 @@ import {
   formatDayShort,
   reviewQueue,
   settling,
+  timedRules,
+  timerOf,
 } from '@/lib/next/selectors';
 import { useNav, type PageId } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Menu } from '@/components/next/ui/menu';
+import { TimerChip } from './timer-chip';
 import { useArrivalFocus } from './use-arrival-focus';
 import { useFit } from './use-fit';
 
@@ -34,8 +38,9 @@ const TABS: { id: PageId; label: string; icon: LucideIcon }[] = [
   { id: 'progress', label: 'Progress', icon: ChartNoAxesColumn },
 ];
 
-/** Reached from More. */
+/** Reached from More. Timer is listed only while the viewer has a timed rule or a timer going. */
 export const MORE_PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
+  { id: 'timer', label: 'Timer', icon: Timer },
   { id: 'gifts', label: 'Gifts', icon: Gift },
   { id: 'rules', label: 'Rules and help', icon: BookOpen },
   { id: 'recap', label: 'Monday recap', icon: CalendarCheck },
@@ -46,8 +51,10 @@ export const MORE_PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
 /**
  * The frame for pages inside a running challenge: the challenge's name and day at the top (the day
  * opens Progress), and the navigation: Overview, Check in, Review (with a count when something
- * waits) and Progress, plus More for Gifts, Rules and help, Monday recap, Settings and Your
- * challenges. A tab bar at the bottom on phones, tabs in the top bar from 1024px.
+ * waits) and Progress, plus More for Timer (with a timed rule), Gifts, Rules and help, Monday
+ * recap, Settings and Your challenges. A tab bar at the bottom on phones, tabs in the top bar from
+ * 1024px. While the viewer has a timer going, the top bar shows it (TimerChip) on every page but
+ * the Timer page.
  *
  * Every page, in both frames, is the same width (720px) with the same side margins.
  */
@@ -65,7 +72,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // After the last day every open dispute holds up the result, whoever's move it is.
   const waiting =
     queue.count + (over ? over.disputes - queue.disputes.length : 0);
-  const moreActive = MORE_PAGES.some((p) => p.id === page);
+  const run = timerOf(world, world.me.id);
+  // Timer is in More while there's something to time (and on the Timer page itself, so More still
+  // says where you are after the last timed rule's timer is turned off there).
+  const timing =
+    !!run || page === 'timer' || timedRules(world, world.me.id).length > 0;
+  const more = MORE_PAGES.filter((p) => p.id !== 'timer' || timing);
+  const moreActive = more.some((p) => p.id === page);
+  const chip = run && page !== 'timer' ? <TimerChip run={run} /> : null;
 
   const tabs = (where: 'top' | 'bottom') => (
     <>
@@ -111,7 +125,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             <span>More</span>
           </button>
         }
-        items={MORE_PAGES.map((p) => ({
+        items={more.map((p) => ({
           label: p.label,
           icon: p.icon,
           current: page === p.id,
@@ -138,7 +152,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <div className="nx-main nx-topbar">
           {page === 'home' ? (
             // Your challenges lists this challenge right below, so the top bar names the product.
-            <span className="nx-brand self-center">The Challenge</span>
+            <div className="nx-topbar-title">
+              <span className="nx-brand">The Challenge</span>
+              {chip}
+            </div>
           ) : (
             <div className="nx-topbar-title">
               {/* The challenge's name leads to Your challenges, like the product's name before Day 1. */}
@@ -161,16 +178,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
                   />
                 )}
               </button>
-              <button
-                type="button"
-                className="nx-day-link"
-                onClick={() => navigate('progress')}
-              >
-                {world.today < c.start
-                  ? `Starts ${formatDayShort(c.start)}`
-                  : `Day ${dayNumber(c, world.today)} of ${c.days}`}
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                {chip}
+                <button
+                  type="button"
+                  className="nx-day-link"
+                  onClick={() => navigate('progress')}
+                >
+                  {world.today < c.start
+                    ? `Starts ${formatDayShort(c.start)}`
+                    : `Day ${dayNumber(c, world.today)} of ${c.days}`}
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </div>
             </div>
           )}
           <nav className="nx-topnav" aria-label="Main">

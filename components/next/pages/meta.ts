@@ -132,6 +132,15 @@ export const PAGE_META: Record<PageId, PageMeta> = {
     brief:
       'Check in for Thursday: one check-in at a time (Yes or No, numbers, screenshots, a note), one Save each, gliding to the next.',
   },
+  timer: {
+    id: 'timer',
+    title: 'Timer',
+    group: 'Every day',
+    frame: 'app',
+    versions: 1,
+    brief:
+      'Time a timed rule (Arabic, 20 min): pick it, then start, pause, resume and stop. While it runs, the time and today’s target show; it keeps going past the target, each day’s sessions add up, and past days show the progress. Main action: Start, or Stop while it runs.',
+  },
   rules: {
     id: 'rules',
     title: 'Rules and help',

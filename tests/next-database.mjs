@@ -11,7 +11,15 @@ import {
   verdictFor,
   withShared,
 } from '../lib/live/world.ts';
-import { activePoints, owes, reviewQueue } from '../lib/next/selectors.ts';
+import {
+  activePoints,
+  owes,
+  reviewQueue,
+  timedMinutes,
+  timedSeconds,
+  timerSeconds,
+} from '../lib/next/selectors.ts';
+import { stopTimer } from '../lib/next/actions.ts';
 
 const db = new PGlite();
 const maya = '00000000-0000-0000-0000-00000000000a',
@@ -36,6 +44,23 @@ await db.exec(
 await db.exec(
   readFileSync(new URL('../supabase/next/schema.sql', import.meta.url), 'utf8'),
 );
+// The functions timer.sql replaces, as the fresh install defines them.
+const timerFunctions = [
+  ...readFileSync(
+    new URL('../supabase/next/timer.sql', import.meta.url),
+    'utf8',
+  ).matchAll(/create or replace function public\.(\w+)\(/g),
+].map((m) => m[1]);
+const definitions = async () =>
+  (
+    await db.query(
+      `select p.proname, pg_get_functiondef(p.oid) d from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = any($1) order by p.proname`,
+      [timerFunctions],
+    )
+  ).rows;
+const freshDefinitions = await definitions();
+assert.equal(freshDefinitions.length, timerFunctions.length);
 // The rerunnable scripts run cleanly on a project that already has the schema.
 for (const script of [
   'share-links.sql',
@@ -50,6 +75,7 @@ for (const script of [
   'fixes-nov-5.sql',
   'saved-copies.sql',
   'fixes-nov-6.sql',
+  'timer.sql',
 ])
   await db.exec(
     readFileSync(
@@ -57,6 +83,8 @@ for (const script of [
       'utf8',
     ),
   );
+// Run last, timer.sql leaves every function it replaces as the fresh install has it.
+assert.deepEqual(await definitions(), freshDefinitions);
 
 /** Runs SQL as `id` (row-level security on), at `now` when given. */
 async function as(id, sql, params = []) {
@@ -675,6 +703,8 @@ async function rowsFor(id) {
     ),
     saved: await all('saved_challenges'),
     gifts: await all('gifts_given'),
+    timers: await all('timer_runs'),
+    sessions: await all('timer_sessions'),
   };
 }
 const links = { origin: 'https://test.example' };
@@ -1665,5 +1695,671 @@ for (const [who, challenge, name] of [
     'only the challenge they were invited to',
   );
 }
+
+// The timer for timed rules (timer.sql). Lee and Kim again, with Ana outside: "Timed" has the usual
+// next-day deadline, "Tonight" a same-night one. April in Toronto is EDT.
+await clock('2027-04-01T12:00:00-04:00');
+const everyDay = [0, 1, 2, 3, 4, 5, 6];
+const readRule = {
+  title: 'Read',
+  question: 'How long did you read?',
+  kind: 'number',
+  days: everyDay,
+  target: { op: '>=', value: 20, unit: 'min' },
+  who: 'both',
+  proof: 'required',
+  timed: true,
+};
+const timedRules = [
+  readRule,
+  {
+    title: 'Steps',
+    question: 'How many steps?',
+    kind: 'number',
+    days: everyDay,
+    target: { op: '>=', value: 10000, unit: 'steps' },
+    who: 'both',
+    timed: true,
+  },
+  {
+    title: 'Stretch',
+    question: 'How long did you stretch?',
+    kind: 'number',
+    days: everyDay,
+    target: { op: '>=', value: 10, unit: 'Minutes' },
+    who: 'me',
+  },
+  {
+    title: 'Pray',
+    question: 'Did you pray?',
+    kind: 'yesno',
+    days: everyDay,
+    who: 'both',
+  },
+];
+const coupleSql = `select nx_create_challenge($1,'classic',null,$2::date,$3,'America/Toronto',1,null,$4::jsonb,$5::uuid) id`;
+const { id: timed } = await one(lee, coupleSql, [
+  'Timed',
+  '2027-04-05',
+  14,
+  JSON.stringify(timedRules),
+  springCouple,
+]);
+const { id: tonight } = await one(lee, coupleSql, [
+  'Tonight',
+  '2027-04-12',
+  2,
+  JSON.stringify([{ ...readRule, proof: 'none' }]),
+  springCouple,
+]);
+await as(lee, `select nx_update_challenge($1,p_deadline_days=>0)`, [tonight]);
+const ruleIn = (challenge, title) =>
+  one(lee, `select id, timed from rules where challenge_id=$1 and title=$2`, [
+    challenge,
+    title,
+  ]);
+const read = await ruleIn(timed, 'Read'),
+  walk = await ruleIn(timed, 'Steps'),
+  stretch = await ruleIn(timed, 'Stretch');
+assert.equal(read.timed, true, 'a rule counted in minutes keeps the timer');
+assert.equal(walk.timed, false, 'a rule counted in steps never has it');
+assert.equal(stretch.timed, false);
+for (const c of [timed, tonight]) {
+  await as(lee, `select nx_finish_setup($1)`, [c]);
+  await as(lee, `select nx_sign_pact($1)`, [c]);
+  await as(kim, `select nx_sign_pact($1)`, [c]);
+}
+const statusOf = async (c) =>
+  (await one(lee, `select status from challenges where id=$1`, [c])).status;
+const signatures = async (c) =>
+  (
+    await one(
+      lee,
+      `select count(*)::int n from signatures where challenge_id=$1`,
+      [c],
+    )
+  ).n;
+assert.equal(await statusOf(timed), 'running');
+
+// Either person turns the timer on, at any time, for a rule counted in minutes; signatures stay.
+await fails(
+  as(lee, `select nx_set_timed($1,$2,true)`, [timed, walk.id]),
+  /counted in minutes/,
+);
+await as(kim, `select nx_set_timed($1,$2,true)`, [timed, stretch.id]);
+await as(kim, `select nx_set_timed($1,$2,true)`, [timed, stretch.id]);
+assert.equal(
+  (await ruleIn(timed, 'Stretch')).timed,
+  true,
+  "Kim turns it on for Lee's own rule after both signed",
+);
+assert.equal(await signatures(timed), 2, 'and the signatures stay');
+assert.equal(await statusOf(timed), 'running');
+
+const timer = (id, challenge, action, ruleId = null) =>
+  as(id, `select nx_timer($1,$2,$3)`, [challenge, action, ruleId]);
+const runOf = (id, challenge) =>
+  one(
+    lee,
+    `select rule_id as rule, day::text as day, to_char(started_at at time zone 'America/Toronto','HH24:MI:SS') as started,
+       to_char(running_since at time zone 'America/Toronto','HH24:MI:SS') as since, banked
+     from timer_runs where challenge_id=$1 and person_id=$2`,
+    [challenge, id],
+  );
+const sessionsOf = (id, ruleId, day) =>
+  as(
+    lee,
+    `select id, seconds, to_char(started_at at time zone 'America/Toronto','HH24:MI:SS') started,
+       to_char(ended_at at time zone 'America/Toronto','HH24:MI:SS') ended
+     from timer_sessions where person_id=$1 and rule_id=$2 and day=$3 order by started_at`,
+    [id, ruleId, day],
+  );
+const secondsOf = async (id, ruleId, day) =>
+  (await sessionsOf(id, ruleId, day)).map((s) => s.seconds);
+const answer = (id, ruleId, day) =>
+  one(
+    lee,
+    `select value::int value, done, status, from_timer from entries where person_id=$1 and rule_id=$2 and day=$3`,
+    [id, ruleId, day],
+  );
+const pointsOn = (id, ruleId, day) =>
+  as(
+    lee,
+    `select reason, voided, forgiven from points where person_id=$1 and rule_id=$2 and day=$3`,
+    [id, ruleId, day],
+  );
+
+// Only on the person's own timed rules. On a day the rule doesn't ask, the time is kept but never
+// becomes an answer.
+await clock('2027-04-04T12:00:00-04:00');
+await timer(lee, timed, 'start', read.id);
+await clock('2027-04-04T12:30:00-04:00');
+await timer(lee, timed, 'stop');
+assert.deepEqual(await secondsOf(lee, read.id, '2027-04-04'), [1800]);
+await clock('2027-04-05T09:00:00-04:00');
+await as(lee, `select nx_sync($1)`, [timed]);
+assert.equal(await answer(lee, read.id, '2027-04-04'), undefined);
+await db.exec(`delete from timer_sessions where day = '2027-04-04'`);
+await fails(timer(kim, timed, 'start', stretch.id), /isn't timed for you/);
+await fails(timer(kim, timed, 'start', walk.id), /isn't timed for you/);
+
+// Monday Apr 5: start, pause, resume, stop. The database stamps every time; pauses don't count.
+await clock('2027-04-05T10:00:00-04:00');
+await timer(lee, timed, 'start', read.id);
+assert.deepEqual(await runOf(lee, timed), {
+  rule: read.id,
+  day: '2027-04-05',
+  started: '10:00:00',
+  since: '10:00:00',
+  banked: 0,
+});
+await clock('2027-04-05T10:05:00-04:00');
+await timer(lee, timed, 'pause');
+await clock('2027-04-05T10:05:30-04:00');
+await timer(lee, timed, 'pause');
+assert.deepEqual(
+  await runOf(lee, timed),
+  {
+    rule: read.id,
+    day: '2027-04-05',
+    started: '10:00:00',
+    since: null,
+    banked: 300,
+  },
+  'paused at five minutes; pausing again changes nothing',
+);
+await clock('2027-04-05T10:30:00-04:00');
+await timer(lee, timed, 'resume');
+assert.equal((await runOf(lee, timed)).since, '10:30:00');
+await clock('2027-04-05T10:40:30-04:00');
+await timer(lee, timed, 'stop');
+assert.equal(await runOf(lee, timed), undefined);
+assert.deepEqual(
+  (await sessionsOf(lee, read.id, '2027-04-05')).map(({ id: _, ...s }) => s),
+  [{ seconds: 930, started: '10:00:00', ended: '10:40:30' }],
+  '5:00 before the pause and 10:30 after it',
+);
+await timer(lee, timed, 'stop');
+await clock('2027-04-05T11:00:00-04:00');
+await timer(lee, timed, 'start', read.id);
+await timer(lee, timed, 'stop');
+assert.deepEqual(
+  await secondsOf(lee, read.id, '2027-04-05'),
+  [930],
+  'a stop with nothing going, or at 0 seconds, saves nothing',
+);
+assert.equal(
+  await answer(lee, read.id, '2027-04-05'),
+  undefined,
+  'nothing is saved before the day can be logged',
+);
+await clock('2027-04-05T20:00:00-04:00');
+await timer(lee, timed, 'start', read.id);
+await clock('2027-04-05T20:06:00-04:00');
+await timer(lee, timed, 'stop');
+await clock('2027-04-05T23:50:00-04:00');
+await timer(kim, timed, 'start', read.id);
+
+// Tuesday just after midnight Monday can be logged: nx_tick saves Lee's two sessions as its answer
+// (21:30 in all, so 21 min), with no screenshot though Read asks for one. Kim's timer is still going.
+await clock('2027-04-06T00:10:00-04:00');
+await as(lee, `select nx_sync($1)`, [timed]);
+assert.deepEqual(await answer(lee, read.id, '2027-04-05'), {
+  value: 21,
+  done: true,
+  status: 'pending',
+  from_timer: true,
+});
+assert.deepEqual(
+  (
+    await one(
+      lee,
+      `select proofs from entries where person_id=$1 and rule_id=$2 and day='2027-04-05'`,
+      [lee, read.id],
+    )
+  ).proofs,
+  [],
+);
+assert.equal(
+  await answer(kim, read.id, '2027-04-05'),
+  undefined,
+  'a day with a timer still going waits for it to stop',
+);
+// Kim's stop: the session counts toward Monday, the day it started, and is saved at once, in full
+// (30 min on a 20 min target).
+await clock('2027-04-06T00:20:00-04:00');
+await timer(kim, timed, 'stop');
+assert.deepEqual(await secondsOf(kim, read.id, '2027-04-05'), [1800]);
+assert.deepEqual(await answer(kim, read.id, '2027-04-05'), {
+  value: 30,
+  done: true,
+  status: 'pending',
+  from_timer: true,
+});
+// One timer at a time: starting Read saves the Stretch that was going.
+await clock('2027-04-06T07:00:00-04:00');
+await timer(lee, timed, 'start', stretch.id);
+await clock('2027-04-06T07:12:00-04:00');
+await timer(lee, timed, 'start', read.id);
+assert.deepEqual(await secondsOf(lee, stretch.id, '2027-04-06'), [720]);
+assert.equal((await runOf(lee, timed)).rule, read.id);
+await clock('2027-04-06T07:22:00-04:00');
+await timer(lee, timed, 'stop');
+await clock('2027-04-06T18:00:00-04:00');
+await timer(kim, timed, 'start', read.id);
+await clock('2027-04-06T18:25:00-04:00');
+await timer(kim, timed, 'stop');
+
+// Wednesday: Tuesday's answers, scored like check-ins. 10 min is short of 20: a miss with its point.
+await clock('2027-04-07T09:00:00-04:00');
+await as(kim, `select nx_sync($1)`, [timed]);
+assert.deepEqual(await answer(lee, read.id, '2027-04-06'), {
+  value: 10,
+  done: false,
+  status: 'missed',
+  from_timer: true,
+});
+assert.deepEqual(await pointsOn(lee, read.id, '2027-04-06'), [
+  { reason: 'missed', voided: false, forgiven: false },
+]);
+assert.deepEqual(await answer(lee, stretch.id, '2027-04-06'), {
+  value: 12,
+  done: true,
+  status: 'pending',
+  from_timer: true,
+});
+assert.deepEqual(await answer(kim, read.id, '2027-04-06'), {
+  value: 25,
+  done: true,
+  status: 'pending',
+  from_timer: true,
+});
+// Changed by hand before the deadline, it's Lee's own answer: the point goes.
+await db.query(`insert into storage.objects values('proofs',$1)`, [
+  `${timed}/${lee}/read.jpg`,
+]);
+await as(
+  lee,
+  `select nx_save_checkin($1,$2,'2027-04-06',p_value=>20,p_proofs=>$3::jsonb)`,
+  [timed, read.id, JSON.stringify([{ path: `${timed}/${lee}/read.jpg` }])],
+);
+assert.deepEqual(await answer(lee, read.id, '2027-04-06'), {
+  value: 20,
+  done: true,
+  status: 'pending',
+  from_timer: false,
+});
+assert.deepEqual(await pointsOn(lee, read.id, '2027-04-06'), [
+  { reason: 'missed', voided: true, forgiven: false },
+]);
+await clock('2027-04-07T18:00:00-04:00');
+await timer(kim, timed, 'start', read.id);
+await clock('2027-04-07T18:25:00-04:00');
+await timer(kim, timed, 'stop');
+
+// Nobody opens the app again until Friday, after Wednesday's deadline: Kim's timed Wednesday gets its
+// answer, not an unlogged point. Lee timed nothing on Wednesday, so his is unlogged.
+await clock('2027-04-09T09:00:00-04:00');
+await as(lee, `select nx_sync($1)`, [timed]);
+assert.deepEqual(await answer(kim, read.id, '2027-04-07'), {
+  value: 25,
+  done: true,
+  status: 'pending',
+  from_timer: true,
+});
+assert.deepEqual(await pointsOn(kim, read.id, '2027-04-07'), []);
+assert.deepEqual(await pointsOn(lee, read.id, '2027-04-07'), [
+  { reason: 'unlogged', voided: false, forgiven: false },
+]);
+
+// The partner reads the sessions (to review them); nobody else can, and nobody writes them directly.
+assert.equal(
+  (await as(kim, `select id from timer_sessions where person_id=$1`, [lee]))
+    .length,
+  4,
+);
+for (const t of ['timer_runs', 'timer_sessions'])
+  assert.equal(
+    (
+      await one(
+        ana,
+        `select count(*)::int n from ${t} where challenge_id=$1 or challenge_id=$2`,
+        [timed, tonight],
+      )
+    ).n,
+    0,
+    `${t}: Ana sees none`,
+  );
+await fails(
+  as(
+    lee,
+    `insert into timer_sessions(challenge_id,person_id,rule_id,day,started_at,ended_at,seconds) values($1,$2,$3,'2027-04-08',now(),now(),600)`,
+    [timed, lee, read.id],
+  ),
+  /permission denied/,
+);
+await fails(as(lee, `update timer_runs set banked=9999`), /permission denied/);
+
+// A person removes only their own session; an answer already saved stays as it is.
+const [firstRead] = await sessionsOf(lee, read.id, '2027-04-05');
+await fails(
+  as(kim, `select nx_remove_session($1)`, [firstRead.id]),
+  /your own sessions/,
+);
+await as(lee, `select nx_remove_session($1)`, [firstRead.id]);
+assert.deepEqual(await secondsOf(lee, read.id, '2027-04-05'), [360]);
+await as(lee, `select nx_sync($1)`, [timed]);
+assert.equal((await answer(lee, read.id, '2027-04-05')).value, 21);
+
+// Turning the timer off stops and saves a timer going on that rule, whoever's it is.
+await clock('2027-04-09T10:00:00-04:00');
+await timer(lee, timed, 'start', stretch.id);
+await clock('2027-04-09T10:30:00-04:00');
+await as(kim, `select nx_set_timed($1,$2,false)`, [timed, stretch.id]);
+assert.equal(await runOf(lee, timed), undefined);
+assert.deepEqual(await secondsOf(lee, stretch.id, '2027-04-09'), [1800]);
+assert.equal((await ruleIn(timed, 'Stretch')).timed, false);
+assert.equal(await signatures(timed), 2);
+await fails(timer(lee, timed, 'start', stretch.id), /isn't timed/);
+await as(kim, `select nx_set_timed($1,$2,true)`, [timed, stretch.id]);
+
+// The rows become the World the Timer page reads, and the page's pure actions agree with the database.
+await clock('2027-04-09T10:40:00-04:00');
+await timer(lee, timed, 'start', read.id);
+await timer(kim, timed, 'start', read.id);
+await clock('2027-04-09T10:45:00-04:00');
+await timer(kim, timed, 'pause');
+const tw = buildWorld(
+  await rowsFor(lee),
+  '2027-04-09T14:50:00.000Z',
+  'America/Toronto',
+  links,
+  {},
+  timed,
+).world;
+assert.equal(tw.challenge.id, timed);
+assert.equal(tw.challenge.rules.find((r) => r.title === 'Read').timed, true);
+assert.equal(
+  tw.challenge.rules.find((r) => r.title === 'Steps').timed,
+  undefined,
+);
+assert.deepEqual(
+  tw.timers
+    .map((t) => [
+      t.personId,
+      t.ruleId,
+      t.day,
+      t.runningSince === null,
+      t.banked,
+    ])
+    .sort((a, b) => a[0].localeCompare(b[0])),
+  [
+    [lee, read.id, '2027-04-09', false, 0],
+    [kim, read.id, '2027-04-09', true, 300],
+  ].sort((a, b) => a[0].localeCompare(b[0])),
+);
+assert.equal(
+  tw.sessions.length,
+  (
+    await one(
+      lee,
+      `select count(*)::int n from timer_sessions where challenge_id=$1`,
+      [timed],
+    )
+  ).n,
+);
+assert.equal(
+  tw.sessions.some(
+    (s) =>
+      s.ruleId === read.id &&
+      s.day === '2027-04-05' &&
+      s.seconds === 360 &&
+      s.personId === lee,
+  ),
+  true,
+);
+assert.equal(timedSeconds(tw, kim, read.id, '2027-04-05'), 1800);
+assert.equal(
+  timedMinutes(timedSeconds(tw, kim, read.id, '2027-04-06')),
+  (await answer(kim, read.id, '2027-04-06')).value,
+  'whole minutes, rounded down, as the database saves them',
+);
+assert.equal(
+  timerSeconds(
+    tw.timers.find((t) => t.personId === kim),
+    '2027-04-09T15:30:00.000Z',
+  ),
+  300,
+);
+const entryIn = (person, day) =>
+  tw.entries.find(
+    (e) => e.personId === person && e.ruleId === read.id && e.day === day,
+  );
+assert.equal(entryIn(kim, '2027-04-06').fromTimer, true);
+assert.equal(
+  entryIn(lee, '2027-04-06').fromTimer,
+  undefined,
+  'changed by hand',
+);
+const pureStop = stopTimer(tw, lee, '2027-04-09T14:50:00.000Z').sessions.find(
+  (s) => !tw.sessions.some((o) => o.id === s.id),
+);
+await clock('2027-04-09T10:50:00-04:00');
+await timer(lee, timed, 'stop');
+assert.deepEqual(
+  (await sessionsOf(lee, read.id, '2027-04-09')).map((s) => s.seconds),
+  [pureStop.seconds],
+  "the page's stop and the database's agree",
+);
+
+// Ana, outside the challenge, is refused by every timer function, and nothing changes.
+const timerState = async () =>
+  JSON.stringify(
+    (
+      await db.query(
+        `select (select count(*) from timer_runs where challenge_id=$1) runs,
+          (select count(*) from timer_sessions where challenge_id=$1) sessions,
+          (select string_agg(timed::text, ',' order by position) from rules where challenge_id=$1) timed`,
+        [timed],
+      )
+    ).rows,
+  );
+const timerBefore = await timerState();
+const [kimSession] = await sessionsOf(kim, read.id, '2027-04-05');
+for (const [sql, params] of [
+  [`select nx_timer($1,'start',$2)`, [timed, read.id]],
+  [`select nx_timer($1,'pause')`, [timed]],
+  [`select nx_timer($1,'resume')`, [timed]],
+  [`select nx_timer($1,'stop')`, [timed]],
+  [`select nx_set_timed($1,$2,false)`, [timed, read.id]],
+  [`select nx_remove_session($1)`, [kimSession.id]],
+])
+  await fails(as(ana, sql, params), /isn't yours/);
+assert.equal(await timerState(), timerBefore, 'nothing changed');
+// The helpers behind them can't be called directly.
+for (const [sql, params] of [
+  [
+    `select nx_timer_log(null::public.challenges,$1,$2,'2027-04-05')`,
+    [lee, read.id],
+  ],
+  [`select nx_stop_timer(null::public.challenges,$1)`, [lee]],
+  [`select nx_can_time('number','min')`, []],
+])
+  await fails(as(lee, sql, params), /permission denied/);
+
+// Ending Timed early stops every timer still going (Kim's paused one, Lee's new one) and drops the
+// sessions on days that no longer count; erasing it removes every timer row.
+await clock('2027-04-10T10:00:00-04:00');
+await timer(lee, timed, 'start', read.id);
+await clock('2027-04-10T10:10:00-04:00');
+assert.equal(
+  (await one(lee, `select nx_end_request($1,'ask') r`, [timed])).r,
+  'asked',
+);
+assert.equal(
+  (await one(kim, `select nx_end_request($1,'ask') r`, [timed])).r,
+  'ended',
+);
+assert.deepEqual(
+  await one(lee, `select status, days from challenges where id=$1`, [timed]),
+  { status: 'finished', days: 4 },
+);
+assert.equal(
+  (
+    await one(
+      lee,
+      `select count(*)::int n from timer_runs where challenge_id=$1`,
+      [timed],
+    )
+  ).n,
+  0,
+  'every timer stopped',
+);
+assert.deepEqual(
+  (
+    await as(
+      lee,
+      `select distinct day::text d from timer_sessions where challenge_id=$1 order by 1`,
+      [timed],
+    )
+  ).map((r) => r.d),
+  ['2027-04-05', '2027-04-06', '2027-04-07'],
+  'only the days that still count keep their sessions',
+);
+for (const id of [lee, kim])
+  await as(id, `select nx_delete_challenge($1)`, [timed]);
+await as(kim, `select nx_erase_challenge($1)`, [timed]);
+for (const t of ['timer_runs', 'timer_sessions', 'entries'])
+  assert.equal(
+    (await db.query(`select 1 from ${t} where challenge_id=$1`, [timed])).rows
+      .length,
+    0,
+    `nothing left in ${t}`,
+  );
+
+// Tonight (same-night deadline): each stop saves the day's answer at once, and later stops update it.
+const tRead = (await ruleIn(tonight, 'Read')).id;
+await clock('2027-04-12T19:00:00-04:00');
+await timer(kim, tonight, 'start', tRead);
+await clock('2027-04-12T19:15:00-04:00');
+await timer(kim, tonight, 'stop');
+assert.deepEqual(await answer(kim, tRead, '2027-04-12'), {
+  value: 15,
+  done: false,
+  status: 'missed',
+  from_timer: true,
+});
+assert.deepEqual(await pointsOn(kim, tRead, '2027-04-12'), [
+  { reason: 'missed', voided: false, forgiven: false },
+]);
+await clock('2027-04-12T20:00:00-04:00');
+await timer(lee, tonight, 'start', tRead);
+await clock('2027-04-12T20:05:00-04:00');
+await timer(lee, tonight, 'stop');
+assert.equal((await answer(lee, tRead, '2027-04-12')).value, 5);
+await clock('2027-04-12T20:30:00-04:00');
+await as(lee, `select nx_save_checkin($1,$2,'2027-04-12',p_value=>22)`, [
+  tonight,
+  tRead,
+]);
+await clock('2027-04-12T21:00:00-04:00');
+await timer(kim, tonight, 'start', tRead);
+await clock('2027-04-12T21:10:00-04:00');
+await timer(kim, tonight, 'stop');
+assert.deepEqual(await answer(kim, tRead, '2027-04-12'), {
+  value: 25,
+  done: true,
+  status: 'pending',
+  from_timer: true,
+});
+assert.deepEqual(await pointsOn(kim, tRead, '2027-04-12'), [
+  { reason: 'missed', voided: true, forgiven: false },
+]);
+// An answer typed by hand is never overwritten by the timer.
+await clock('2027-04-12T21:15:00-04:00');
+await timer(lee, tonight, 'start', tRead);
+await clock('2027-04-12T21:45:00-04:00');
+await timer(lee, tonight, 'stop');
+assert.deepEqual(await secondsOf(lee, tRead, '2027-04-12'), [300, 1800]);
+assert.deepEqual(await answer(lee, tRead, '2027-04-12'), {
+  value: 22,
+  done: true,
+  status: 'pending',
+  from_timer: false,
+});
+// Approved, but the day is still open: more time changes it, and it goes back for review.
+const entryId = async (id, ruleId, day) =>
+  (
+    await one(
+      lee,
+      `select id from entries where person_id=$1 and rule_id=$2 and day=$3`,
+      [id, ruleId, day],
+    )
+  ).id;
+await clock('2027-04-12T21:50:00-04:00');
+await as(lee, `select nx_review($1,'approve')`, [
+  await entryId(kim, tRead, '2027-04-12'),
+]);
+await clock('2027-04-12T22:00:00-04:00');
+await timer(kim, tonight, 'start', tRead);
+await clock('2027-04-12T22:10:00-04:00');
+await timer(kim, tonight, 'stop');
+assert.deepEqual(await answer(kim, tRead, '2027-04-12'), {
+  value: 35,
+  done: true,
+  status: 'pending',
+  from_timer: true,
+});
+await clock('2027-04-12T22:20:00-04:00');
+await as(lee, `select nx_review($1,'approve')`, [
+  await entryId(kim, tRead, '2027-04-12'),
+]);
+await as(kim, `select nx_review($1,'approve')`, [
+  await entryId(lee, tRead, '2027-04-12'),
+]);
+// Once the deadline has passed an approved answer stays, though a session started before it still
+// counts toward the day.
+await clock('2027-04-12T23:50:00-04:00');
+await timer(kim, tonight, 'start', tRead);
+await clock('2027-04-13T00:20:00-04:00');
+await timer(kim, tonight, 'stop');
+assert.deepEqual(
+  await secondsOf(kim, tRead, '2027-04-12'),
+  [900, 600, 600, 1800],
+);
+assert.deepEqual(await answer(kim, tRead, '2027-04-12'), {
+  value: 35,
+  done: true,
+  status: 'confirmed',
+  from_timer: true,
+});
+// The last day: a timer can't start once the day's deadline has passed, and one still going holds
+// back both the day's unlogged point and the result until it stops.
+await clock('2027-04-13T23:50:00-04:00');
+await timer(kim, tonight, 'start', tRead);
+await clock('2027-04-13T23:59:30-04:00');
+await fails(timer(lee, tonight, 'start', tRead), /deadline has passed/);
+await clock('2027-04-14T00:05:00-04:00');
+await as(lee, `select nx_sync($1)`, [tonight]);
+assert.equal((await answer(lee, tRead, '2027-04-13')).status, 'unlogged');
+assert.equal(await answer(kim, tRead, '2027-04-13'), undefined);
+assert.equal(await statusOf(tonight), 'running', 'waits for the timer');
+await clock('2027-04-14T00:20:00-04:00');
+await timer(kim, tonight, 'stop');
+assert.deepEqual(await answer(kim, tRead, '2027-04-13'), {
+  value: 30,
+  done: true,
+  status: 'pending',
+  from_timer: true,
+});
+assert.deepEqual(await pointsOn(kim, tRead, '2027-04-13'), []);
+await as(lee, `select nx_review($1,'approve')`, [
+  await entryId(kim, tRead, '2027-04-13'),
+]);
+assert.equal(await statusOf(tonight), 'finished');
+await fails(
+  timer(kim, tonight, 'start', tRead),
+  /while the challenge is running/,
+);
 
 console.log('next database: ok');

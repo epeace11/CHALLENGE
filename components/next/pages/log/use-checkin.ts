@@ -1,6 +1,12 @@
 'use client';
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { DateString, Entry, Proof, Rule } from '@/lib/next/model';
+import type {
+  DateString,
+  Entry,
+  Proof,
+  Rule,
+  TimerSession,
+} from '@/lib/next/model';
 import { saveCheckin, type CheckinInput } from '@/lib/next/actions';
 import { screenTimeShot, stepsShot } from '@/lib/next/shots';
 import {
@@ -17,8 +23,10 @@ import {
   openCheckins,
   openDays,
   rulesOn,
+  sessionsOf,
   shift,
   targetFor,
+  timedMinutes,
   timeLeft,
 } from '@/lib/next/selectors';
 import { useBackend } from '@/components/next/backend';
@@ -71,6 +79,14 @@ export function draftFrom(entry: Entry | undefined): Draft {
     proofs: from.proofs,
   };
 }
+
+/** A timed rule's finished sessions on the day being logged, and what they add up to. */
+export type Timed = {
+  sessions: TimerSession[];
+  seconds: number;
+  /** Whole minutes, rounded down: what the day's answer is saved as. */
+  minutes: number;
+};
 
 export function outcomeOf(rule: Rule, d: Draft): Outcome {
   if (rule.kind === 'number') {
@@ -230,14 +246,33 @@ export function useCheckin({ top, heading }: Anchors) {
   const current = focused ?? (late ? undefined : queue[0]);
   const entryOf = (rule: Rule) =>
     day ? entryFor(world, me, rule.id, day) : undefined;
+  /** A timed rule's sessions on the day on screen, when it has any. */
+  const timedOf = (rule: Rule): Timed | null => {
+    if (!day || !rule.timed || rule.kind !== 'number') return null;
+    const sessions = sessionsOf(world, me, rule.id, day);
+    if (!sessions.length) return null;
+    const seconds = sessions.reduce((sum, s) => sum + s.seconds, 0);
+    return { sessions, seconds, minutes: timedMinutes(seconds) };
+  };
+  /**
+   * What a check-in's draft starts from: the answer saved (or the late answer waiting on it), else
+   * for a timed rule the minutes its sessions add up to, else nothing.
+   */
+  const baseOf = (rule: Rule): Draft => {
+    const entry = entryOf(rule),
+      timed = timedOf(rule);
+    return !isAnswered(entry) && timed
+      ? { ...BLANK, value: timed.minutes }
+      : draftFrom(entry);
+  };
   /** True while changing an answer already saved. */
   const changing = !!current && isAnswered(entryOf(current));
 
   const key = (rule: Rule) => `${day}|${rule.id}`;
-  const draftOf = (rule: Rule) => drafts[key(rule)] ?? draftFrom(entryOf(rule));
+  const draftOf = (rule: Rule) => drafts[key(rule)] ?? baseOf(rule);
   const change = (rule: Rule, patch: Partial<Draft>) => {
     const k = key(rule),
-      base = draftFrom(entryOf(rule));
+      base = baseOf(rule);
     setDrafts((all) => ({ ...all, [k]: { ...(all[k] ?? base), ...patch } }));
   };
   /** True when a saved answer's draft still says what was saved: Save would send nothing new. */
@@ -431,7 +466,7 @@ export function useCheckin({ top, heading }: Anchors) {
       : sampleShot(rule, d.value, day ?? '', shots.current));
     setUploading((u) => (u === k ? null : u));
     if (!proof) return;
-    const base = draftFrom(entryOf(rule));
+    const base = baseOf(rule);
     setDrafts((all) => {
       const was = all[k] ?? base;
       return { ...all, [k]: { ...was, proofs: [...was.proofs, proof] } };
@@ -473,6 +508,7 @@ export function useCheckin({ top, heading }: Anchors) {
     changing,
     direction,
     entryOf,
+    timedOf,
     draftOf,
     canSave,
     blocked,

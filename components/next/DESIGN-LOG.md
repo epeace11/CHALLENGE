@@ -572,6 +572,16 @@ Round, October 30, 2026 (only the end of the day differs; version 1 is the page 
 
 Pick: 3, October 30, 2026 (Erin). Built: the end of the day is now the day at a glance (a square per check-in, then the streak), and versions 1 and 2 are deleted.
 
+### Timer (`timer`)
+
+New page, November 8, 2026. Erin's decisions: the timer is a setting on a rule counted in minutes ("Arabic, 20 min"), which either person can turn on or off at any time, even after signing, from Set up or Rules and help. It has its own page rather than living in Check in, because Check in logs the day before and the timer runs on the day itself. Each day's sessions add up and keep counting past the target. Once the day is over, the total is saved as that day's answer by itself. The partner reviews it, seeing each session, and it can still be changed by hand on Check in.
+
+1. **The clock first.** One rule on screen. Today's total is a big clock inside a ring that closes at the target. Past the target the ring turns green and laps again ("+2 min over your 20"). Start, then Stop and save with Pause beside it. Today's sessions show as chips, and the last 7 days as tiles. Several timed rules get chips at the top.
+2. **Your timed rules first.** A card for each timed rule, showing today's total against its target and its own Start. Starting turns that card into the live timer, and the other cards step back ("Start instead"). A card opens a sheet with today's sessions and past days. "Time another rule" sits at the end.
+3. **Today's progress first.** "12 of 20 min, 8 min to go" is the hero, with the session clock smaller beside it. The bar is made of today's sessions and keeps going past the target. Under it, this week as day squares with each day's minutes. Start, Pause and Stop are pinned at the bottom.
+
+Pick: 1, November 9, 2026 (Erin), with one change: the Today line shows the total that will be saved ("Today · 32 min total, saved at midnight"). It grows while a timer runs and shows from the first session, so after several sessions the saved number is always in view. Versions 2 and 3 are deleted.
+
 ### Rules and help (`rules`)
 
 1. One page: rules as rows grouped Both of you / Maya / Jordan, then the deadline and stakes, then short expandable answers; Propose a change pinned at the bottom.

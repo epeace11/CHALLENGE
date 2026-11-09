@@ -11,14 +11,19 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
+import { setTimed } from '@/lib/next/actions';
 import {
   activePoints,
+  canTime,
   formatDayShort,
   formatDeadline,
   formatMoney,
   owes,
+  ruleById,
+  ruleIsFor,
   whenUnlessTitled,
 } from '@/lib/next/selectors';
+import { useClock } from '@/components/next/clock';
 import { useNav } from '@/components/next/nav';
 import {
   Button,
@@ -31,6 +36,7 @@ import {
   RowButton,
   Sheet,
   StatusPill,
+  Toggle,
 } from '@/components/next/ui';
 import { useWorld } from '@/components/next/world';
 import { cn } from '@/lib/utils';
@@ -179,11 +185,15 @@ export function RuleSheet({
   // As in the rows: no Days when the title says them ("Gym, 4 days a week"), and the Answer leaves
   // out a target the title already names.
   const when = shown && whenUnlessTitled(shown);
+  // A rule the timer can count asks "How many minutes…?" and has its Timer row below, so a plain
+  // "A number" isn't said again (and the sheet stays short enough not to scroll).
+  const answer = shown ? answerLabel(shown) : '';
+  const sayAnswer = !!shown && !(canTime(shown) && answer === 'A number');
   const facts: [string, string][] = shown
     ? [
         ['For', whoLabel(world, shown.who)],
         ...(when ? [['Days', when] as [string, string]] : []),
-        ['Answer', answerLabel(shown)],
+        ...(sayAnswer ? [['Answer', answer] as [string, string]] : []),
         ...limitFacts(world, shown),
         [
           'Screenshot',
@@ -246,22 +256,57 @@ export function RuleSheet({
             </p>
             <p className="text-nx-body text-nx-ink-2">{shown.description}</p>
           </div>
-          <dl className="flex flex-col">
-            {facts.map(([term, value]) => (
-              <div
-                key={term}
-                className="flex items-baseline justify-between gap-4 border-t border-nx-line py-3"
-              >
-                <dt className="text-nx-2 text-nx-ink-2">{term}</dt>
-                <dd className="text-right text-nx-body font-semibold text-nx-ink">
-                  {value}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <div className="flex flex-col">
+            <dl className="flex flex-col">
+              {facts.map(([term, value]) => (
+                <div
+                  key={term}
+                  className="flex items-baseline justify-between gap-4 border-t border-nx-line py-3"
+                >
+                  <dt className="text-nx-2 text-nx-ink-2">{term}</dt>
+                  <dd className="text-right text-nx-body font-semibold text-nx-ink">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <TimerToggle ruleId={shown.id} />
+          </div>
         </div>
       )}
     </Sheet>
+  );
+}
+
+/**
+ * The timer for a rule counted in minutes, on or off, as the last of its facts. Either of you turns
+ * it on or off at any time, without asking the other: it changes how the minutes are counted, not
+ * what counts. Nothing for a rule the timer can't count.
+ */
+function TimerToggle({ ruleId }: { ruleId: string }) {
+  const world = useWorld();
+  const backend = useBackend();
+  const { at } = useClock(false);
+  // The rule as it is now (the sheet keeps the one it opened on while it slides away).
+  const rule = ruleById(world.challenge, ruleId);
+  if (!rule || !canTime(rule)) return null;
+  const timed = !!rule.timed;
+  const who = ruleIsFor(rule, world.me.id)
+    ? 'Time it'
+    : `${world.partner.name} times it`;
+  return (
+    <Toggle
+      className="border-t border-nx-line"
+      checked={timed}
+      onChange={(on) => {
+        const t = at();
+        backend.act({ type: 'setTimed', ruleId, timed: on }, (w) =>
+          setTimed(w, ruleId, on, t),
+        );
+      }}
+      label="Timer"
+      description={`${who} on the Timer page. Each day’s total is the answer.`}
+    />
   );
 }
 

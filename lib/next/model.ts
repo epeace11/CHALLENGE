@@ -84,6 +84,13 @@ export type Rule = {
   /** First and last day it applies; the challenge's own dates when absent. */
   startsOn?: DateString;
   endsOn?: DateString;
+  /**
+   * A number rule counted in minutes (`canTime`) with the timer on: the Timer page times it, each
+   * day's sessions add up, and once the day is over its total is saved as that day's answer by
+   * itself (still changeable on Check in until the deadline). Either person can turn it on or off
+   * at any time, even after signing: it changes how minutes are counted, not what counts.
+   */
+  timed?: boolean;
 };
 
 /**
@@ -139,6 +146,40 @@ export type Entry = {
   /** When it was logged or last changed. */
   loggedAt?: Instant;
   correction?: Correction;
+  /** Saved by itself from the day's timed sessions (a timed rule); a change by hand clears it. */
+  fromTimer?: boolean;
+};
+
+/**
+ * One stretch of timing a timed rule, from Start to Stop. It counts toward the day it started on, in
+ * the challenge's time zone, even if it ran past midnight. The partner sees these when reviewing.
+ */
+export type TimerSession = {
+  id: string;
+  personId: string;
+  ruleId: string;
+  day: DateString;
+  startedAt: Instant;
+  endedAt: Instant;
+  /** Time on the clock: from start to stop, without the pauses. */
+  seconds: number;
+};
+
+/**
+ * A timer that has started and not stopped yet: at most one per person. Its time is worked out from
+ * timestamps (`timerSeconds`), never counted by the page, so it stays right while the person is on
+ * another page, the app is in the background, or the phone is off.
+ */
+export type TimerRun = {
+  personId: string;
+  ruleId: string;
+  /** The day its session will count toward: the day it started. */
+  day: DateString;
+  startedAt: Instant;
+  /** Since when it has been running; null while paused. */
+  runningSince: Instant | null;
+  /** Seconds on the clock from earlier stretches, before a pause. */
+  banked: number;
 };
 
 /**
@@ -473,4 +514,8 @@ export type World = {
   partners: Pairing[];
   /** True while the partner has no account in the couple yet (the live app, before the invite is accepted). */
   partnerPending?: boolean;
+  /** Timers running or paused, both people's (at most one each). */
+  timers: TimerRun[];
+  /** Both people's finished timer sessions on this challenge. */
+  sessions: TimerSession[];
 };

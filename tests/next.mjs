@@ -175,11 +175,11 @@ assert.ok(isClosed(FALL_RESET, '2026-11-18', w.now));
 assert.ok(!isClosed(FALL_RESET, '2026-11-19', w.now));
 assert.deepEqual(
   rulesOn(FALL_RESET, MAYA, '2026-11-19').map((r) => r.id),
-  ['bed', 'phones', 'social', 'gym', 'eating-out', 'read', 'alcohol'],
+  ['bed', 'phones', 'social', 'gym', 'eating-out', 'read', 'alcohol', 'arabic'],
 );
 assert.deepEqual(
   rulesOn(FALL_RESET, JORDAN, '2026-11-21').map((r) => r.id),
-  ['phones', 'social', 'steps', 'gym', 'eating-out'],
+  ['phones', 'social', 'steps', 'gym', 'eating-out', 'arabic'],
 );
 
 // What is left to log.
@@ -191,10 +191,10 @@ assert.deepEqual(openCheckins(w, JORDAN), []);
 
 // What waits for review.
 const queue = reviewQueue(w, MAYA);
-assert.equal(queue.count, 4);
+assert.equal(queue.count, 5);
 assert.deepEqual(
   queue.answers.map((i) => i.entry.ruleId),
-  ['steps', 'social'],
+  ['steps', 'social', 'arabic'],
 );
 const steps = queue.answers[0].entry;
 assert.equal(steps.value, 11240);
@@ -347,17 +347,17 @@ assert.equal(mr.due - mr.done, 2);
 
 // Stakes: miss 1 in 10 check-ins.
 const plan = { ...FALL_RESET };
-assert.equal(checkinCount(plan, MAYA), 181);
-assert.equal(checkinCount(plan, JORDAN), 159);
+assert.equal(checkinCount(plan, MAYA), 197);
+assert.equal(checkinCount(plan, JORDAN), 175);
 const stakes = stakesPreview(plan, 0.1, [MAYA, JORDAN]);
 assert.deepEqual(
   stakes.perPerson.map((p) => [p.misses, p.gift]),
   [
+    [20, 210],
     [18, 171],
-    [16, 136],
   ],
 );
-assert.equal(stakes.gift, 150);
+assert.equal(stakes.gift, 190);
 const seventyFive = w.themes.find((t) => t.id === 'seventy-five');
 assert.equal(
   stakesPreview({ ...seventyFive, start: '2027-01-04' }).gift,
@@ -533,13 +533,13 @@ assert.equal(dayColor(y, MAYA, '2026-11-19'), 'open');
 // Reviewing.
 y = approve(w, steps.id);
 assert.equal(entryFor(y, JORDAN, 'steps', '2026-11-19').status, 'confirmed');
-assert.equal(reviewQueue(y, MAYA).count, 3);
+assert.equal(reviewQueue(y, MAYA).count, 4);
 y = decideForgiveness(y, queue.forgiveness[0].request.id, 'approved');
 assert.equal(activePoints(y, JORDAN).length, 8);
 assert.equal(gets(y, MAYA), 36);
 assert.equal(entryFor(y, JORDAN, 'eating-out', '2026-11-18').status, 'excused');
 assert.equal(dayColor(y, JORDAN, '2026-11-18'), 'excused');
-assert.equal(reviewQueue(y, MAYA).count, 2);
+assert.equal(reviewQueue(y, MAYA).count, 3);
 const denied = decideForgiveness(w, queue.forgiveness[0].request.id, 'denied');
 assert.equal(dayColor(denied, JORDAN, '2026-11-18'), 'missed');
 assert.equal(activePoints(denied, JORDAN).length, 9);
@@ -552,7 +552,7 @@ assert.equal(dayColor(conceded, MAYA, '2026-11-17'), 'missed');
 assert.equal(reviewQueue(conceded, MAYA).disputes.length, 0);
 // Keeping a dispute open with a reply moves it off Maya's queue (and the Review badge); it waits on Jordan.
 const replied = replyToDispute(w, d.id, 'I was in bed by 10:55.');
-assert.equal(reviewQueue(replied, MAYA).count, 3);
+assert.equal(reviewQueue(replied, MAYA).count, 4);
 assert.equal(repliedDisputes(replied, MAYA).length, 1);
 assert.equal(repliedDisputes(w, MAYA).length, 0);
 const withdrawn = withdrawDispute(w, d.id);
@@ -568,7 +568,7 @@ const disputed = dispute(
   'Screenshot is from Wednesday.',
 );
 assert.equal(reviewQueue(disputed, JORDAN).disputes.length, 1);
-assert.equal(reviewQueue(disputed, MAYA).answers.length, 1);
+assert.equal(reviewQueue(disputed, MAYA).answers.length, 2);
 // A late answer after the deadline waits for the partner, then replaces the miss.
 let late = saveCheckin(w, {
   personId: JORDAN,
@@ -794,6 +794,7 @@ const PLANNED = {
   practice: 1,
   overview: 1,
   log: 1,
+  timer: 1,
   rules: 1,
   review: 1,
   gifts: 1,
@@ -802,7 +803,7 @@ const PLANNED = {
   verdict: 1,
   settings: 1,
 };
-assert.equal(Object.keys(PLANNED).length, 19);
+assert.equal(Object.keys(PLANNED).length, 20);
 const pagesDir = join(root, 'components/next/pages');
 const registry = readFileSync(join(pagesDir, 'registry.ts'), 'utf8');
 for (const [id, count] of Object.entries(PLANNED)) {
@@ -917,6 +918,127 @@ for (const file of styles) {
   }
 }
 
+// The timer: a timed rule's sessions add up toward the day's target and past it.
+{
+  const T = await import('../lib/next/actions.ts');
+  const S = await import('../lib/next/selectors.ts');
+  const F = await import('../lib/next/format.ts');
+  const arabic = w.challenge.rules.find((r) => r.id === 'arabic');
+  const social = w.challenge.rules.find((r) => r.id === 'social');
+  assert.ok(S.canTime(arabic) && S.canTime(social));
+  assert.ok(!S.canTime(w.challenge.rules.find((r) => r.id === 'read')));
+  assert.deepEqual(
+    S.timedRules(w, MAYA).map((r) => r.id),
+    ['arabic'],
+  );
+  assert.deepEqual(
+    S.timeableRules(w, MAYA).map((r) => r.id),
+    ['social'],
+  );
+  // Today Maya has 12 of 20 minutes from this morning's session.
+  assert.equal(S.timedProgress(w, MAYA, arabic, '2026-11-20').minutes, 12);
+  const at = (hm) => `2026-11-21T${hm}:00.000Z`; // Nov 20, evening in Toronto (UTC-5)
+  let x = T.startTimer(w, MAYA, 'arabic', at('00:30'));
+  assert.equal(S.timerOf(x, MAYA).day, '2026-11-20');
+  assert.equal(S.timerSeconds(S.timerOf(x, MAYA), at('00:35')), 300);
+  x = T.pauseTimer(x, MAYA, at('00:35'));
+  assert.equal(
+    S.timerSeconds(S.timerOf(x, MAYA), at('01:00')),
+    300,
+    'a paused clock stands still',
+  );
+  x = T.resumeTimer(x, MAYA, at('01:00'));
+  // 5 + 13 minutes on the clock: with this morning's 12, today is 30 minutes, 10 past the target.
+  const live = S.timedProgress(x, MAYA, arabic, '2026-11-20', at('01:13'));
+  assert.deepEqual([live.minutes, live.diff, live.met], [30, 600, true]);
+  x = T.stopTimer(x, MAYA, at('01:13'));
+  assert.equal(S.timerOf(x, MAYA), null);
+  const last = x.sessions[x.sessions.length - 1];
+  assert.deepEqual(
+    [last.day, last.seconds, last.startedAt],
+    ['2026-11-20', 1080, at('00:30')],
+  );
+  assert.deepEqual(
+    S.sessionsOf(x, MAYA, 'arabic', '2026-11-20').map((s) => s.seconds),
+    [720, 1080],
+  );
+  assert.equal(
+    F.formatMinutes(S.timedSeconds(x, MAYA, 'arabic', '2026-11-20')),
+    '30 min',
+  );
+  assert.equal(F.formatClock(1080), '18:00');
+  assert.equal(F.formatClock(3725), '1:02:05');
+  // 19:59 is saved as 19 minutes, so the target counts only once the clock reaches 20:00.
+  assert.equal(S.timedMinutes(1199), 19);
+  // A session that runs past midnight counts toward the day it started.
+  let y = T.startTimer(w, MAYA, 'arabic', at('04:50'));
+  y = T.stopTimer(y, MAYA, at('05:20'));
+  assert.equal(y.sessions[y.sessions.length - 1].day, '2026-11-20');
+  // One timer at a time: starting another saves the first.
+  let z = T.setTimed(w, 'social', true);
+  assert.ok(z.challenge.rules.find((r) => r.id === 'social').timed);
+  z = T.startTimer(z, MAYA, 'arabic', at('00:00'));
+  z = T.startTimer(z, MAYA, 'social', at('00:10'));
+  assert.equal(S.timerOf(z, MAYA).ruleId, 'social');
+  assert.equal(S.sessionsOf(z, MAYA, 'arabic', '2026-11-20').length, 2);
+  // Turning the timer off saves a timer going on that rule; a rule not in minutes can't be timed.
+  z = T.setTimed(z, 'social', false, at('00:20'));
+  assert.equal(S.timerOf(z, MAYA), null);
+  assert.equal(S.sessionsOf(z, MAYA, 'social', '2026-11-20')[0].seconds, 600);
+  assert.equal(T.setTimed(w, 'read', true), w);
+  assert.equal(
+    T.startTimer(w, MAYA, 'social', at('00:00')),
+    w,
+    'only a timed rule starts',
+  );
+  assert.equal(
+    T.startTimer(w, MAYA, 'steps', at('00:00')),
+    w,
+    "only one's own rule",
+  );
+  assert.equal(
+    T.startTimer(
+      { ...w, challenge: { ...w.challenge, status: 'finished' } },
+      MAYA,
+      'arabic',
+      at('00:00'),
+    ).timers.length,
+    0,
+    'only while it runs',
+  );
+  // A stop with nothing on the clock saves nothing; removing a session takes it off.
+  assert.equal(
+    T.stopTimer(T.startTimer(w, MAYA, 'arabic', at('00:00')), MAYA, at('00:00'))
+      .sessions.length,
+    w.sessions.length,
+  );
+  assert.equal(T.removeSession(x, last.id).sessions.length, w.sessions.length);
+  // History: each day it asks, newest first, with the answer saved from the timer.
+  const days = S.timedDays(w, JORDAN, arabic);
+  assert.deepEqual(
+    days.map((d) => [d.day, d.seconds / 60, d.entry?.status ?? null]),
+    [
+      ['2026-11-20', 20, null],
+      ['2026-11-19', 35, 'pending'],
+      ['2026-11-18', 26, 'confirmed'],
+      ['2026-11-17', 22, 'confirmed'],
+      ['2026-11-16', 20, 'confirmed'],
+    ],
+  );
+  assert.ok(days[1].entry.fromTimer);
+  // A change by hand on Check in is no longer from the timer.
+  const byHand = saveCheckin(w, {
+    personId: MAYA,
+    ruleId: 'arabic',
+    day: '2026-11-19',
+    value: 40,
+  });
+  assert.equal(
+    entryFor(byHand, MAYA, 'arabic', '2026-11-19').fromTimer,
+    undefined,
+  );
+}
+
 console.log(
-  'PASS: next — formatters and dates, the sample world’s numbers (open check-ins, review queue, points and gifts, gym weeks, streaks, calendar colours, pills, recap, stakes, badges), actions, every planned page version, and the no-network and 14px rules.',
+  'PASS: next — formatters and dates, the sample world’s numbers (open check-ins, review queue, points and gifts, gym weeks, streaks, calendar colours, pills, recap, stakes, badges), actions, the timer, every planned page version, and the no-network and 14px rules.',
 );

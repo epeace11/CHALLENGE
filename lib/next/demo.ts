@@ -17,6 +17,7 @@ import type {
   Rule,
   SavedChallenge,
   SayRulesDraft,
+  TimerSession,
   World,
 } from './model.ts';
 import {
@@ -40,8 +41,10 @@ import { screenTimeShot, stepsShot } from './shots.ts';
  *
  * Key numbers (tests/next.mjs checks them):
  * - Maya: 3 check-ins open for Nov 19 (social media, reading, gym); 1 answer waiting for Jordan.
- * - Waiting for Maya: 2 of Jordan's answers (10,000 steps: 11,240 with a screenshot; social media:
- *   48 min), 1 forgiveness request (Nov 18, eating out) and 1 dispute Jordan raised (Maya's Nov 17 bedtime).
+ * - Waiting for Maya: 3 of Jordan's answers (10,000 steps: 11,240 with a screenshot; social media:
+ *   48 min; Arabic: 35 min from the timer), 1 forgiveness request (Nov 18, eating out) and 1 dispute
+ *   Jordan raised (Maya's Nov 17 bedtime).
+ * - Timer: Arabic, 20 min, is timed. Today Maya has 12 of 20 minutes, Jordan 20; no timer is going.
  * - Points: Maya 6 active, Jordan 9 active (plus 1 forgiven). Maya gets a $45 gift, Jordan a $21
  *   gift; Maya is ahead by 3. Maya's next miss adds $7, Jordan's $10.
  * - Gym this week (Nov 16–22): Maya 2 of 4, Jordan 3 of 4.
@@ -143,6 +146,16 @@ export const FALL_RULES: Rule[] = [
     'Did you skip alcohol?',
     'No beer, wine or spirits.',
     { days: SUN_THU, who: MAYA.id },
+  ),
+  // Timed: the Timer page adds up each day's minutes, saved as the answer once the day is over.
+  numberRule(
+    'arabic',
+    'Mind',
+    'Arabic, 20 min',
+    'How many minutes of Arabic?',
+    'Lessons, an app or speaking practice.',
+    { op: '>=', value: 20, unit: 'min' },
+    { startsOn: '2026-11-16', timed: true },
   ),
 ];
 
@@ -339,7 +352,48 @@ const SPECIAL: Record<string, Answer> = {
     note: 'Team dinner for a coworker’s last day.',
     loggedAt: at('2026-11-19', '07:30'),
   },
+  // Arabic, timed (see SESSIONS).
+  'maya|arabic|2026-11-16': { value: 25 },
+  'maya|arabic|2026-11-17': { value: 20 },
+  'maya|arabic|2026-11-18': { value: 34 },
+  'jordan|arabic|2026-11-16': { value: 20 },
+  'jordan|arabic|2026-11-17': { value: 22 },
+  'jordan|arabic|2026-11-18': { value: 26 },
 };
+
+/* ── Timer sessions, Arabic ────────────────────────────────────────────── */
+
+/** [person, day, start, end]: Maya before work (and some evenings), Jordan at lunch. */
+const TIMED: [string, DateString, string, string][] = [
+  ['maya', '2026-11-16', '07:05', '07:30'],
+  ['maya', '2026-11-17', '07:10', '07:20'],
+  ['maya', '2026-11-17', '21:00', '21:10'],
+  ['maya', '2026-11-18', '06:50', '07:24'],
+  ['maya', '2026-11-19', '07:00', '07:18'],
+  ['maya', '2026-11-19', '20:30', '20:42'],
+  ['maya', '2026-11-20', '07:10', '07:22'],
+  ['jordan', '2026-11-16', '12:15', '12:35'],
+  ['jordan', '2026-11-17', '12:10', '12:32'],
+  ['jordan', '2026-11-18', '12:20', '12:46'],
+  ['jordan', '2026-11-19', '12:05', '12:25'],
+  ['jordan', '2026-11-19', '22:00', '22:15'],
+  ['jordan', '2026-11-20', '12:10', '12:30'],
+];
+
+/** Today (Nov 20) Maya has 12 of her 20 minutes; Jordan has his 20. No timer is going. */
+const SESSIONS: TimerSession[] = TIMED.map(([personId, day, from, to], i) => {
+  const startedAt = at(day, from),
+    endedAt = at(day, to);
+  return {
+    id: `session-${i + 1}`,
+    personId,
+    ruleId: 'arabic',
+    day,
+    startedAt,
+    endedAt,
+    seconds: (Date.parse(endedAt) - Date.parse(startedAt)) / 1000,
+  };
+});
 
 function buildEntries(): Entry[] {
   const out: Entry[] = [];
@@ -348,6 +402,7 @@ function buildEntries(): Entry[] {
       for (const rule of FALL_RULES) {
         if (rule.who !== 'both' && rule.who !== person.id) continue;
         if (!rule.days.includes(weekday(day))) continue;
+        if (rule.startsOn && day < rule.startsOn) continue;
         if (rule.kind === 'weekly') {
           out.push(
             answer(person.id, rule, day, {
@@ -406,8 +461,20 @@ function buildEntries(): Entry[] {
       status: 'pending',
       loggedAt: at('2026-11-20', '18:41'),
     }),
+    // Arabic, saved by itself from the timer at midnight: Jordan approved Maya's this morning, and
+    // Jordan's (two sessions, 35 min) waits for her.
+    answer(MAYA.id, rule('arabic'), OPEN_DAY, { value: 30 }),
+    answer(JORDAN.id, rule('arabic'), OPEN_DAY, {
+      value: 35,
+      status: 'pending',
+    }),
   );
-  return out;
+  // Every Arabic answer was saved from the timer, at midnight after its day.
+  return out.map((e) =>
+    e.ruleId === 'arabic'
+      ? { ...e, fromTimer: true, loggedAt: at(shift(e.day, 1), '00:00') }
+      : e,
+  );
 }
 
 const ENTRIES = buildEntries();
@@ -871,4 +938,6 @@ export const world: World = deepFreeze({
       },
     },
   ],
+  timers: [],
+  sessions: SESSIONS,
 });

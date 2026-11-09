@@ -10,13 +10,14 @@ import type {
   Weekday,
 } from '@/lib/next/model';
 import { EVERY_DAY } from '@/lib/next/catalog';
-import { formatWeekdays } from '@/lib/next/selectors';
+import { canTime, formatWeekdays } from '@/lib/next/selectors';
 import {
   Button,
   NumberField,
   SegmentedControl,
   Sheet,
   TextField,
+  Toggle,
 } from '@/components/next/ui';
 import { CheckinPreview } from './checkin-preview';
 import { Labeled, WeekdayPicker } from './fields';
@@ -35,6 +36,12 @@ type Form = {
   value: number | null;
   unit: string;
   proof: ProofNeed;
+  /**
+   * The timer switch. The rule gets it only while it is a number counted in minutes, so another
+   * unit (or Yes or No, or days a week) turns it off; the switch remembers it while a unit is being
+   * typed ("minu…" on the way to "minutes").
+   */
+  timed: boolean;
 };
 
 type Errors = Partial<
@@ -53,6 +60,7 @@ const BLANK: Form = {
   value: 10,
   unit: 'min',
   proof: 'none',
+  timed: false,
 };
 
 function formFrom(rule: Rule | null): Form {
@@ -69,6 +77,7 @@ function formFrom(rule: Rule | null): Form {
     value: rule.target?.value ?? 10,
     unit: rule.target?.unit ?? '',
     proof: rule.proof,
+    timed: !!rule.timed,
   };
 }
 
@@ -92,14 +101,16 @@ function ruleFrom(form: Form, base: Rule | null, id: string): Rule {
       days: base?.kind === 'weekly' ? base.days : EVERY_DAY,
       weeklyTarget: form.perWeek ?? 1,
     };
-  if (form.answer === 'number')
-    return {
+  if (form.answer === 'number') {
+    const rule: Rule = {
       ...common,
       kind: 'number',
       days: form.days,
       target: { op: form.op, value: form.value ?? 0, unit: form.unit.trim() },
       ...(base?.personalTarget ? { personalTarget: true } : {}),
     };
+    return form.timed && canTime(rule) ? { ...rule, timed: true } : rule;
+  }
   return { ...common, kind: 'yesno', days: form.days };
 }
 
@@ -315,6 +326,15 @@ export function RuleBuilderSheet({
                   maxLength={12}
                 />
               </div>
+              {canTime(preview) && (
+                <Toggle
+                  className="nx-enter"
+                  checked={form.timed}
+                  onChange={(timed) => set({ timed })}
+                  label="Timer"
+                  description="Time it on the Timer page. Each day’s total is saved as that day’s answer."
+                />
+              )}
             </div>
           )}
           <Labeled label="Screenshot">

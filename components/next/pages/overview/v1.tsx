@@ -32,6 +32,7 @@ import { EndAskCard, LeaveSheet, endAskFrom } from '../settings/parts';
 import { useAccount, useEndAsk } from '../settings/hooks';
 import { overviewOf, shortTitle } from './data';
 import { BeforeStart } from './before-start';
+import { TimerRow } from './timer-row';
 import { DaySheet, WeekLegend, WeekStrip } from './week';
 
 /** Overview, version 1. Before Day 1 it shows the wait instead. */
@@ -322,6 +323,8 @@ function Running() {
           <OthersWaiting />
 
           <div className="-mt-5 flex flex-col gap-8">
+            {/* Today's timed minutes, under what matters now: a row, so Log stays the one main action. */}
+            <TimerRow index={2} />
             {/* On Day 1 nobody has a point or anything to review yet, so those numbers wait. */}
             {!o.firstDay && (
               <Section title="Gifts" index={2}>

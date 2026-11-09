@@ -164,6 +164,25 @@ export function formatDuration(msLeft: number) {
   return `${mins}m`;
 }
 
+/** A stopwatch: "0:07", "12:30", "1:02:05" (hours only once there are some). */
+export function formatClock(seconds: number) {
+  const s = Math.max(0, Math.floor(seconds)),
+    h = Math.floor(s / 3600),
+    m = Math.floor((s % 3600) / 60),
+    r = s % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(r)}` : `${m}:${pad(r)}`;
+}
+
+/** Whole minutes of `seconds`, rounded down, said plainly: "0 min", "45 min", "1 h 5 min". */
+export function formatMinutes(seconds: number) {
+  const total = Math.max(0, Math.floor(seconds / 60)),
+    h = Math.floor(total / 60),
+    m = total % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 
 /** A name's initial for its avatar: its first whole character ("🌸" from "🌸Maya", not half of it). */

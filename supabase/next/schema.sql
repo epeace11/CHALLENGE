@@ -89,6 +89,9 @@ create table public.rules(
   -- one's value by person id, set when they sign; target_value is the suggestion until then.
   personal boolean not null default false,
   limits jsonb not null default '{}',
+  -- A number rule counted in minutes (nx_can_time) with the timer on. Either person turns it on or off
+  -- at any time (nx_set_timed); it changes how the minutes are counted, not what counts.
+  timed boolean not null default false,
   check (kind <> 'weekly' or weekly_target is not null),
   check (kind <> 'number' or (target_op is not null and target_value is not null))
 );
@@ -140,6 +143,8 @@ create table public.entries(
   correction_note text,
   correction_proofs jsonb,
   correction_at timestamptz,
+  -- Saved by itself from the day's timer sessions (nx_timer_log); an answer saved by hand clears it.
+  from_timer boolean not null default false,
   unique (person_id, rule_id, day)
 );
 create index entries_challenge on public.entries(challenge_id, day);
@@ -197,6 +202,33 @@ create table public.journal_notes(
   created_at timestamptz not null default now()
 );
 create index journal_notes_challenge on public.journal_notes(challenge_id, day);
+
+-- A timer someone has started on a timed rule and not stopped: one per person per challenge. Its time
+-- is `banked` (seconds from stretches before a pause) plus, while running, nx_now() - running_since.
+-- `day` is the day it started on, in the challenge's time zone: its session counts toward that day.
+create table public.timer_runs(
+  challenge_id uuid not null references public.challenges on delete cascade,
+  person_id uuid not null references public.profiles,
+  rule_id uuid not null references public.rules on delete cascade,
+  day date not null,
+  started_at timestamptz not null,
+  running_since timestamptz,
+  banked integer not null default 0 check (banked >= 0),
+  primary key (challenge_id, person_id)
+);
+
+-- One stretch of timing, Start to Stop, with the seconds on the clock (pauses left out).
+create table public.timer_sessions(
+  id uuid primary key default gen_random_uuid(),
+  challenge_id uuid not null references public.challenges on delete cascade,
+  person_id uuid not null references public.profiles,
+  rule_id uuid not null references public.rules on delete cascade,
+  day date not null,
+  started_at timestamptz not null,
+  ended_at timestamptz not null,
+  seconds integer not null check (seconds > 0)
+);
+create index timer_sessions_challenge on public.timer_sessions(challenge_id, person_id, rule_id, day);
 
 -- A named copy of a challenge's rules and settings, owned by the couple. Never answers or points.
 create table public.saved_challenges(
@@ -280,6 +312,12 @@ create function public.nx_rule_for(r public.rules, p_person uuid) returns boolea
   select r.who is null or r.who = p_person
 $$;
 
+-- A rule the timer can time: a number rule counted in minutes ("min", "mins", "minute", "minutes"),
+-- like canTime() in lib/next/selectors.ts.
+create function public.nx_can_time(p_kind text, p_unit text) returns boolean language sql immutable as $$
+  select coalesce(p_kind = 'number' and btrim(p_unit) ~* '^min(ute)?s?$', false)
+$$;
+
 -- A weekly rule's target in the week [p_from, p_to] (already clipped to the challenge): the full target
 -- for a full week, otherwise its share of the days the rule applies, rounded down. Matches weekTarget().
 create function public.nx_week_target(c public.challenges, r public.rules, p_from date, p_to date) returns integer language sql stable as $$
@@ -292,14 +330,29 @@ $$;
 
 -- Idempotent. Runs before every write and on every load (nx_sync), and hourly if pg_cron is set up.
 create function public.nx_tick(p_challenge uuid) returns void language plpgsql security definer set search_path = public as $$
-declare c challenges; wr rules; mem record; wk record; visits integer; target integer; i integer; last_closed date;
+declare c challenges; wr rules; mem record; wk record; visits integer; target integer; i integer; last_closed date; g record;
 begin
   select * into c from challenges where id = p_challenge;
   if c.id is null or c.status not in ('running','finished') then return; end if;
   -- The latest day whose deadline has passed.
   last_closed := least(nx_last_day(c), nx_today(c) - c.deadline_days - case when nx_now() > nx_lock_time(c, nx_today(c) - c.deadline_days) then 0 else 1 end);
 
-  -- Unlogged misses: every closed day a daily rule applied and nothing was logged.
+  -- Timed days first, so one with sessions gets its answer instead of an unlogged miss: every day
+  -- that can be logged, has sessions and no answer yet (none, or unlogged with no late answer
+  -- waiting). nx_timer_log has the whole rule; an answer already there only changes at a Stop.
+  if c.status = 'running' then
+    for g in
+      select distinct s.person_id, s.rule_id, s.day from timer_sessions s
+      where s.challenge_id = c.id and (s.day < nx_today(c) or (s.day = nx_today(c) and c.deadline_days = 0))
+        and not exists(select 1 from entries e where e.person_id = s.person_id and e.rule_id = s.rule_id and e.day = s.day
+                       and (e.status <> 'unlogged' or e.correction_at is not null))
+    loop
+      perform nx_timer_log(c, g.person_id, g.rule_id, g.day);
+    end loop;
+  end if;
+
+  -- Unlogged misses: every closed day a daily rule applied and nothing was logged. A day with a timer
+  -- still going on that rule waits: its answer is saved when the timer stops.
   if last_closed >= c.start_date then
     insert into entries(challenge_id, person_id, rule_id, day, done, status)
     select c.id, m.person_id, r.id, d::date, null, 'unlogged'
@@ -307,6 +360,8 @@ begin
     join couple_members m on m.couple_id = c.couple_id and (r.who is null or r.who = m.person_id)
     cross join generate_series(c.start_date, last_closed, interval '1 day') d
     where r.challenge_id = c.id and r.kind <> 'weekly' and nx_applies(c, r, d::date)
+      and not exists(select 1 from timer_runs t
+                     where t.challenge_id = c.id and t.person_id = m.person_id and t.rule_id = r.id and t.day = d::date)
     on conflict (person_id, rule_id, day) do nothing;
 
     insert into points(challenge_id, person_id, rule_id, day, reason, entry_id)
@@ -347,10 +402,12 @@ begin
   where challenge_id = c.id and status = 'pending' and correction_at is null and logged_at <= nx_now() - interval '48 hours';
 
   -- It's over once the last deadline has passed and nothing can still change the result: every
-  -- dispute settled, every answer reviewed (48 hours at most, above). Until then there's no verdict.
+  -- dispute settled, every answer reviewed (48 hours at most, above), every timer stopped (a timer
+  -- only starts on a day of the challenge, and its time still counts). Until then there's no verdict.
   if c.status = 'running' and nx_now() > nx_lock_time(c, nx_last_day(c))
      and not exists(select 1 from disputes where challenge_id = c.id and status = 'open')
-     and not exists(select 1 from entries where challenge_id = c.id and status = 'pending' and correction_at is null) then
+     and not exists(select 1 from entries where challenge_id = c.id and status = 'pending' and correction_at is null)
+     and not exists(select 1 from timer_runs where challenge_id = c.id) then
     update challenges set status = 'finished' where id = c.id;
   end if;
 end $$;
@@ -386,7 +443,7 @@ end $$;
 /* ── Setting up ────────────────────────────────────────────────────────── */
 
 -- Replaces a challenge's rules from a JSON array of Rule objects (lib/next/model.ts). `who` is
--- 'both', 'me' (the caller), 'partner', or a member's id.
+-- 'both', 'me' (the caller), 'partner', or a member's id. `timed` sticks only to a rule the timer can time.
 create function public.nx_put_rules(c public.challenges, p_rules jsonb) returns void language plpgsql security definer set search_path = public as $$
 declare x jsonb; i integer := 0; who uuid; partner uuid := nx_partner(c.id, auth.uid());
 begin
@@ -401,7 +458,7 @@ begin
       when exists(select 1 from couple_members where couple_id = c.couple_id and person_id::text = x->>'who') then (x->>'who')::uuid
       else null end;
     insert into rules(challenge_id, position, title, question, description, rule_group, kind, days, weekly_target,
-                      target_op, target_value, target_unit, who, for_invitee, proof, starts_on, ends_on, personal, limits)
+                      target_op, target_value, target_unit, who, for_invitee, proof, starts_on, ends_on, personal, limits, timed)
     values (c.id, i, trim(x->>'title'), trim(x->>'question'), coalesce(x->>'description', ''),
             coalesce(x->>'group', 'Mind'), x->>'kind',
             array(select jsonb_array_elements_text(x->'days')::integer),
@@ -414,7 +471,8 @@ begin
               select jsonb_object_agg(l.key, l.value) from jsonb_each(case when jsonb_typeof(x->'limits') = 'object' then x->'limits' else '{}' end) l
               where jsonb_typeof(l.value) = 'number' and (l.value #>> '{}')::numeric > 0
                 and exists(select 1 from couple_members m where m.couple_id = c.couple_id and m.person_id::text = l.key)), '{}')
-            else '{}' end);
+            else '{}' end,
+            coalesce((x->>'timed')::boolean, false) and nx_can_time(x->>'kind', x->'target'->>'unit'));
     i := i + 1;
   end loop;
 end $$;
@@ -656,7 +714,8 @@ begin
 end $$;
 
 -- One whole check-in, like saveCheckin() in lib/next/actions.ts. Before the deadline it is the answer;
--- after it, a late answer the partner has to approve.
+-- after it, a late answer the partner has to approve. Saved by hand, so never from the timer: the
+-- timer doesn't change it afterwards (nx_timer_log). A late answer clears from_timer once approved.
 create function public.nx_save_checkin(p_challenge uuid, p_rule uuid, p_day date, p_done boolean default null,
   p_value numeric default null, p_note text default '', p_proofs jsonb default '[]', p_forgiveness text default null)
   returns void language plpgsql security definer set search_path = public as $$
@@ -690,11 +749,11 @@ begin
     return;
   end if;
 
-  insert into entries(challenge_id, person_id, rule_id, day, done, value, status, note, proofs, logged_at)
+  insert into entries(challenge_id, person_id, rule_id, day, done, value, status, note, proofs, logged_at, from_timer)
   values (c.id, auth.uid(), r.id, p_day, v_done, case when r.kind = 'number' then p_value end,
-          case when v_done then 'pending' when r.kind = 'weekly' then 'confirmed' else 'missed' end, v_note, v_proofs, nx_now())
+          case when v_done then 'pending' when r.kind = 'weekly' then 'confirmed' else 'missed' end, v_note, v_proofs, nx_now(), false)
   on conflict (person_id, rule_id, day) do update set done = excluded.done, value = excluded.value, status = excluded.status,
-    note = excluded.note, proofs = excluded.proofs, logged_at = excluded.logged_at,
+    note = excluded.note, proofs = excluded.proofs, logged_at = excluded.logged_at, from_timer = false,
     correction_done = null, correction_value = null, correction_note = null, correction_proofs = null, correction_at = null
   returning * into e;
   if e.status = 'missed' then
@@ -726,8 +785,9 @@ begin
       if e.status <> 'pending' then raise exception 'This answer isn''t waiting on you.'; end if;
       update entries set status = 'confirmed' where id = e.id;
     else
+      -- The late answer was typed by hand: the timer no longer changes it.
       update entries set done = correction_done, value = correction_value, note = coalesce(correction_note, ''),
-        proofs = coalesce(correction_proofs, '[]'), logged_at = nx_now(),
+        proofs = coalesce(correction_proofs, '[]'), logged_at = nx_now(), from_timer = false,
         status = case when correction_done or r.kind = 'weekly' then 'confirmed' else 'missed' end,
         correction_done = null, correction_value = null, correction_note = null, correction_proofs = null, correction_at = null
       where id = e.id returning * into e;
@@ -862,6 +922,140 @@ begin
   perform nx_edit_note(p_note, '');
 end $$;
 
+/* ── Timer ─────────────────────────────────────────────────────────────── */
+
+-- A timed day's answer, saved by itself from its sessions (like the Timer page's timedMinutes()):
+-- * When: the challenge is running, the day can be logged (it's over, or it's today with a same-night
+--   deadline, as in nx_save_checkin) and no timer is still going on that rule and day. Called at each
+--   Stop (nx_stop_timer) and by nx_tick, which only fills a day with no answer yet, before it gives
+--   unlogged misses. So removing a session (nx_remove_session) never changes an answer already saved.
+-- * What: the day's sessions added up, in whole minutes rounded down, scored like a check-in
+--   (nx_meets: pending if met, missed with a point if not), from_timer = true. The sessions stand in
+--   for screenshots, even when the rule asks for them. Sessions count whether or not the timer is
+--   still on: turning it off saves the one going.
+-- * Never over: an answer typed by hand (from_timer false), a late answer waiting on the partner, a
+--   disputed or conceded one, or one the partner approved once the day's deadline has passed. Before
+--   the deadline an approved timer answer changes like a hand edit would, and goes back for review.
+--   An unlogged day (nobody answered, no late answer waiting) is filled.
+-- * Only days the rule asks, and only the rule's own people.
+create function public.nx_timer_log(c public.challenges, p_person uuid, p_rule uuid, p_day date) returns void
+language plpgsql security definer set search_path = public as $$
+declare r rules; e entries; total integer; v_min integer; v_done boolean;
+begin
+  if c.status <> 'running' then return; end if;
+  select * into r from rules where id = p_rule and challenge_id = c.id;
+  if r.id is null or r.kind <> 'number' or not nx_rule_for(r, p_person) or not nx_applies(c, r, p_day) then return; end if;
+  if p_day > nx_today(c) or (p_day = nx_today(c) and c.deadline_days > 0) then return; end if;
+  if exists(select 1 from timer_runs where challenge_id = c.id and person_id = p_person and rule_id = r.id and day = p_day) then return; end if;
+  select coalesce(sum(seconds), 0) into total from timer_sessions
+  where challenge_id = c.id and person_id = p_person and rule_id = r.id and day = p_day;
+  if total <= 0 then return; end if;
+  v_min := total / 60;
+  v_done := nx_meets(r, v_min, p_person);
+  select * into e from entries where person_id = p_person and rule_id = r.id and day = p_day;
+  if e.id is not null then
+    if e.correction_at is not null then return; end if;
+    if e.from_timer then
+      if e.value is not distinct from v_min::numeric or e.status in ('disputed','conceded')
+         or (e.status = 'confirmed' and nx_now() > nx_lock_time(c, p_day)) then return; end if;
+    elsif e.status <> 'unlogged' then
+      return;
+    end if;
+  end if;
+  insert into entries(challenge_id, person_id, rule_id, day, done, value, status, logged_at, from_timer)
+  values (c.id, p_person, r.id, p_day, v_done, v_min, case when v_done then 'pending' else 'missed' end, nx_now(), true)
+  on conflict (person_id, rule_id, day) do update set done = excluded.done, value = excluded.value,
+    status = excluded.status, logged_at = excluded.logged_at, from_timer = true
+  returning * into e;
+  if e.status = 'missed' then perform nx_add_point(e, 'missed'); else perform nx_void_point_of(e.id); end if;
+end $$;
+
+-- Stops `p_person`'s timer, if any: its time (pauses left out) becomes a session on the day it started,
+-- and that day's answer is saved from the timer when it can be (nx_timer_log). 0 seconds saves nothing.
+create function public.nx_stop_timer(c public.challenges, p_person uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare t timer_runs; secs integer;
+begin
+  delete from timer_runs where challenge_id = c.id and person_id = p_person returning * into t;
+  if t.person_id is null then return; end if;
+  secs := t.banked + case when t.running_since is null then 0
+                          else greatest(0, floor(extract(epoch from nx_now() - t.running_since)))::integer end;
+  if secs > 0 then
+    insert into timer_sessions(challenge_id, person_id, rule_id, day, started_at, ended_at, seconds)
+    values (c.id, p_person, t.rule_id, t.day, t.started_at, nx_now(), secs);
+    perform nx_timer_log(c, p_person, t.rule_id, t.day);
+  end if;
+end $$;
+
+-- The viewer's timer, like startTimer()/pauseTimer()/resumeTimer()/stopTimer() in lib/next/actions.ts:
+-- 'start' (p_rule), 'pause', 'resume' or 'stop'. The database stamps every time. One timer per person
+-- per challenge: starting stops and saves the one going. It starts only while the challenge runs, before
+-- the day's deadline. On a day the rule doesn't ask, the time is kept (it shows in the history) but is
+-- never saved as an answer. Pausing, resuming or stopping when there's nothing to pause, resume or stop
+-- changes nothing, as in the pure actions.
+create function public.nx_timer(p_challenge uuid, p_action text, p_rule uuid default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge); r rules;
+begin
+  perform nx_tick(c.id);
+  select * into c from challenges where id = c.id;
+  if c.status <> 'running' then raise exception 'The timer works while the challenge is running.'; end if;
+  if p_action = 'start' then
+    select * into r from rules where id = p_rule and challenge_id = c.id;
+    if r.id is null or not r.timed or not nx_can_time(r.kind, r.target_unit) or not nx_rule_for(r, auth.uid()) then
+      raise exception 'That rule isn''t timed for you.';
+    end if;
+    if nx_now() > nx_lock_time(c, nx_today(c)) then raise exception 'Today''s deadline has passed.'; end if;
+    perform nx_stop_timer(c, auth.uid());
+    insert into timer_runs(challenge_id, person_id, rule_id, day, started_at, running_since, banked)
+    values (c.id, auth.uid(), r.id, nx_today(c), nx_now(), nx_now(), 0);
+  elsif p_action = 'pause' then
+    update timer_runs set banked = banked + greatest(0, floor(extract(epoch from nx_now() - running_since)))::integer,
+      running_since = null
+    where challenge_id = c.id and person_id = auth.uid() and running_since is not null;
+  elsif p_action = 'resume' then
+    update timer_runs set running_since = nx_now()
+    where challenge_id = c.id and person_id = auth.uid() and running_since is null;
+  elsif p_action = 'stop' then
+    perform nx_stop_timer(c, auth.uid());
+  else
+    raise exception 'Unknown timer action.';
+  end if;
+  perform nx_tick(c.id);
+end $$;
+
+-- Either person turns the timer on or off for a rule counted in minutes, at any time, even after
+-- signing: it doesn't change what counts, so the signatures stay. Off stops and saves any timer going
+-- on that rule, either person's.
+create function public.nx_set_timed(p_challenge uuid, p_rule uuid, p_on boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge); r rules; t record;
+begin
+  select * into r from rules where id = p_rule and challenge_id = c.id;
+  if r.id is null then raise exception 'That rule is gone.'; end if;
+  if not nx_can_time(r.kind, r.target_unit) then raise exception 'Only a rule counted in minutes can be timed.'; end if;
+  if r.timed = coalesce(p_on, false) then return; end if;
+  if not coalesce(p_on, false) then
+    for t in select person_id from timer_runs where challenge_id = c.id and rule_id = r.id loop
+      perform nx_stop_timer(c, t.person_id);
+    end loop;
+  end if;
+  update rules set timed = coalesce(p_on, false) where id = r.id;
+  perform nx_tick(c.id);
+end $$;
+
+-- Removes one of the viewer's own sessions (timed by mistake). An answer already saved stays as it is.
+create function public.nx_remove_session(p_session uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare s timer_sessions;
+begin
+  select * into s from timer_sessions where id = p_session;
+  if s.id is null then raise exception 'That session is gone.'; end if;
+  perform nx_enter(s.challenge_id);
+  if s.person_id <> auth.uid() then raise exception 'You can only remove your own sessions.'; end if;
+  delete from timer_sessions where id = s.id;
+end $$;
+
 /* ── Saved challenges ──────────────────────────────────────────────────── */
 
 -- Saves a challenge's rules and settings under a name. Returns the saved challenge's id.
@@ -876,7 +1070,8 @@ begin
       'days', to_jsonb(r.days), 'weeklyTarget', r.weekly_target,
       'target', case when r.target_op is not null then jsonb_build_object('op', r.target_op, 'value', r.target_value, 'unit', coalesce(r.target_unit, '')) end,
       'who', case when r.for_invitee then 'partner' when r.who is null then 'both' when r.who = auth.uid() then 'me' else 'partner' end,
-      'proof', r.proof, 'personalTarget', case when r.personal then true end)) order by r.position)
+      'proof', r.proof, 'personalTarget', case when r.personal then true end,
+      'timed', case when r.timed then true end)) order by r.position)
     from rules r where r.challenge_id = c.id), '[]'), auth.uid())
   returning id into s;
   return s;
@@ -1060,12 +1255,17 @@ end $$;
 -- Internal: it runs once both have agreed. Returns 'deleted', 'erase' or 'ended'.
 create function public.nx_end_now(p_challenge uuid) returns text
 language plpgsql security definer set search_path = public as $$
-declare c challenges; last_closed date;
+declare c challenges; last_closed date; t record;
 begin
   perform nx_tick(p_challenge);
   select * into c from challenges where id = p_challenge;
   -- The latest day whose deadline has passed (as in nx_tick).
   last_closed := least(nx_last_day(c), nx_today(c) - c.deadline_days - case when nx_now() > nx_lock_time(c, nx_today(c) - c.deadline_days) then 0 else 1 end);
+  -- Timers still going stop and save, like a Stop; sessions on the days that no longer count go.
+  for t in select person_id from timer_runs where challenge_id = c.id loop
+    perform nx_stop_timer(c, t.person_id);
+  end loop;
+  delete from timer_sessions where challenge_id = c.id and day > last_closed;
   if last_closed < c.start_date then
     if exists(select 1 from storage.objects where bucket_id = 'proofs' and name like c.id::text || '/%') then
       insert into hidden_challenges(challenge_id, person_id, status)
@@ -1142,7 +1342,7 @@ end $$;
 
 do $$ declare t text; begin
   foreach t in array array['profiles','couples','couple_members','challenges','rules','signatures','invites','entries','points',
-                           'forgiveness_requests','disputes','journal_notes','saved_challenges'] loop
+                           'forgiveness_requests','disputes','journal_notes','saved_challenges','timer_runs','timer_sessions'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('grant select on public.%I to authenticated', t);
     execute format('revoke insert, update, delete on public.%I from anon, authenticated', t);
@@ -1155,7 +1355,9 @@ create policy read_own on public.couple_members for select to authenticated usin
 create policy read_own on public.challenges for select to authenticated using (nx_in_couple(couple_id));
 create policy read_own on public.saved_challenges for select to authenticated using (nx_in_couple(couple_id));
 do $$ declare t text; begin
-  foreach t in array array['rules','signatures','invites','entries','points','forgiveness_requests','disputes','journal_notes'] loop
+  -- Both people read each other's timers and sessions (the partner sees them when reviewing).
+  foreach t in array array['rules','signatures','invites','entries','points','forgiveness_requests','disputes','journal_notes',
+                           'timer_runs','timer_sessions'] loop
     execute format('create policy read_own on public.%I for select to authenticated using (nx_in_challenge(challenge_id))', t);
   end loop;
 end $$;
@@ -1169,7 +1371,8 @@ do $$ declare f text; begin
   -- Internal helpers: nobody calls these directly.
   foreach f in array array['nx_enter(uuid)','nx_partner(uuid,uuid)','nx_tick(uuid)','nx_tick_all()',
     'nx_put_rules(public.challenges,jsonb)','nx_find_invite(text)','nx_check_proofs(public.challenges,jsonb)',
-    'nx_void_point_of(uuid)','nx_add_point(public.entries,text)','nx_forgive(uuid)','nx_end_now(uuid)'] loop
+    'nx_void_point_of(uuid)','nx_add_point(public.entries,text)','nx_forgive(uuid)','nx_end_now(uuid)',
+    'nx_can_time(text,text)','nx_timer_log(public.challenges,uuid,uuid,date)','nx_stop_timer(public.challenges,uuid)'] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
   end loop;
   -- What a signed-in person can call.
@@ -1181,7 +1384,7 @@ do $$ declare f text; begin
     'nx_resolve_dispute(uuid,text,text)','nx_ask_forgiveness(uuid,text)','nx_decide_forgiveness(uuid,boolean)',
     'nx_forgive_point(uuid)','nx_add_note(uuid,date,text)','nx_edit_note(uuid,text)','nx_remove_note(uuid)',
     'nx_save_challenge(uuid,text)','nx_hide_challenge(uuid,boolean)','nx_delete_challenge(uuid)','nx_erase_challenge(uuid)','nx_hide_saved(uuid,boolean)','nx_delete_saved(uuid)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)',
-    'nx_end_request(uuid,text)'] loop
+    'nx_end_request(uuid,text)','nx_timer(uuid,text,uuid)','nx_set_timed(uuid,uuid,boolean)','nx_remove_session(uuid)'] loop
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;
@@ -1214,7 +1417,8 @@ create policy proofs_insert on storage.objects for insert to authenticated
 
 do $$ declare t text; begin
   if exists(select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['challenges','rules','signatures','couple_members','entries','points','forgiveness_requests','disputes','journal_notes'] loop
+    foreach t in array array['challenges','rules','signatures','couple_members','entries','points','forgiveness_requests','disputes','journal_notes',
+                             'timer_runs','timer_sessions'] loop
       execute format('alter publication supabase_realtime add table public.%I', t);
     end loop;
   end if;

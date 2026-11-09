@@ -63,7 +63,19 @@ export type Command =
       /** Who receives the gift. */
       recipientId: string;
       given: boolean;
-    };
+    }
+  /**
+   * The viewer's timer on the challenge on screen. The database stamps the times itself; the page
+   * passes its own moment only to the pure action (startTimer, pauseTimer…) for what shows at once.
+   * Starting stops (and saves) a timer already going.
+   */
+  | { type: 'startTimer'; ruleId: string }
+  | { type: 'pauseTimer' }
+  | { type: 'resumeTimer' }
+  | { type: 'stopTimer' }
+  | { type: 'removeSession'; sessionId: string }
+  /** Turns the timer on or off for a rule counted in minutes, at any time; signatures stay. */
+  | { type: 'setTimed'; ruleId: string; timed: boolean };
 
 /** Where a new challenge starts from on the Start page. */
 export type Template =

@@ -53,6 +53,12 @@ import {
   type Shown,
 } from './queue';
 import type { Held, Pause, Review } from './use-review';
+import {
+  answerSessions,
+  SessionList,
+  SessionsLine,
+  sessionsLine,
+} from './sessions';
 
 /* ── Hooks ─────────────────────────────────────────────────────────────── */
 
@@ -363,6 +369,9 @@ export function AnswerBody({
     : showDay
       ? `${world.partner.name}’s answer · ${formatDayShort(entry.day)}`
       : null;
+  // A timed rule's answer says under it that it came from the timer, and its sessions are the
+  // evidence, listed where a screenshot would be.
+  const sessions = answerSessions(world, rule, entry.personId, entry.day);
   const answer = (
     <>
       <Value rule={rule} shown={shown} size={size} />
@@ -372,15 +381,22 @@ export function AnswerBody({
           Before: {formatAnswer(rule, entry)}
         </p>
       )}
+      <SessionsLine sessions={sessions} value={shown.value} />
     </>
   );
   const note = shown.note ? (
     <Quote person={world.partner}>{shown.note}</Quote>
   ) : null;
+  const list = sessions.length ? (
+    <SessionList sessions={sessions} timeZone={world.challenge.timeZone} />
+  ) : null;
   // On the page's card the screenshot is the biggest thing: under the answer and the note on
   // phones (the note first, so the pinned Approve and Dispute never cover it before a scroll), a
-  // tall tile on the left with the answer and note beside it on wider screens.
+  // tall tile on the left with the answer and note beside it on wider screens. Timer sessions go
+  // where a screenshot would: under the answer on phones, beside it on wider screens (under the
+  // note when there is a screenshot too).
   const beside = size === 'lg' && shown.proofs.length > 0;
+  const besideList = size === 'lg' && !beside && !!list;
   return (
     <div className="flex flex-col gap-4">
       {(kicker || !hideTitle) && (
@@ -395,23 +411,39 @@ export function AnswerBody({
             'grid gap-4',
             beside &&
               'sm:grid-cols-[auto_minmax(0,1fr)] sm:grid-rows-[auto_1fr] sm:gap-x-6',
+            besideList && 'sm:grid-cols-2 sm:grid-rows-[auto_1fr] sm:gap-x-6',
           )}
         >
           <div
             className={cn(
               'flex min-w-0 flex-col gap-2',
               beside && 'sm:col-start-2 sm:row-start-1 sm:pt-1',
+              besideList && 'sm:col-start-1 sm:row-start-1',
             )}
           >
             {answer}
           </div>
-          {note && (
+          {(note || (beside && list)) && (
             <div
               className={cn(
+                'flex min-w-0 flex-col gap-4',
                 beside && 'sm:col-start-2 sm:row-start-2 sm:self-start',
+                besideList && 'sm:col-start-1 sm:row-start-2 sm:self-start',
               )}
             >
               {note}
+              {beside && list}
+            </div>
+          )}
+          {!beside && list && (
+            <div
+              className={cn(
+                'min-w-0',
+                besideList &&
+                  'sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:self-start',
+              )}
+            >
+              {list}
             </div>
           )}
           <Shot
@@ -428,6 +460,7 @@ export function AnswerBody({
             <div className="flex min-w-0 flex-col gap-2 pb-0.5">{answer}</div>
           </div>
           {note}
+          {list}
         </>
       )}
     </div>
@@ -607,19 +640,21 @@ export function UndoLine({
 
 /**
  * "Approve both for Thursday": every answer of that day, each with its rule, the answer and its
- * screenshot (which opens full screen), so nothing is approved unseen. The main button approves
- * them together.
+ * screenshot (which opens full screen) or where its timer sessions came from, so nothing is
+ * approved unseen. The main button approves them together.
  */
 export function ApproveDaySheet({
   sheet,
-  partner,
+  world,
   onApprove,
 }: {
   sheet: SheetFor<DayGroup>;
-  partner: Person;
+  /** The world the answers were drawn from: whose they are, and their timer sessions. */
+  world: World;
   onApprove: (group: DayGroup) => void;
 }) {
   const group = sheet.target;
+  const partner = world.partner;
   return (
     <Sheet
       open={sheet.open}
@@ -646,6 +681,12 @@ export function ApproveDaySheet({
         <ul className="flex flex-col gap-2.5">
           {group.items.map((item) => {
             const shown = shownAnswer(item);
+            const sessions = answerSessions(
+              world,
+              item.rule,
+              item.entry.personId,
+              item.entry.day,
+            );
             return (
               <li
                 key={item.id}
@@ -663,6 +704,11 @@ export function ApproveDaySheet({
                     shown={shown}
                     personId={item.entry.personId}
                   />
+                  {sessions.length > 0 && (
+                    <p className="text-nx-2 text-nx-ink-2">
+                      {sessionsLine(sessions, shown.value)}
+                    </p>
+                  )}
                   {shown.note && (
                     <p className="line-clamp-2 text-nx-2 text-nx-ink-2">
                       <span className="sr-only">{partner.name}’s note: </span>“

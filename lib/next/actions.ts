@@ -2,18 +2,25 @@ import type {
   Challenge,
   DateString,
   Entry,
+  Instant,
   Point,
   Proof,
+  TimerRun,
   World,
 } from './model.ts';
 import { isClosed, shift } from './calendar.ts';
 import {
+  canTime,
   entryFor,
   meetsTarget,
   pendingRequestFor,
   pointOfEntry,
   ruleById,
+  ruleIsFor,
   targetFor,
+  timerDay,
+  timerOf,
+  timerSeconds,
 } from './selectors.ts';
 
 /**
@@ -459,4 +466,110 @@ export function sendInvite(
   to: { name: string; email: string },
 ): World {
   return { ...w, invite: { ...w.invite, to, status: 'sent', sentAt: w.now } };
+}
+
+/* ── Timer ─────────────────────────────────────────────────────────────── */
+// `at` is the moment of the tap (the live app's database uses its own clock for the saved times).
+
+/** Stops `personId`'s timer at `at` and saves its time as a session (nothing is saved for 0 seconds). */
+export function stopTimer(w: World, personId: string, at: Instant): World {
+  const run = timerOf(w, personId);
+  if (!run) return w;
+  const seconds = timerSeconds(run, at);
+  const timers = w.timers.filter((t) => t !== run);
+  if (seconds <= 0) return { ...w, timers };
+  return {
+    ...w,
+    timers,
+    sessions: [
+      ...w.sessions,
+      {
+        id: newId('session', w.sessions),
+        personId,
+        ruleId: run.ruleId,
+        day: run.day,
+        startedAt: run.startedAt,
+        endedAt: at,
+        seconds,
+      },
+    ],
+  };
+}
+
+/**
+ * Starts timing a timed rule for `personId` at `at`; its session counts toward the day it starts on.
+ * One timer at a time: one already going for them stops first and is saved. Only while the challenge
+ * runs and before that day's deadline (nx_timer). On a day the rule doesn't ask, the time is kept but
+ * never becomes an answer.
+ */
+export function startTimer(
+  w: World,
+  personId: string,
+  ruleId: string,
+  at: Instant,
+): World {
+  const rule = ruleById(w.challenge, ruleId);
+  if (!rule?.timed || !canTime(rule) || !ruleIsFor(rule, personId)) return w;
+  const day = timerDay(w, at);
+  if (w.challenge.status !== 'running' || isClosed(w.challenge, day, at))
+    return w;
+  const next = stopTimer(w, personId, at);
+  const run: TimerRun = {
+    personId,
+    ruleId,
+    day,
+    startedAt: at,
+    runningSince: at,
+    banked: 0,
+  };
+  return { ...next, timers: [...next.timers, run] };
+}
+
+/** Pauses `personId`'s running timer: the clock keeps what it has and stands still. */
+export function pauseTimer(w: World, personId: string, at: Instant): World {
+  const run = timerOf(w, personId);
+  if (!run?.runningSince) return w;
+  const paused = { ...run, banked: timerSeconds(run, at), runningSince: null };
+  return { ...w, timers: w.timers.map((t) => (t === run ? paused : t)) };
+}
+
+/** Starts `personId`'s paused timer again, from the time it had. */
+export function resumeTimer(w: World, personId: string, at: Instant): World {
+  const run = timerOf(w, personId);
+  if (!run || run.runningSince) return w;
+  const running = { ...run, runningSince: at };
+  return { ...w, timers: w.timers.map((t) => (t === run ? running : t)) };
+}
+
+/** Takes away a session (timed by mistake). An answer already saved for its day stays as it is. */
+export const removeSession = (w: World, sessionId: string): World => ({
+  ...w,
+  sessions: w.sessions.filter((s) => s.id !== sessionId),
+});
+
+/**
+ * Turns the timer on or off for a rule counted in minutes, at any time (it doesn't change what
+ * counts). Turning it off stops a timer going on that rule and saves its time.
+ */
+export function setTimed(
+  w: World,
+  ruleId: string,
+  timed: boolean,
+  at: Instant = w.now,
+): World {
+  const rule = ruleById(w.challenge, ruleId);
+  if (!rule || !canTime(rule) || !!rule.timed === timed) return w;
+  let next = w;
+  if (!timed)
+    for (const run of w.timers.filter((t) => t.ruleId === ruleId))
+      next = stopTimer(next, run.personId, at);
+  return {
+    ...next,
+    challenge: {
+      ...next.challenge,
+      rules: next.challenge.rules.map((r) =>
+        r.id === ruleId ? { ...r, timed } : r,
+      ),
+    },
+  };
 }

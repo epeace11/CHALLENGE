@@ -89,6 +89,8 @@ export async function loadRows(): Promise<Rows | null> {
     gifts,
     hidden,
     hiddenSaved,
+    timers,
+    sessions,
   ] = await Promise.all([
     select<Rows['members'][number]>('profiles', 'id,name,hue'),
     select<{ couple_id: string; person_id: string; joined_at: string }>(
@@ -124,6 +126,11 @@ export async function loadRows(): Promise<Rows | null> {
       'saved_id,status',
       'saved_id',
     ),
+    // Added by supabase/next/timer.sql: until that has run, nobody has timed anything.
+    select<Rows['timers'][number]>('timer_runs', '*', 'person_id').catch(
+      () => [],
+    ),
+    select<Rows['sessions'][number]>('timer_sessions').catch(() => []),
   ]);
   const me = profiles.find((p) => p.id === user.id);
   if (!me) return null;
@@ -151,6 +158,8 @@ export async function loadRows(): Promise<Rows | null> {
     invites,
     saved,
     gifts,
+    timers,
+    sessions,
   };
 }
 
@@ -336,6 +345,8 @@ export function ruleInput(rule: Rule, meId: string) {
           ...(rule.limits ? { limits: rule.limits } : {}),
         }
       : {}),
+    // The database keeps it only on a rule counted in minutes.
+    ...(rule.timed ? { timed: true } : {}),
   };
 }
 
@@ -724,6 +735,32 @@ export function send(challengeId: string, c: Command) {
         p_challenge: c.challengeId,
         p_name: c.name,
       });
+    // The database stamps the timer's times itself (supabase/next/timer.sql).
+    case 'startTimer':
+      return rpc('nx_timer', {
+        p_challenge: challengeId,
+        p_action: 'start',
+        p_rule: c.ruleId,
+      });
+    case 'pauseTimer':
+    case 'resumeTimer':
+    case 'stopTimer':
+      return rpc('nx_timer', {
+        p_challenge: challengeId,
+        p_action: {
+          pauseTimer: 'pause',
+          resumeTimer: 'resume',
+          stopTimer: 'stop',
+        }[c.type],
+      });
+    case 'removeSession':
+      return rpc('nx_remove_session', { p_session: c.sessionId });
+    case 'setTimed':
+      return rpc('nx_set_timed', {
+        p_challenge: challengeId,
+        p_rule: c.ruleId,
+        p_on: c.timed,
+      });
   }
 }
 
@@ -740,6 +777,9 @@ export function subscribe(onChange: () => void) {
     'forgiveness_requests',
     'disputes',
     'journal_notes',
+    // timer.sql: the partner's timer starting and stopping, and sessions saved.
+    'timer_runs',
+    'timer_sessions',
     // Not gifts_given: a project that hasn't run gifts-given.sql would fail the whole channel.
     // Gift marks are rare and show on the next reload.
   ])

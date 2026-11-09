@@ -15,6 +15,8 @@ import type {
   Rule,
   RuleGroup,
   SavedChallenge,
+  TimerRun,
+  TimerSession,
   Verdict,
   Weekday,
   World,
@@ -86,6 +88,8 @@ export type RuleRow = {
   /** Each person sets their own target, kept in `limits` by person id (pact-limits.sql). */
   personal?: boolean;
   limits?: Record<string, number | string> | null;
+  /** The timer is on for this rule (timer.sql). */
+  timed?: boolean;
 };
 export type ProofRow = { path: string; takenAt?: string | null };
 export type EntryRow = {
@@ -105,6 +109,8 @@ export type EntryRow = {
   correction_note: string | null;
   correction_proofs: ProofRow[] | null;
   correction_at: string | null;
+  /** Saved by itself from the day's timer sessions (timer.sql). */
+  from_timer?: boolean;
 };
 export type PointRow = {
   id: string;
@@ -214,12 +220,38 @@ export type Rows = {
   saved: SavedRow[];
   /** Gifts marked given, by who receives them (supabase/next/gifts-given.sql). */
   gifts: GiftRow[];
+  /** Timers going and finished timer sessions, both people's (supabase/next/timer.sql). */
+  timers: TimerRunRow[];
+  sessions: TimerSessionRow[];
 };
 
 export type GiftRow = {
   challenge_id: string;
   recipient_id: string;
   given_at: string;
+};
+
+/** A timer started and not stopped yet, one per person per challenge (timer.sql). */
+export type TimerRunRow = {
+  challenge_id: string;
+  person_id: string;
+  rule_id: string;
+  day: string;
+  started_at: string;
+  running_since: string | null;
+  banked: number;
+};
+
+/** One stretch of timing, Start to Stop, without the pauses (timer.sql). */
+export type TimerSessionRow = {
+  id: string;
+  challenge_id: string;
+  person_id: string;
+  rule_id: string;
+  day: string;
+  started_at: string;
+  ended_at: string;
+  seconds: number;
 };
 
 /** Where the app lives, for invite and share links. */
@@ -274,6 +306,7 @@ export function ruleOf(r: RuleRow, partnerId: string): Rule {
           ),
         }
       : {}),
+    ...(r.timed ? { timed: true } : {}),
   };
 }
 
@@ -346,6 +379,7 @@ export function entryOf(e: EntryRow, urls: ProofUrls): Entry {
           },
         }
       : {}),
+    ...(e.from_timer ? { fromTimer: true } : {}),
   };
 }
 
@@ -388,6 +422,25 @@ export const noteOf = (n: NoteRow): JournalNote => ({
   day: n.day,
   text: n.text,
   createdAt: n.created_at,
+});
+
+export const timerRunOf = (t: TimerRunRow): TimerRun => ({
+  personId: t.person_id,
+  ruleId: t.rule_id,
+  day: t.day,
+  startedAt: t.started_at,
+  runningSince: t.running_since,
+  banked: Number(t.banked),
+});
+
+export const sessionOf = (s: TimerSessionRow): TimerSession => ({
+  id: s.id,
+  personId: s.person_id,
+  ruleId: s.rule_id,
+  day: s.day,
+  startedAt: s.started_at,
+  endedAt: s.ended_at,
+  seconds: Number(s.seconds),
 });
 
 /** A saved challenge's rules, with 'me' and 'partner' turned into the viewer's and partner's ids. */
@@ -656,6 +709,9 @@ export function buildWorld(
       return row ? [{ coupleId: couple_id, person: personOf(row) }] : [];
     }),
     partnerPending: !partnerRow,
+    // Empty on a project that hasn't run timer.sql (the loader reads none).
+    timers: mine(rows.timers ?? []).map(timerRunOf),
+    sessions: mine(rows.sessions ?? []).map(sessionOf),
   };
 
   // Finished challenges, newest first, each with its verdict worked out from its own rows.
@@ -829,6 +885,8 @@ export function inviteWorld(
     others: [],
     partners: [],
     partnerPending: false,
+    timers: [],
+    sessions: [],
   };
 }
 

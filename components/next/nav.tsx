@@ -15,6 +15,7 @@ export const PAGE_IDS = [
   'practice',
   'overview',
   'log',
+  'timer',
   'rules',
   'review',
   'gifts',

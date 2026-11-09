@@ -17,6 +17,8 @@ import type {
   Weekday,
   OtherChallenge,
   RunningSummary,
+  TimerRun,
+  TimerSession,
   World,
 } from './model.ts';
 import {
@@ -1222,4 +1224,128 @@ export function nextBadge(w: World, personId: string) {
           a.progress!.have / a.progress!.need,
       )[0] ?? null
   );
+}
+
+/* ── Timer ─────────────────────────────────────────────────────────────── */
+
+/** Units a timer counts in: "min", "mins", "minute", "minutes". */
+const MINUTES = /^min(ute)?s?$/i;
+
+/** A rule the timer can be turned on for: a number rule counted in minutes. */
+export const canTime = (rule: Rule) =>
+  rule.kind === 'number' &&
+  !!rule.target &&
+  MINUTES.test(rule.target.unit.trim());
+
+/** Rules with the timer on that `personId` has, in the challenge's order. */
+export const timedRules = (w: World, personId: string) =>
+  rulesFor(w.challenge, personId).filter((r) => r.timed && canTime(r));
+
+/** Rules `personId` has that the timer could be turned on for, and isn't yet. */
+export const timeableRules = (w: World, personId: string) =>
+  rulesFor(w.challenge, personId).filter((r) => canTime(r) && !r.timed);
+
+/** The timer `personId` has going (running or paused), if any. */
+export const timerOf = (w: World, personId: string): TimerRun | null =>
+  w.timers.find((t) => t.personId === personId) ?? null;
+
+/** Seconds on a timer's clock at `now`: earlier stretches plus the one running, worked out from timestamps. */
+export const timerSeconds = (run: TimerRun, now: Instant | number) =>
+  run.banked +
+  (run.runningSince
+    ? Math.max(0, Math.floor((ms(now) - ms(run.runningSince)) / 1000))
+    : 0);
+
+/** The challenge day an instant falls on, in its time zone: the day a session started counts toward. */
+export const timerDay = (w: World, at: Instant | number): DateString =>
+  dateIn(w.challenge.timeZone, at);
+
+/** One person's finished sessions on a rule, oldest first; only `day`'s when given. */
+export const sessionsOf = (
+  w: World,
+  personId: string,
+  ruleId: string,
+  day?: DateString,
+): TimerSession[] =>
+  w.sessions
+    .filter(
+      (s) =>
+        s.personId === personId &&
+        s.ruleId === ruleId &&
+        (day === undefined || s.day === day),
+    )
+    .sort((a, b) => ms(a.startedAt) - ms(b.startedAt));
+
+/** Seconds timed on a rule on `day`: its finished sessions, plus a timer still going for that day. */
+export function timedSeconds(
+  w: World,
+  personId: string,
+  ruleId: string,
+  day: DateString,
+  now: Instant | number = w.now,
+) {
+  const done = sessionsOf(w, personId, ruleId, day).reduce(
+    (sum, s) => sum + s.seconds,
+    0,
+  );
+  const run = timerOf(w, personId);
+  return run && run.ruleId === ruleId && run.day === day
+    ? done + timerSeconds(run, now)
+    : done;
+}
+
+/** Whole minutes, rounded down: what a timed day's answer is saved as (19:59 is 19 min). */
+export const timedMinutes = (seconds: number) =>
+  Math.floor(Math.max(0, seconds) / 60);
+
+/**
+ * Where a timed day stands against `personId`'s target: the seconds timed, the target, and `diff`,
+ * the seconds past (positive) or short of (negative) the target's minutes. `met` uses the saved whole
+ * minutes, so the moment the clock reaches the target is the moment the answer counts. For a limit
+ * ("60 min or less"), a positive `diff` is time over the limit and `met` turns false.
+ */
+export function timedProgress(
+  w: World,
+  personId: string,
+  rule: Rule,
+  day: DateString,
+  now: Instant | number = w.now,
+) {
+  const target = targetFor(rule, personId);
+  const seconds = timedSeconds(w, personId, rule.id, day, now);
+  const targetSeconds = (target?.value ?? 0) * 60;
+  const minutes = timedMinutes(seconds);
+  return {
+    seconds,
+    minutes,
+    target,
+    targetSeconds,
+    diff: seconds - targetSeconds,
+    met: !!target && meetsTarget(target, minutes),
+    /** True for an "at most" rule, where going past the target is a miss. */
+    limit: target?.op === '<=',
+  };
+}
+
+/**
+ * A timed rule's days so far for `personId`, newest first, for the history: each day it asks
+ * (from its first day to today), with the seconds timed, that day's sessions, and the answer saved
+ * for it (by itself from the timer, or by hand), if any.
+ */
+export function timedDays(
+  w: World,
+  personId: string,
+  rule: Rule,
+  now: Instant | number = w.now,
+) {
+  const today = timerDay(w, now);
+  return challengeDays(w.challenge)
+    .filter((day) => day <= today && appliesOn(rule, day, w.challenge))
+    .reverse()
+    .map((day) => ({
+      day,
+      seconds: timedSeconds(w, personId, rule.id, day, now),
+      sessions: sessionsOf(w, personId, rule.id, day),
+      entry: entryFor(w, personId, rule.id, day) ?? null,
+    }));
 }

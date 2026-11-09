@@ -1,0 +1,261 @@
+/* Timer, version 1 (the clock first): the dial, the rule chips and the past days. Tokens only, so
+   light, dark and every look work; motion uses the --nx-* durations, which are 0 under reduced
+   motion. */
+/* Tailwind's layer order, stated first: if this sheet is registered before app/globals.css, the
+   components layer still sits between base (preflight) and utilities. */
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  /* ── The dial: today's time inside a ring that closes at the target ──────── */
+  /* The dial gives way on short screens (a short laptop window, a small phone), so the page
+     still fits without scrolling. */
+  .dial {
+    --dial-size: min(220px, 60vw, max(184px, 100dvh - 600px));
+    --dial-arc: var(--nx-accent);
+    --dial-track: var(--nx-sunken);
+    --dial-lap: var(--nx-accent-strong);
+    position: relative;
+    width: var(--dial-size);
+    aspect-ratio: 1;
+    margin-inline: auto;
+  }
+  @media (min-width: 640px) {
+    .dial {
+      --dial-size: min(288px, max(176px, 100dvh - 488px));
+    }
+  }
+  .dial[data-tone='done'] {
+    --dial-arc: var(--nx-done-bar);
+    --dial-track: var(--nx-done-soft);
+    --dial-lap: var(--nx-done);
+  }
+  .dial[data-tone='missed'] {
+    --dial-arc: var(--nx-missed-bar);
+    --dial-track: var(--nx-missed-soft);
+    --dial-lap: var(--nx-missed);
+  }
+  .ring {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .track,
+  .arc,
+  .lap {
+    fill: none;
+    stroke-width: 9;
+    transition:
+      stroke var(--nx-slow) var(--nx-ease),
+      stroke-dashoffset var(--nx-slow) var(--nx-ease),
+      opacity var(--nx-base) var(--nx-ease);
+  }
+  .track {
+    stroke: var(--dial-track);
+  }
+  .arc {
+    stroke: var(--dial-arc);
+    stroke-linecap: round;
+    stroke-dasharray: 100 100;
+  }
+  /* Time past the target (or past a limit) goes round again, darker, on top of the full ring. */
+  .lap {
+    stroke: var(--dial-lap);
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 100 100;
+  }
+  .arc[data-empty],
+  .lap[data-empty] {
+    opacity: 0;
+  }
+  /* Once time laps the ring, the full ring steps back so the lap reads on top, in light and dark. */
+  .dial[data-over] .arc {
+    opacity: 0.5;
+  }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12%;
+    text-align: center;
+  }
+  /* The stopwatch, in the system's countdown numbers: Georgia with lining, tabular digits, so
+     nothing shifts as it ticks. Hours ("1:02:05") step down a size. */
+  .digits {
+    font-family: var(--nx-font-serif);
+    /* The countdown size (64px) on a full dial, smaller as the dial gives way. */
+    font-size: calc(var(--dial-size) * 0.22);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: lining-nums tabular-nums;
+    color: var(--nx-ink);
+    white-space: nowrap;
+    transition: color var(--nx-base) var(--nx-ease);
+  }
+  .digits[data-long] {
+    font-size: calc(var(--dial-size) * 0.15);
+  }
+  /* Paused: the clock stands still, a shade lighter. */
+  .dial[data-state='paused'] .digits {
+    color: var(--nx-ink-2);
+  }
+
+  /* "+10 min" past the target: a small pill in the dial's tone. */
+  .over {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    animation: nx-pop var(--nx-slow) var(--nx-ease) both;
+  }
+  .over[data-tone='done'] {
+    background: var(--nx-done-soft);
+    color: var(--nx-done);
+  }
+  .over[data-tone='missed'] {
+    background: var(--nx-missed-soft);
+    color: var(--nx-missed);
+  }
+
+  /* While the clock runs: a dot that breathes slowly (still under reduced motion). */
+  .live {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: var(--dial-lap, var(--nx-accent));
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  /* ── Labels and today's sessions ──────────────────────────────────────── */
+  /* "Today", "Past days": small labels, so the dial stays the one big thing. */
+  .label {
+    font-family: var(--nx-font-sans);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--nx-ink-2);
+  }
+  /* One session as a chip: its start time and length; a tap opens it. */
+  .session {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--nx-line-strong);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    font-size: 16px;
+    line-height: 1.2;
+    white-space: nowrap;
+    transition:
+      border-color var(--nx-base) var(--nx-ease),
+      background var(--nx-base) var(--nx-ease);
+  }
+  .session:hover {
+    border-color: var(--nx-accent-line);
+    background: var(--nx-accent-soft);
+  }
+
+  /* ── The rule chips (several timed rules) ─────────────────────────────── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    max-width: 100%;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--nx-line-strong);
+    background: var(--nx-surface-2);
+    color: var(--nx-ink);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background var(--nx-base) var(--nx-ease),
+      border-color var(--nx-base) var(--nx-ease),
+      color var(--nx-base) var(--nx-ease),
+      opacity var(--nx-base) var(--nx-ease),
+      transform var(--nx-fast) var(--nx-ease);
+  }
+  .chip:hover:not([data-off]) {
+    border-color: var(--nx-accent-line);
+  }
+  .chip:active:not([data-off]) {
+    transform: scale(0.97);
+  }
+  .chip:has(input:checked) {
+    border-color: var(--nx-accent);
+    background: var(--nx-accent-soft);
+    color: var(--nx-accent);
+    box-shadow: 0 0 0 1px var(--nx-accent) inset;
+  }
+  .chip:has(input:focus-visible) {
+    outline: 2px solid var(--nx-accent);
+    outline-offset: 2px;
+  }
+  .chip[data-off] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .chip svg {
+    flex-shrink: 0;
+    color: var(--nx-done);
+  }
+
+  /* ── Past days: one tile per day, the minutes and how the answer stands ── */
+  .days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    padding: 0 0 4px;
+    border-radius: 12px;
+    color: var(--nx-ink-2);
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  .tile:hover .square {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      0 0 0 2px var(--nx-accent-line);
+  }
+  /* An nx-day square (laid out with Tailwind's flex classes): the minutes over the icon. */
+  .square {
+    gap: 3px;
+    width: 100%;
+    max-width: 52px;
+    aspect-ratio: 1;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1;
+    transition: box-shadow var(--nx-base) var(--nx-ease);
+  }
+}
