@@ -557,6 +557,14 @@ Pick: 3, October 30, 2026 (Erin). Built: one step at a time is now the page, and
 
 Pick: 1
 
+Round, November 9, 2026: goals. Each person writes a few goals for the challenge in their own words. Their Overview shows them, and the partner's are one tap away. Nothing is scored or ticked off. The versions differ only in where your goals sit, and all three share the same editor and partner sheet.
+
+1. **Where they fit.** A quiet "Your goals" card in the stack of rows under the Log card, with Change, and a "Jordan's goals" row at its foot.
+2. **Your goals first.** Your goals in italic serif right under the day's title, before the Log card, with Change and Jordan's goals in one quiet row under them. Erin wanted them more prominent, in a card of their own that draws the eye, so version 2 became: the one tinted card on the page, right under the title, with "Your goals", Change in its corner, the goals large in serif, and Jordan's goals at its foot. Then (Erin): each goal a small numbered card inside it ("1. Run a 10K before New Year"), side by side, never stacked: one fills the row, two sit as a pair, and three or more sit in one row that scrolls sideways on a phone (so Log yesterday stays on the first screen) and in rows of three from 640px.
+3. **One compact row.** A single row with the first goal ("Run a 10K before New Year · Your goals · 1 more") among the rows under the Log card. It opens a sheet with all your goals, Change, and Jordan's goals as a step inside it.
+
+Pick: none of the first three as they were; version 2, reworked as above, November 9, 2026 (Erin). Built: Overview opens with the goals card (`goals-card.tsx`), Jordan's goals sheet shows the same numbered goals, and versions 1 and 3 are deleted.
+
 ### Check in (`log`)
 
 1. Step by step: a '3 left' card on top, one question card at a time with Save on the card, gliding to the next; the journal below; a calendar button opens the day switcher.

@@ -223,6 +223,17 @@ export type Rows = {
   /** Timers going and finished timer sessions, both people's (supabase/next/timer.sql). */
   timers: TimerRunRow[];
   sessions: TimerSessionRow[];
+  /** Both people's goals for each challenge (supabase/next/goals.sql). */
+  goals: GoalRow[];
+};
+
+/** One of a person's goals for a challenge, in their order (goals.sql). */
+export type GoalRow = {
+  id: string;
+  challenge_id: string;
+  person_id: string;
+  position: number;
+  text: string;
 };
 
 export type GiftRow = {
@@ -712,8 +723,10 @@ export function buildWorld(
     // Empty on a project that hasn't run timer.sql (the loader reads none).
     timers: mine(rows.timers ?? []).map(timerRunOf),
     sessions: mine(rows.sessions ?? []).map(sessionOf),
-    // Filled in from the goals table (goals.sql).
-    goals: [],
+    // Empty on a project that hasn't run goals.sql.
+    goals: mine(rows.goals ?? [])
+      .sort((a, b) => a.position - b.position)
+      .map((g) => ({ id: g.id, personId: g.person_id, text: g.text })),
   };
 
   // Finished challenges, newest first, each with its verdict worked out from its own rows.

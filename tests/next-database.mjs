@@ -44,13 +44,19 @@ await db.exec(
 await db.exec(
   readFileSync(new URL('../supabase/next/schema.sql', import.meta.url), 'utf8'),
 );
-// The functions timer.sql replaces, as the fresh install defines them.
+// The functions timer.sql, rule-limit.sql and goals.sql replace, as the fresh install defines them.
 const timerFunctions = [
-  ...readFileSync(
-    new URL('../supabase/next/timer.sql', import.meta.url),
-    'utf8',
-  ).matchAll(/create or replace function public\.(\w+)\(/g),
-].map((m) => m[1]);
+  ...new Set(
+    ['timer.sql', 'rule-limit.sql', 'goals.sql'].flatMap((script) =>
+      [
+        ...readFileSync(
+          new URL(`../supabase/next/${script}`, import.meta.url),
+          'utf8',
+        ).matchAll(/create or replace function public\.(\w+)\(/g),
+      ].map((m) => m[1]),
+    ),
+  ),
+];
 const definitions = async () =>
   (
     await db.query(
@@ -77,6 +83,7 @@ for (const script of [
   'fixes-nov-6.sql',
   'timer.sql',
   'rule-limit.sql',
+  'goals.sql',
 ])
   await db.exec(
     readFileSync(
@@ -84,7 +91,7 @@ for (const script of [
       'utf8',
     ),
   );
-// Run last, timer.sql and rule-limit.sql leave every function they replace as the fresh install has it.
+// Run last, those scripts leave every function they replace as the fresh install has it.
 assert.deepEqual(await definitions(), freshDefinitions);
 
 /** Runs SQL as `id` (row-level security on), at `now` when given. */
@@ -706,6 +713,7 @@ async function rowsFor(id) {
     gifts: await all('gifts_given'),
     timers: await all('timer_runs'),
     sessions: await all('timer_sessions'),
+    goals: await all('goals'),
   };
 }
 const links = { origin: 'https://test.example' };
@@ -2406,6 +2414,136 @@ await fails(
       [many(31)],
     ),
     /30 rules or fewer/,
+  );
+}
+
+// Goals (goals.sql): each person's own, in order, read by both, nobody else.
+{
+  const goalsOf = (id) =>
+    as(
+      lee,
+      `select text, position from goals where challenge_id = $1 and person_id = $2 order by position`,
+      [tonight, id],
+    );
+  await as(lee, `select nx_set_goals($1, $2::jsonb)`, [
+    tonight,
+    JSON.stringify(['  Run a 10K ', '', 'x'.repeat(150), 'a', 'b', 'c', 'd']),
+  ]);
+  assert.deepEqual(
+    (await goalsOf(lee)).map((g) => [g.position, g.text.length]),
+    [
+      [0, 9],
+      [1, 100],
+      [2, 1],
+      [3, 1],
+      [4, 1],
+    ],
+    'trimmed, empty left out, 100 characters, 5 at most',
+  );
+  assert.equal((await goalsOf(lee))[0].text, 'Run a 10K');
+  // The partner reads them; their own set leaves Lee's as they are.
+  assert.equal(
+    (
+      await as(
+        kim,
+        `select count(*)::int n from goals where challenge_id = $1 and person_id = $2`,
+        [tonight, lee],
+      )
+    )[0].n,
+    5,
+  );
+  await as(kim, `select nx_set_goals($1, $2::jsonb)`, [
+    tonight,
+    JSON.stringify(['Play one song']),
+  ]);
+  assert.equal((await goalsOf(lee)).length, 5);
+  assert.deepEqual(
+    (await goalsOf(kim)).map((g) => g.text),
+    ['Play one song'],
+  );
+  // Replacing: a new list, then none.
+  await as(lee, `select nx_set_goals($1, $2::jsonb)`, [
+    tonight,
+    JSON.stringify(['Beach body']),
+  ]);
+  assert.deepEqual(
+    (await goalsOf(lee)).map((g) => g.text),
+    ['Beach body'],
+  );
+  await as(lee, `select nx_set_goals($1, '[]'::jsonb)`, [tonight]);
+  assert.deepEqual(await goalsOf(lee), []);
+  await fails(
+    as(lee, `select nx_set_goals($1, '{}'::jsonb)`, [tonight]),
+    /must be a list/,
+  );
+  // An outsider reads none and can't write any; nobody writes the table directly.
+  assert.equal(
+    (
+      await as(
+        ana,
+        `select count(*)::int n from goals where challenge_id = $1`,
+        [tonight],
+      )
+    )[0].n,
+    0,
+  );
+  await fails(
+    as(ana, `select nx_set_goals($1, '["Mine"]'::jsonb)`, [tonight]),
+    /isn't yours/,
+  );
+  await fails(
+    as(
+      lee,
+      `insert into goals(challenge_id, person_id, text) values ($1, $2, 'Sneaky')`,
+      [tonight, lee],
+    ),
+    /permission denied/,
+  );
+  await fails(
+    as(lee, `delete from goals where challenge_id = $1`, [tonight]),
+    /permission denied/,
+  );
+  // The live app shows them: each person's in order, on the challenge they belong to.
+  await as(lee, `select nx_set_goals($1, $2::jsonb)`, [
+    tonight,
+    JSON.stringify(['Beach body', 'Talk for 3 minutes in Arabic']),
+  ]);
+  const lw = buildWorld(
+    await rowsFor(lee),
+    '2027-04-14T12:00:00.000Z',
+    'America/Toronto',
+    links,
+    {},
+    tonight,
+  ).world;
+  assert.equal(lw.challenge.id, tonight);
+  assert.deepEqual(
+    lw.goals.filter((g) => g.personId === lee).map((g) => g.text),
+    ['Beach body', 'Talk for 3 minutes in Arabic'],
+  );
+  assert.deepEqual(
+    lw.goals.filter((g) => g.personId === kim).map((g) => g.text),
+    ['Play one song'],
+  );
+  // Goals go with their challenge.
+  await db.exec(`delete from goals where challenge_id = '${tonight}'`);
+  await as(kim, `select nx_set_goals($1, '["Back again"]'::jsonb)`, [tonight]);
+  const before = (
+    await db.query(
+      `select count(*)::int n from goals where challenge_id = $1`,
+      [tonight],
+    )
+  ).rows[0].n;
+  assert.equal(before, 1);
+  await db.exec(`delete from challenges where id = '${tonight}'`);
+  assert.equal(
+    (
+      await db.query(
+        `select count(*)::int n from goals where challenge_id = $1`,
+        [tonight],
+      )
+    ).rows[0].n,
+    0,
   );
 }
 

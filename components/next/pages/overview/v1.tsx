@@ -1,4 +1,4 @@
-// Numbers first. Thursday's check-ins as one big number in the card with the Log button, then number buttons for review, gym and both gifts, then the week.
+// Your goals first, in a card of their own: the one tinted card on the page, under the day's title, each goal a small numbered card side by side; then the check-ins as one big number with the Log button, number buttons for review, gym and both gifts, and the week.
 'use client';
 import { Fragment, useMemo, useState } from 'react';
 import { ArrowRight, CircleCheck, Clock3 } from 'lucide-react';
@@ -34,8 +34,12 @@ import { overviewOf, shortTitle } from './data';
 import { BeforeStart } from './before-start';
 import { TimerRow } from './timer-row';
 import { DaySheet, WeekLegend, WeekStrip } from './week';
+import { GoalsFirst } from './goals-card';
 
-/** Overview, version 1. Before Day 1 it shows the wait instead. */
+/**
+ * Overview: your goals lead the page, as the first thing read each day. Everything under
+ * them is the picked Overview. Before Day 1 it shows the wait instead.
+ */
 export default function OverviewV1() {
   const world = useWorld();
   if (world.today < world.challenge.start)
@@ -199,7 +203,11 @@ function Running() {
   return (
     <AppFrame>
       <div className="flex flex-col gap-8">
-        <PageTitle title={o.today} />
+        {/* Your goals belong with the day's title: the first thing read, before what to do. */}
+        <div className="flex flex-col gap-4">
+          <PageTitle title={o.today} />
+          <GoalsFirst />
+        </div>
 
         <EndAsk />
 

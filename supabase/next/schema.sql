@@ -230,6 +230,17 @@ create table public.timer_sessions(
 );
 create index timer_sessions_challenge on public.timer_sessions(challenge_id, person_id, rule_id, day);
 
+-- A person's goals for one challenge, in their own words and order. Nothing is scored.
+create table public.goals(
+  id uuid primary key default gen_random_uuid(),
+  challenge_id uuid not null references public.challenges on delete cascade,
+  person_id uuid not null references public.profiles on delete cascade,
+  position integer not null default 0,
+  text text not null check (length(trim(text)) between 1 and 100),
+  created_at timestamptz not null default now()
+);
+create index goals_challenge on public.goals(challenge_id, person_id, position);
+
 -- A named copy of a challenge's rules and settings, owned by the couple. Never answers or points.
 create table public.saved_challenges(
   id uuid primary key default gen_random_uuid(),
@@ -1056,6 +1067,23 @@ begin
   delete from timer_sessions where id = s.id;
 end $$;
 
+-- The viewer's goals for a challenge, replacing the ones they had, in order: trimmed, empty ones
+-- left out, at most 5 of 100 characters each (setGoals in lib/next/actions.ts does the same). Only
+-- the viewer's own; the partner reads them. Any time, before Day 1 or after.
+create function public.nx_set_goals(p_challenge uuid, p_goals jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare c challenges := nx_enter(p_challenge); g text; i integer := 0;
+begin
+  if jsonb_typeof(coalesce(p_goals, '[]')) <> 'array' then raise exception 'Goals must be a list.'; end if;
+  delete from goals where challenge_id = c.id and person_id = auth.uid();
+  for g in select left(trim(v), 100) from jsonb_array_elements_text(coalesce(p_goals, '[]')) v loop
+    continue when g = '';
+    exit when i >= 5;
+    insert into goals(challenge_id, person_id, position, text) values (c.id, auth.uid(), i, g);
+    i := i + 1;
+  end loop;
+end $$;
+
 /* ── Saved challenges ──────────────────────────────────────────────────── */
 
 -- Saves a challenge's rules and settings under a name. Returns the saved challenge's id.
@@ -1342,7 +1370,8 @@ end $$;
 
 do $$ declare t text; begin
   foreach t in array array['profiles','couples','couple_members','challenges','rules','signatures','invites','entries','points',
-                           'forgiveness_requests','disputes','journal_notes','saved_challenges','timer_runs','timer_sessions'] loop
+                           'forgiveness_requests','disputes','journal_notes','saved_challenges','timer_runs','timer_sessions',
+                           'goals'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('grant select on public.%I to authenticated', t);
     execute format('revoke insert, update, delete on public.%I from anon, authenticated', t);
@@ -1355,9 +1384,9 @@ create policy read_own on public.couple_members for select to authenticated usin
 create policy read_own on public.challenges for select to authenticated using (nx_in_couple(couple_id));
 create policy read_own on public.saved_challenges for select to authenticated using (nx_in_couple(couple_id));
 do $$ declare t text; begin
-  -- Both people read each other's timers and sessions (the partner sees them when reviewing).
+  -- Both people read each other's timers and sessions (the partner sees them when reviewing), and goals.
   foreach t in array array['rules','signatures','invites','entries','points','forgiveness_requests','disputes','journal_notes',
-                           'timer_runs','timer_sessions'] loop
+                           'timer_runs','timer_sessions','goals'] loop
     execute format('create policy read_own on public.%I for select to authenticated using (nx_in_challenge(challenge_id))', t);
   end loop;
 end $$;
@@ -1384,7 +1413,8 @@ do $$ declare f text; begin
     'nx_resolve_dispute(uuid,text,text)','nx_ask_forgiveness(uuid,text)','nx_decide_forgiveness(uuid,boolean)',
     'nx_forgive_point(uuid)','nx_add_note(uuid,date,text)','nx_edit_note(uuid,text)','nx_remove_note(uuid)',
     'nx_save_challenge(uuid,text)','nx_hide_challenge(uuid,boolean)','nx_delete_challenge(uuid)','nx_erase_challenge(uuid)','nx_hide_saved(uuid,boolean)','nx_delete_saved(uuid)','nx_set_share_link(uuid,boolean)','nx_cancel_challenge(uuid)',
-    'nx_end_request(uuid,text)','nx_timer(uuid,text,uuid)','nx_set_timed(uuid,uuid,boolean)','nx_remove_session(uuid)'] loop
+    'nx_end_request(uuid,text)','nx_timer(uuid,text,uuid)','nx_set_timed(uuid,uuid,boolean)','nx_remove_session(uuid)',
+    'nx_set_goals(uuid,jsonb)'] loop
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;
@@ -1418,7 +1448,7 @@ create policy proofs_insert on storage.objects for insert to authenticated
 do $$ declare t text; begin
   if exists(select 1 from pg_publication where pubname = 'supabase_realtime') then
     foreach t in array array['challenges','rules','signatures','couple_members','entries','points','forgiveness_requests','disputes','journal_notes',
-                             'timer_runs','timer_sessions'] loop
+                             'timer_runs','timer_sessions','goals'] loop
       execute format('alter publication supabase_realtime add table public.%I', t);
     end loop;
   end if;

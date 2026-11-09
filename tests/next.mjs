@@ -1039,6 +1039,37 @@ for (const file of styles) {
   );
 }
 
+// Goals: each person's own, in order, words only.
+{
+  const G = await import('../lib/next/actions.ts');
+  const S = await import('../lib/next/selectors.ts');
+  assert.deepEqual(
+    S.goalsOf(w, MAYA).map((g) => g.text),
+    ['Run a 10K before New Year', 'Read two books a month'],
+  );
+  assert.deepEqual(
+    S.goalsOf(w, JORDAN).map((g) => g.text),
+    ['Sleep 7 hours most nights'],
+  );
+  const x = G.setGoals(w, MAYA, [
+    '  Learn to swim ',
+    '',
+    'x'.repeat(150),
+    'a',
+    'b',
+    'c',
+    'd',
+    'e',
+  ]);
+  assert.deepEqual(
+    S.goalsOf(x, MAYA).map((g) => g.text.length),
+    [13, 100, 1, 1, 1],
+    'trimmed, empty dropped, 100 characters, 5 at most',
+  );
+  assert.equal(S.goalsOf(x, JORDAN).length, 1, "the partner's stay");
+  assert.equal(S.goalsOf(G.setGoals(w, MAYA, []), MAYA).length, 0);
+}
+
 console.log(
-  'PASS: next — formatters and dates, the sample world’s numbers (open check-ins, review queue, points and gifts, gym weeks, streaks, calendar colours, pills, recap, stakes, badges), actions, the timer, every planned page version, and the no-network and 14px rules.',
+  'PASS: next — formatters and dates, the sample world’s numbers (open check-ins, review queue, points and gifts, gym weeks, streaks, calendar colours, pills, recap, stakes, badges), actions, the timer, goals, every planned page version, and the no-network and 14px rules.',
 );

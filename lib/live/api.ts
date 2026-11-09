@@ -91,6 +91,7 @@ export async function loadRows(): Promise<Rows | null> {
     hiddenSaved,
     timers,
     sessions,
+    goals,
   ] = await Promise.all([
     select<Rows['members'][number]>('profiles', 'id,name,hue'),
     select<{ couple_id: string; person_id: string; joined_at: string }>(
@@ -131,6 +132,8 @@ export async function loadRows(): Promise<Rows | null> {
       () => [],
     ),
     select<Rows['sessions'][number]>('timer_sessions').catch(() => []),
+    // Added by supabase/next/goals.sql: until that has run, nobody has goals.
+    select<Rows['goals'][number]>('goals').catch(() => []),
   ]);
   const me = profiles.find((p) => p.id === user.id);
   if (!me) return null;
@@ -160,6 +163,7 @@ export async function loadRows(): Promise<Rows | null> {
     gifts,
     timers,
     sessions,
+    goals,
   };
 }
 
@@ -761,6 +765,11 @@ export function send(challengeId: string, c: Command) {
         p_rule: c.ruleId,
         p_on: c.timed,
       });
+    case 'setGoals':
+      return rpc('nx_set_goals', {
+        p_challenge: challengeId,
+        p_goals: c.goals,
+      });
   }
 }
 
@@ -780,6 +789,8 @@ export function subscribe(onChange: () => void) {
     // timer.sql: the partner's timer starting and stopping, and sessions saved.
     'timer_runs',
     'timer_sessions',
+    // goals.sql: the partner's goals as they change.
+    'goals',
     // Not gifts_given: a project that hasn't run gifts-given.sql would fail the whole channel.
     // Gift marks are rare and show on the next reload.
   ])
