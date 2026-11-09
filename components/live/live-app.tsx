@@ -180,6 +180,8 @@ const SIGNED_OUT: PageId[] = ['landing', 'signup'];
 const RUNNING: PageId[] = [
   'overview',
   'log',
+  // Every page inside a running challenge belongs here (tests/next.mjs checks it).
+  'timer',
   'review',
   'progress',
   'gifts',

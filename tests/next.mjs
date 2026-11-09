@@ -1070,6 +1070,23 @@ for (const file of styles) {
   assert.equal(S.goalsOf(G.setGoals(w, MAYA, []), MAYA).length, 0);
 }
 
+// The live app can open every page inside a running challenge (it once couldn't open Timer).
+{
+  const { PAGE_META } = await import('../components/next/pages/meta.ts');
+  const live = readFileSync(join(root, 'components/live/live-app.tsx'), 'utf8');
+  const running = [
+    ...live
+      .match(/const RUNNING: PageId\[\] = \[([\s\S]*?)\];/)[1]
+      .matchAll(/'(\w+)'/g),
+  ].map((m) => m[1]);
+  for (const meta of Object.values(PAGE_META))
+    if (meta.frame === 'app')
+      assert.ok(
+        running.includes(meta.id),
+        `the live app opens ${meta.id} while a challenge runs`,
+      );
+}
+
 console.log(
   'PASS: next — formatters and dates, the sample world’s numbers (open check-ins, review queue, points and gifts, gym weeks, streaks, calendar colours, pills, recap, stakes, badges), actions, the timer, goals, every planned page version, and the no-network and 14px rules.',
 );
