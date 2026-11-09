@@ -3,7 +3,6 @@
 import { ArrowRight } from 'lucide-react';
 import type { DateString, Rule, World } from '@/lib/next/model';
 import { reviewQueue, streaks } from '@/lib/next/selectors';
-import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { Button } from '@/components/next/ui';
 import type { EndActionsProps } from './page';
@@ -23,17 +22,13 @@ export function streakAfter(w: World, personId: string, day: DateString) {
 }
 
 /**
- * Review the partner's answers when something waits for you, else another challenge waiting, else Overview. The day's answers are
- * the squares above (each opens its answer), so there is no second button for them.
+ * Review the partner's answers when something waits for you, else Overview. It stays in this
+ * challenge: switching to another happens only on Your challenges. The day's answers are the squares
+ * above (each opens its answer), so there is no second button for them.
  */
 export function NextActions({ ci }: EndActionsProps) {
   const { navigate } = useNav();
-  const { host } = useBackend();
   const review = reviewQueue(ci.world, ci.me).count > 0;
-  // Another challenge waiting comes next, once nothing here does.
-  const other = ci.world.others.find((o) => o.needsYou);
-  const openOther = () =>
-    other && (host ? host.openChallenge(other.id) : navigate('home'));
   return (
     <div className="flex flex-col gap-3 sm:items-start">
       <Button
@@ -42,23 +37,10 @@ export function NextActions({ ci }: EndActionsProps) {
         full
         iconEnd={ArrowRight}
         className="sm:w-auto sm:min-w-56"
-        onClick={() =>
-          !review && other
-            ? openOther()
-            : navigate(review ? 'review' : 'overview')
-        }
+        onClick={() => navigate(review ? 'review' : 'overview')}
       >
-        {review
-          ? `Review ${ci.partner}’s answers`
-          : other
-            ? `Go to ${other.name}`
-            : 'Go to Overview'}
+        {review ? `Review ${ci.partner}’s answers` : 'Go to Overview'}
       </Button>
-      {review && other && (
-        <Button size="lg" full className="sm:w-auto" onClick={openOther}>
-          Go to {other.name}
-        </Button>
-      )}
     </div>
   );
 }

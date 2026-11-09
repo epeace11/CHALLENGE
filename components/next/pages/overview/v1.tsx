@@ -6,14 +6,11 @@ import type { DateString } from '@/lib/next/model';
 import {
   formatDuration,
   formatMoney,
-  lastDay,
   plural,
   settling,
   settlingLine,
-  shift,
 } from '@/lib/next/selectors';
 import { AppFrame } from '@/components/next/frames';
-import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { showVerdictFor } from '../verdict/which';
 import { useWorld } from '@/components/next/world';
@@ -24,7 +21,6 @@ import {
   GlassCard,
   PageTitle,
   ProgressBar,
-  RowButton,
   Section,
   StatButton,
 } from '@/components/next/ui';
@@ -138,46 +134,6 @@ function Settling() {
   );
 }
 
-/** Other challenges waiting on this person, in words, each opening that challenge. */
-function OthersWaiting() {
-  const world = useWorld();
-  const { navigate } = useNav();
-  const { host } = useBackend();
-  const waiting = world.others.filter((o) => o.needsYou);
-  // Another challenge that just finished: its result, for two weeks or until the gifts are given.
-  const results = world.past.filter(
-    (p) =>
-      !p.hidden &&
-      p.challenge.id !== world.challenge.id &&
-      shift(lastDay(p.challenge), 14) >= world.today &&
-      p.verdict.people.some((x) => !x.giftGivenAt),
-  );
-  if (!waiting.length && !results.length) return null;
-  return (
-    <Enter index={2} className="flex flex-col gap-2.5">
-      {waiting.map((o) => (
-        <RowButton
-          key={o.id}
-          title={`${o.name}, with ${o.partner}`}
-          detail={o.line}
-          onClick={() => (host ? host.openChallenge(o.id) : navigate('home'))}
-        />
-      ))}
-      {results.map((p) => (
-        <RowButton
-          key={p.challenge.id}
-          title={`${p.challenge.name}, with ${(p.partner ?? world.partner).name}`}
-          detail="Finished. See who won"
-          onClick={() => {
-            showVerdictFor(p.challenge.id);
-            navigate('verdict');
-          }}
-        />
-      ))}
-    </Enter>
-  );
-}
-
 function Running() {
   const world = useWorld();
   const { navigate } = useNav();
@@ -195,7 +151,6 @@ function Running() {
           <PageTitle title={o.today} />
           <EndAsk />
           <Settling />
-          <OthersWaiting />
         </div>
       </AppFrame>
     );
@@ -260,30 +215,11 @@ function Running() {
                 </GlassCard>
               </>
             ) : o.firstDay ? (
-              <>
-                {/* Day 1: nothing can be logged until tomorrow, so the card says when, and what. */}
-                <GlassCard className="flex flex-col gap-2">
-                  <p className="font-nx-serif text-nx-h3">Nothing to log yet</p>
-                  <p className="text-nx-body text-nx-ink">{o.answerToday}</p>
-                  <p className="text-nx-2 text-nx-ink-2">
-                    {o.todayRules.map((r, i) => (
-                      <Fragment key={r.id}>
-                        {i > 0 && '\u00a0· '}
-                        <span className="inline-block">{shortTitle(r)}</span>
-                      </Fragment>
-                    ))}
-                  </p>
-                </GlassCard>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  full
-                  iconEnd={ArrowRight}
-                  onClick={() => navigate('practice')}
-                >
-                  Try a practice day
-                </Button>
-              </>
+              // Day 1: nothing can be logged until tomorrow, so the card says only that, and when.
+              <GlassCard className="flex flex-col gap-2">
+                <p className="font-nx-serif text-nx-h3">Nothing to log yet</p>
+                <p className="text-nx-body text-nx-ink">{o.answerToday}</p>
+              </GlassCard>
             ) : (
               <>
                 <GlassCard className="flex items-center gap-4">
@@ -328,7 +264,6 @@ function Running() {
               </>
             )}
           </Enter>
-          <OthersWaiting />
 
           <div className="-mt-5 flex flex-col gap-8">
             {/* Today's timed minutes, under what matters now: a row, so Log stays the one main action. */}

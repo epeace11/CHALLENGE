@@ -1,4 +1,4 @@
-// Two tabs, this challenge and all challenges, each a calm list of rows that show each setting's value; tapping one opens a sheet to change just that.
+// One scrolling page under two headings, this challenge and then every challenge, each a calm list of rows that show each setting's value; tapping one opens a sheet to change just that.
 'use client';
 import {
   useId,
@@ -128,7 +128,6 @@ export default function SettingsV1() {
   const later = true;
   const [theme, setTheme] = useThemeChoice();
   const [open, setOpen] = useState<Open>(null);
-  const [scope, setScope] = useState<'challenge' | 'all'>('challenge');
   const [reminders, setReminders] = useState<Reminders>(DEFAULT_REMINDERS);
   const [proposal, setProposal] = useState<Terms | null>(null);
   const c = world.challenge;
@@ -201,24 +200,10 @@ export default function SettingsV1() {
   return (
     <AppFrame>
       <div className="flex flex-col gap-10">
-        <div className="flex flex-col gap-5">
-          <PageTitle title="Settings" />
-          {/* One group at a time, so what's on screen is never mistaken for the other. */}
-          {c.id && (
-            <SegmentedControl
-              label="Which settings"
-              value={scope}
-              onChange={setScope}
-              options={[
-                { value: 'challenge', label: 'This challenge' },
-                { value: 'all', label: 'Your account' },
-              ]}
-              className={styles.seg}
-            />
-          )}
-        </div>
+        {/* Both groups on one page, each under a heading that says what it applies to. */}
+        <PageTitle title="Settings" />
 
-        {c.id && scope === 'challenge' && (
+        {c.id && (
           <Scope
             icon={Flag}
             title={c.name}
@@ -299,92 +284,87 @@ export default function SettingsV1() {
           </Scope>
         )}
 
-        {(!c.id || scope === 'all') && (
-          <Scope
-            icon={CircleUser}
-            title="For every challenge"
-            detail="These apply everywhere, not just to one challenge."
-            index={1}
-          >
-            <RowButton
-              leading={<Avatar person={world.me} decorative />}
-              title="Your name"
-              detail={world.me.name}
-              onClick={() => setOpen('name')}
-            />
+        <Scope
+          icon={CircleUser}
+          title="For every challenge"
+          detail="These apply everywhere, not just to one challenge."
+          index={c.id ? 2 : 1}
+        >
+          <RowButton
+            leading={<Avatar person={world.me} decorative />}
+            title="Your name"
+            detail={world.me.name}
+            onClick={() => setOpen('name')}
+          />
 
-            {!later && (
-              <Section title="Reminders" index={2}>
-                <GlassCard
-                  pad="sm"
-                  className="flex flex-col gap-1 px-5 sm:px-6"
-                >
-                  <Toggle
-                    checked={reminders.on}
-                    onChange={(on) => setReminders({ ...reminders, on })}
-                    label="Evening reminders"
-                    description="Only when something is left to log"
+          {!later && (
+            <Section title="Reminders" index={2}>
+              <GlassCard pad="sm" className="flex flex-col gap-1 px-5 sm:px-6">
+                <Toggle
+                  checked={reminders.on}
+                  onChange={(on) => setReminders({ ...reminders, on })}
+                  label="Evening reminders"
+                  description="Only when something is left to log"
+                />
+                <div className="-mx-2 border-t border-nx-line pt-2 sm:-mx-3">
+                  <RowButton
+                    glass={false}
+                    className="border-0 bg-transparent disabled:opacity-50"
+                    leading={
+                      <Clock3
+                        size={22}
+                        className="text-nx-accent"
+                        aria-hidden="true"
+                      />
+                    }
+                    title="Times"
+                    detail={remindersLine(reminders)}
+                    disabled={!reminders.on}
+                    onClick={() => setOpen('times')}
                   />
-                  <div className="-mx-2 border-t border-nx-line pt-2 sm:-mx-3">
-                    <RowButton
-                      glass={false}
-                      className="border-0 bg-transparent disabled:opacity-50"
-                      leading={
-                        <Clock3
-                          size={22}
-                          className="text-nx-accent"
-                          aria-hidden="true"
-                        />
-                      }
-                      title="Times"
-                      detail={remindersLine(reminders)}
-                      disabled={!reminders.on}
-                      onClick={() => setOpen('times')}
-                    />
-                  </div>
-                </GlassCard>
-              </Section>
-            )}
-
-            <Section title="Appearance" index={3}>
-              <SegmentedControl
-                label="Appearance"
-                value={theme}
-                onChange={setTheme}
-                options={THEME_OPTIONS}
-                className={styles.seg}
-              />
+                </div>
+              </GlassCard>
             </Section>
+          )}
 
-            <div className="flex flex-col gap-2.5">
+          <Section title="Appearance" index={3}>
+            <SegmentedControl
+              label="Appearance"
+              value={theme}
+              onChange={setTheme}
+              options={THEME_OPTIONS}
+              className={styles.seg}
+            />
+          </Section>
+
+          <div className="flex flex-col gap-2.5">
+            <RowButton
+              leading={
+                <LogOut
+                  size={22}
+                  className="text-nx-accent"
+                  aria-hidden="true"
+                />
+              }
+              title="Sign out"
+              detail={world.me.email}
+              onClick={account.signOut}
+            />
+            {!later && (
               <RowButton
                 leading={
-                  <LogOut
+                  <Trash2
                     size={22}
-                    className="text-nx-accent"
+                    className="text-nx-danger"
                     aria-hidden="true"
                   />
                 }
-                title="Sign out"
-                detail={world.me.email}
-                onClick={account.signOut}
+                title={<span className="text-nx-danger">Delete account</span>}
+                onClick={() => setOpen('delete')}
               />
-              {!later && (
-                <RowButton
-                  leading={
-                    <Trash2
-                      size={22}
-                      className="text-nx-danger"
-                      aria-hidden="true"
-                    />
-                  }
-                  title={<span className="text-nx-danger">Delete account</span>}
-                  onClick={() => setOpen('delete')}
-                />
-              )}
-            </div>
-          </Scope>
-        )}
+            )}
+          </div>
+        </Scope>
       </div>
 
       <NameSheet

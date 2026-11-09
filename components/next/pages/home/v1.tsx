@@ -231,7 +231,6 @@ export default function HomeV2() {
             <Enter key={o.id} index={2 + i}>
               <OpenCard
                 o={o}
-                filled={i === 0}
                 withPartner={world.partners.length > 1}
                 open={(page) => openAt(o.id, page)}
               />
@@ -466,23 +465,56 @@ function NotStarted() {
   );
 }
 
-/** One challenge: a kicker saying where it stands, its name, and what can be done with it. */
+/**
+ * One challenge: a kicker saying where it stands, its name, and what can be done with it. With
+ * `onOpen`, the whole card opens the challenge (its name is the button, stretched over the card, with
+ * a chevron); buttons inside it (the day, Left to log, To review) sit above and go where they say.
+ */
 function ChallengeCard({
   kicker,
   name,
   detail,
+  onOpen,
   children,
 }: {
   kicker: string;
   name: string;
   detail?: string;
+  onOpen?: () => void;
   children: ReactNode;
 }) {
   return (
-    <GlassCard pad="lg" as="article" className="flex flex-col gap-5">
+    <GlassCard
+      pad="lg"
+      as="article"
+      className={cn(
+        'flex flex-col gap-5',
+        onOpen && cn('relative', styles.openCard),
+      )}
+    >
       <header className="flex flex-col gap-1">
         <p className="nx-kicker">{kicker}</p>
-        <h2 className="font-nx-serif text-nx-h2">{name}</h2>
+        <h2 className="font-nx-serif text-nx-h2">
+          {onOpen ? (
+            <button
+              type="button"
+              className={cn(
+                'flex w-full items-center justify-between gap-3 text-left',
+                styles.openButton,
+              )}
+              onClick={onOpen}
+            >
+              <span className="min-w-0">{name}</span>
+              <ChevronRight
+                size={24}
+                className="shrink-0 text-nx-accent"
+                aria-hidden="true"
+              />
+            </button>
+          ) : (
+            name
+          )}
+        </h2>
         {detail && <p className="text-nx-2 text-nx-ink-2">{detail}</p>}
       </header>
       {children}
@@ -516,32 +548,24 @@ function HiddenLine({ name, onUndo }: { name: string; onUndo: () => void }) {
 /** An unfinished challenge: a running one with its day and what's left; the rest, where it stands. */
 function OpenCard({
   o,
-  filled,
   withPartner,
   open,
 }: {
   o: OtherChallenge;
-  /** The first card has the page's one filled button. */
-  filled: boolean;
   withPartner: boolean;
   open: (page?: PageId) => void;
 }) {
   const run = o.running;
-  const button = (
-    <Button
-      variant={filled ? 'primary' : 'secondary'}
-      size={filled ? 'lg' : 'md'}
-      iconEnd={filled ? ArrowRight : undefined}
-      className={filled ? 'w-full sm:w-auto sm:self-start' : 'self-start'}
-      onClick={() => open()}
-    >
-      Open challenge
-    </Button>
-  );
   if (!run)
     return (
-      <ChallengeCard kicker={`With ${o.partner}`} name={o.name} detail={o.line}>
-        {o.status === 'draft' && !o.needsYou ? null : button}
+      <ChallengeCard
+        kicker={`With ${o.partner}`}
+        name={o.name}
+        detail={o.line}
+        // One the partner is still setting up has nothing to open yet.
+        onOpen={o.status === 'draft' && !o.needsYou ? undefined : () => open()}
+      >
+        {null}
       </ChallengeCard>
     );
   return (
@@ -549,11 +573,12 @@ function OpenCard({
       kicker={withPartner ? `Running now, with ${o.partner}` : 'Running now'}
       name={o.name}
       detail={run.range}
+      onOpen={() => open()}
     >
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          className="nx-press -ml-2 inline-flex min-h-11 items-center gap-1 self-start rounded-nx-sm px-2 text-nx-body font-semibold text-nx-ink hover:bg-nx-accent-soft"
+          className="nx-press relative z-[1] -ml-2 inline-flex min-h-11 items-center gap-1 self-start rounded-nx-sm px-2 text-nx-body font-semibold text-nx-ink hover:bg-nx-accent-soft"
           onClick={() => open('progress')}
         >
           Day {run.day} of {run.days}
@@ -591,14 +616,17 @@ function OpenCard({
           onClick={() => open('review')}
         />
       </Rows>
-      {/* The card's title names it, so the button does not. */}
-      {button}
     </ChallengeCard>
   );
 }
 
 function Rows({ children }: { children: ReactNode }) {
-  return <div className={cn(styles.rows, styles.list)}>{children}</div>;
+  // Above a card that opens as a whole, so each row goes where it says.
+  return (
+    <div className={cn('relative z-[1]', styles.rows, styles.list)}>
+      {children}
+    </div>
+  );
 }
 
 /** A row that is one button: a lead (a count or an icon), what it is, where it goes. */
