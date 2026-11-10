@@ -10,7 +10,7 @@ import type {
   Weekday,
 } from '@/lib/next/model';
 import { EVERY_DAY } from '@/lib/next/catalog';
-import { canTime, formatWeekdays } from '@/lib/next/selectors';
+import { canTime } from '@/lib/next/selectors';
 import {
   Button,
   NumberField,
@@ -235,7 +235,6 @@ export function RuleBuilderSheet({
             onChange={(question) => set({ question })}
             placeholder="Did you stretch for 10 minutes?"
             maxLength={100}
-            hint="Asked at every check-in."
             error={errors.question}
           />
           <Labeled label="Who it’s for">
@@ -266,7 +265,6 @@ export function RuleBuilderSheet({
               label="Days"
               value={form.days}
               onChange={(days) => set({ days })}
-              hint={formatWeekdays(form.days)}
               error={errors.days}
             />
           ) : (

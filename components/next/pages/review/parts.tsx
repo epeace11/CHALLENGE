@@ -541,7 +541,7 @@ export function DisputeBody({
       {dispute.reply && <Quote person={world.me}>{dispute.reply}</Quote>}
       {/* The kicker names the partner, so the gift line says only which gift. */}
       <GiftsLink>
-        If you concede, it becomes a point and the gift you give goes from{' '}
+        If you concede, the gift you give goes from{' '}
         <b className="font-semibold text-nx-ink">{formatMoney(effect.now)}</b>{' '}
         to{' '}
         <b className="font-semibold text-nx-ink">{formatMoney(effect.after)}</b>
@@ -743,9 +743,9 @@ export function DisputeSheet({
       open={sheet.open}
       onOpenChange={sheet.setOpen}
       title={`Dispute ${partner}’s answer`}
-      description={`No point while it’s open. It becomes a point only if ${partner} concedes, and you can withdraw it any time. The challenge can’t end until it’s settled.`}
+      // What disputing does, the one fact needed to decide.
+      description={`No point unless ${partner} concedes it.`}
       label="Your reason"
-      hint={`${partner} reads exactly what you write.`}
       placeholder="What looks off to you?"
       submit="Dispute"
       missing={`Write a reason so ${partner} knows what to look at.`}
@@ -778,8 +778,6 @@ export function ReplySheet({
       open={sheet.open}
       onOpenChange={sheet.setOpen}
       title={`Reply to ${partner.name}`}
-      description={`No point while it’s open. ${partner.name} can withdraw it, and you can still concede later.`}
-      // The title says who reads it, so the field has no hint saying so again.
       label="Your reply"
       submit="Send reply"
       missing="Write your reply first."
@@ -991,13 +989,13 @@ export function CaughtUp({
             ? `${plural(over.disputes, 'dispute')} left to settle`
             : 'All caught up'}
         </h2>
-        <p className="max-w-sm text-nx-body text-nx-ink-2">
-          {over
-            ? over.disputes
+        {over && (
+          <p className="max-w-sm text-nx-body text-nx-ink-2">
+            {over.disputes
               ? settlingLine(world)
-              : `Waiting for ${partner} to review your answers. ${settlingLine(world)}`
-            : `${partner}’s next answers show up here.`}
-        </p>
+              : `Waiting for ${partner} to review your answers. ${settlingLine(world)}`}
+          </p>
+        )}
         <div className="mt-3">
           {over?.disputes ? (
             <Button variant="primary" onClick={onWaiting}>

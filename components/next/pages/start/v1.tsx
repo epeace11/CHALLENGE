@@ -24,10 +24,6 @@ import { forgetWantedTheme, wantedTheme } from './wanted';
 
 type Step = 'how' | 'themes' | 'saved';
 
-const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
-/** "Four": small counts read better as words in a sentence. */
-const countWord = (n: number) => WORDS[n] ?? String(n);
-
 /** Start a challenge. */
 export default function Start() {
   const world = useWorld();
@@ -103,7 +99,6 @@ export default function Start() {
                 <StartRow
                   filled
                   title="Create new challenge"
-                  detail="Pick each rule yourself"
                   icon={Plus}
                   onClick={() =>
                     host
@@ -130,7 +125,7 @@ export default function Start() {
                 )}
                 <StartRow
                   title="Themes"
-                  detail={`${countWord(themes.length)} ready-made challenges`}
+                  detail="Ready-made challenges"
                   art={<ThemeDots choices={themes} />}
                   onClick={() => go('themes')}
                 />
@@ -178,8 +173,8 @@ export default function Start() {
 }
 
 /**
- * One way to start, as a long row the full width of the page: its icon or art, a title and one
- * line. `filled` makes it the page's main action, in the accent colour.
+ * One way to start, as a long row the full width of the page: its icon or art, a title and, when
+ * the title needs it, one line. `filled` makes it the page's main action, in the accent colour.
  */
 function StartRow({
   title,
@@ -190,7 +185,7 @@ function StartRow({
   onClick,
 }: {
   title: string;
-  detail: string;
+  detail?: string;
   icon?: LucideIcon;
   art?: ReactNode;
   filled?: boolean;
@@ -220,11 +215,16 @@ function StartRow({
         >
           {title}
         </span>
-        <span
-          className={cx('text-nx-2', filled ? 'text-inherit' : 'text-nx-ink-2')}
-        >
-          {detail}
-        </span>
+        {detail && (
+          <span
+            className={cx(
+              'text-nx-2',
+              filled ? 'text-inherit' : 'text-nx-ink-2',
+            )}
+          >
+            {detail}
+          </span>
+        )}
       </span>
       <ChevronRight className="nx-row-chevron" size={22} aria-hidden="true" />
     </button>

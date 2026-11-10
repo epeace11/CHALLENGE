@@ -9,7 +9,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import type { DateString, Proof, World } from '@/lib/next/model';
+import type { Proof, World } from '@/lib/next/model';
 import { shift } from '@/lib/next/calendar';
 import { formatDay } from '@/lib/next/selectors';
 import {
@@ -770,41 +770,33 @@ function Hosting({
         if (sending === 0) await reload();
         return ok;
       },
-      // Always settles: the proof, or null when the person cancels or the upload fails.
-      pickProof: (day: DateString) =>
-        new Promise<Proof | null>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/jpeg,image/png,image/webp';
-          // In the page while picking (some browsers send its events only then), out of sight.
-          input.style.cssText =
-            'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
-          let settled = false;
-          const done = (proof: Proof | null) => {
-            if (settled) return;
-            settled = true;
-            input.remove();
-            resolve(proof);
-          };
-          input.addEventListener('cancel', () => done(null));
-          input.addEventListener('change', async () => {
-            const file = input.files?.[0];
-            if (!file) return done(null);
-            const { challenge, me } = ids();
-            const up = await attempt(() =>
-              api.uploadProof(challenge, me, file),
-            );
-            if (up === false) return done(null);
-            done({
+      // One at a time, as the original app did, so a phone decodes one full-size screenshot at once.
+      // One that fails doesn't stop the rest; the first failure is what the message says.
+      uploadProofs: async (day, files, room) => {
+        const { challenge, me } = ids();
+        const take = files.slice(0, Math.max(0, room));
+        const out: Proof[] = [];
+        let failed: unknown = null;
+        for (const file of take) {
+          try {
+            const up = await api.uploadProof(challenge, me, file);
+            out.push({
               id: up.path,
               src: URL.createObjectURL(up.blob),
               alt: `Screenshot for ${formatDay(day)}`,
               ...(up.takenAt ? { takenAt: up.takenAt } : {}),
             });
-          });
-          document.body.appendChild(input);
-          input.click();
-        }),
+          } catch (e) {
+            failed ??= e;
+          }
+        }
+        if (failed) fail(failed);
+        else if (files.length > take.length)
+          toast(
+            `An answer takes six screenshots at most, so ${take.length === 1 ? 'only the first one was' : `the first ${take.length} were`} added.`,
+          );
+        return out;
+      },
       signUp: async (a) => {
         const r = await attempt(() =>
           api.signUp(a, { invite: inviteToken, shared: sharedToken }),

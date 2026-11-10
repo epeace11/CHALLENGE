@@ -604,6 +604,18 @@ async function eraseChallenge(challengeId: string) {
   await rpc('nx_erase_challenge', { p_challenge: challengeId });
 }
 
+/**
+ * A random UUID for a file name. Not crypto.randomUUID(): older iPhones and pages that aren't https
+ * don't have it, and a screenshot failed to upload there. getRandomValues works everywhere.
+ */
+function randomId() {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 /** Compresses and uploads one screenshot into the challenge's folder. Returns its path and when it was taken. */
 export async function uploadProof(
   challengeId: string,
@@ -619,7 +631,7 @@ export async function uploadProof(
       ? exif.DateTimeOriginal.toISOString()
       : undefined;
   const blob = await compress(file);
-  const path = `${challengeId}/${userId}/${crypto.randomUUID()}.jpg`;
+  const path = `${challengeId}/${userId}/${randomId()}.jpg`;
   const { error } = await supabase.storage
     .from(PROOF_BUCKET)
     .upload(path, blob, { contentType: 'image/jpeg', upsert: false });

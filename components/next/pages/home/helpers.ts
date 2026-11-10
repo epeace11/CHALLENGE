@@ -6,7 +6,6 @@ import type {
   World,
 } from '@/lib/next/model';
 import {
-  formatDate,
   formatMoney,
   formatTarget,
   formatWhen,
@@ -110,7 +109,3 @@ export function rulesByWho(rules: Rule[], me: Person, partner: Person) {
 export const stakesLine = (s: Pick<SavedChallenge, 'step' | 'cap'>) =>
   `First point ${formatMoney(s.step)}, then ${formatMoney(s.step * 2)}, ${formatMoney(s.step * 3)}…` +
   (s.cap === null ? ' · No cap' : ` · Capped at ${formatMoney(s.cap)}`);
-
-/** "Saved Jul 27" */
-export const savedLine = (s: SavedChallenge) =>
-  `Saved ${formatDate(s.savedOn)}`;

@@ -47,7 +47,10 @@ import styles from './progress.module.css';
 
 const youOr = (w: World, p: Person) => (p.id === w.me.id ? 'You' : p.name);
 
-/** The open day and the one filled button, or what waits on the viewer. Nothing when nothing does. */
+/**
+ * The open day and the one filled button, or Open Review when something waits on the viewer.
+ * Nothing when nothing does.
+ */
 export function MainAction() {
   const world = useWorld();
   const { navigate } = useNav();
@@ -56,12 +59,13 @@ export function MainAction() {
   if (!action) return null;
   return (
     <div className="nx-enter flex flex-col gap-3 sm:flex-row sm:items-center">
-      <p className="flex-1 text-nx-body text-nx-ink">
-        {/* The button names the day ("Log Thursday"), so the line only says until when. */}
-        {action.page === 'log' && open
-          ? `Open ${lockWords(world, open)}.`
-          : `${world.partner.name} is waiting on your review.`}
-      </p>
+      {/* The button names the day ("Log Thursday"), so the line only says until when; Open Review
+          says it all by itself. */}
+      {action.page === 'log' && open && (
+        <p className="flex-1 text-nx-body text-nx-ink">
+          Open {lockWords(world, open)}.
+        </p>
+      )}
       <Button
         variant="primary"
         iconEnd={ArrowRight}

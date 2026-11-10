@@ -9,7 +9,6 @@ import {
   formatMoney,
   formatTarget,
   formatWhen,
-  giftTotal,
   shift,
   weekday,
 } from '@/lib/next/selectors';
@@ -68,20 +67,6 @@ export const costSteps = (n: number, step: number) =>
 /** "$2, $4, $6…": how each point costs one step more than the last. */
 export const costSequence = (step: number) =>
   `${[1, 2, 3].map((i) => formatMoney(i * step)).join(', ')}…`;
-
-/**
- * "3 points cost $12", the one-line example (or where the cap stops it). It sits under "$2, $4,
- * $6…", so it gives only the total, not the steps again.
- */
-export function costExample(
-  s: Pick<SavedChallenge, 'step' | 'cap'>,
-  misses = 3,
-) {
-  const total = giftTotal(misses, s.step, s.cap);
-  if (total < giftTotal(misses, s.step))
-    return `${misses} points cost ${formatMoney(total)}, the most a gift can be`;
-  return `${misses} points cost ${formatMoney(total)}`;
-}
 
 /** The Monday after `today`: a sample first day, to show where the dates would land. */
 export const nextMonday = (today: DateString) =>

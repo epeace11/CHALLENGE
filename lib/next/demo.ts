@@ -921,7 +921,6 @@ export const world: World = deepFreeze({
         left: 1,
         leftHint: 'Thursday, 4h 29m left',
         waiting: 0,
-        waitingHint: 'Nothing waiting',
       },
     },
   ],

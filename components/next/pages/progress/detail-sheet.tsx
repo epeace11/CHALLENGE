@@ -87,7 +87,7 @@ const bothHave = (w: World, ruleId: string) =>
 
 /** The line under the title. It says whose it is (the partner's), once, and nothing else repeats it. */
 function describe(w: World, view: DetailView, bothPeople?: boolean) {
-  if (view.kind === 'habits') return 'Worst first.';
+  if (view.kind === 'habits') return undefined;
   const whose =
     view.personId === w.me.id ? null : nameOf(w, view.personId) || null;
   const line = (...parts: (string | null | undefined)[]) =>
@@ -97,10 +97,10 @@ function describe(w: World, view: DetailView, bothPeople?: boolean) {
       const rule = ruleById(w.challenge, view.ruleId);
       if (!rule) return undefined;
       // The chips say whose days these are when both have the habit. A weekly habit's title
-      // already says how often, so it gets what counts instead.
+      // already says how often.
       return line(
         bothPeople && bothHave(w, rule.id) ? null : whose,
-        rule.kind === 'weekly' ? rule.description : formatWhen(rule),
+        rule.kind === 'weekly' ? null : formatWhen(rule),
       );
     }
     case 'day':

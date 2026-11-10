@@ -7,7 +7,6 @@ import { Button, Sheet } from '@/components/next/ui';
 export type HiddenItem = {
   id: string;
   name: string;
-  detail: string;
   restore: () => void;
   remove: () => void;
 };
@@ -36,21 +35,13 @@ export function HiddenSheet({
     if (open && !items.length) onOpenChange(false);
   }, [open, items.length, onOpenChange]);
   return (
-    <Sheet
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Hidden"
-      description="Only on your account. Your partner still sees theirs."
-    >
+    <Sheet open={open} onOpenChange={onOpenChange} title="Hidden">
       <ul ref={list} className="flex flex-col divide-y divide-nx-line">
         {items.map((item) => (
           <li key={item.id} className="flex flex-col gap-2 py-3">
-            <div className="flex flex-col gap-0.5">
-              <p className="text-nx-body font-semibold text-nx-ink">
-                {item.name}
-              </p>
-              <p className="text-nx-2 text-nx-ink-2">{item.detail}</p>
-            </div>
+            <p className="text-nx-body font-semibold text-nx-ink">
+              {item.name}
+            </p>
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => restore(item)}>Restore</Button>
               <Button

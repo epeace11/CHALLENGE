@@ -2,6 +2,20 @@
 
 Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write the pick and a short reason under the page; once a page is picked, the other versions are deleted from `components/next/pages/<page>/` and the pick becomes the page.
 
+## Decisions, November 10, 2026 (Erin, using the live app on her phone)
+
+- **Screenshots work, several at once.** Uploads failed on her iPhone with "crypto.randomUUID is not a function": file names now come from `crypto.getRandomValues`, which every browser has. The photo picker takes several screenshots, as the original app's did, and they upload one after another. The spinner shows only once screenshots are chosen, so closing the picker without choosing never leaves the tile stuck on "Uploading…". Choosing more than fit adds the first ones and says so.
+- **Nothing is logged until the timer stops.** See Timer below.
+- **Overview says how many are left to log, not which.** The list of rule names under "4 left to log" is gone; Check in brings them up one at a time.
+- **The question is enough.** Check in no longer shows the rule's description under the question (it stays on Rules and help and in the pact). Every page was then checked for text nobody needs.
+- **Nothing unnecessary, page by page.** About 60 lines came off, mostly sublines that repeated a heading or a button, sheet descriptions that repeated the title, and explanations nobody needs to act. Kept: questions, labels, errors, deadlines, what a miss or a concession costs, the warnings before ending, deleting or leaving, the rule descriptions on Rules and help, the pact and rule editors, and Practice's teaching lines. The biggest cuts:
+  - Check in: the end-of-day tally ("5 done, 1 waiting"), "Done for this week", the closed-day explanations said three times, "Notes never change points", "No notes yet".
+  - Overview: "Nothing waits for you either", "Nothing to review", the goals sheet's description, "It ends only if you agree".
+  - Review: the dispute and reply sheets' long descriptions (the dispute sheet keeps "No point unless Jordan concedes it."), the lines under the forgiveness rows, "Jordan's next answers show up here".
+  - Set up, Start and Say: the deadline line, the sample rule under each theme, "Pick each rule yourself", the time zone and library sheet descriptions, "Say what you both want, in your own words…".
+  - Settings: the lines under each section heading and under name fields, "Until then, nothing changes".
+  - Progress, Verdict, Rules, Your challenges, Pact and Invite: lines that repeated what the row, button or signatures already show.
+
 ## Decisions, November 5, 2026 (ninth audit and eighth critique, and everything they found)
 
 Erin asked to rerun both after the last round of fixes. The audit came back 14/20 with no critical issues and one major one (from one critical and five major), and the critique 29/40 (trend 27, 29, 30, 28, 29). Of the last round's six fixes, two fully held and four partly did. All of it is fixed here.
@@ -589,6 +603,8 @@ New page, November 8, 2026. Erin's decisions: the timer is a setting on a rule c
 3. **Today's progress first.** "12 of 20 min, 8 min to go" is the hero, with the session clock smaller beside it. The bar is made of today's sessions and keeps going past the target. Under it, this week as day squares with each day's minutes. Start, Pause and Stop are pinned at the bottom.
 
 Pick: 1, November 9, 2026 (Erin), with one change: the Today line shows the total that will be saved ("Today · 32 min total, saved at midnight"). It grows while a timer runs and shows from the first session, so after several sessions the saved number is always in view. Versions 2 and 3 are deleted.
+
+Change, November 10, 2026 (Erin): nothing counts as logged until the timer stops. The Today line adds only stopped sessions and first shows after the first one stops; Overview's timer row does the same. While a session runs, its time is on the dial only.
 
 ### Rules and help (`rules`)
 

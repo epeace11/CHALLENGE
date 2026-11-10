@@ -36,6 +36,7 @@ import {
   formatValue,
   formatWeekday,
   ruleById,
+  timedMinutes,
   timedProgress,
 } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
@@ -99,9 +100,8 @@ export default function TimerV1() {
   const openDay = dayOpen
     ? (t.history.find((d) => d.day === dayOpen.day) ?? null)
     : null;
-  // Today's total so far, a session still going included: the whole minutes saved as the answer.
-  const timingToday = t.run?.ruleId === rule.id && t.run.day === t.today;
-  const todayShown = t.sessions.length > 0 || timingToday;
+  // What's logged today: stopped sessions only. A session going is on the dial and joins this when it stops.
+  const todayShown = t.sessions.length > 0;
 
   return (
     <AppFrame>
@@ -145,7 +145,7 @@ export default function TimerV1() {
                   </h2>
                   {' · '}
                   <span className="font-semibold text-nx-ink tabular-nums">
-                    {formatValue(rule, t.progress.minutes)} total
+                    {formatValue(rule, timedMinutes(t.logged))} total
                   </span>
                   {t.asksToday && ', saved at midnight'}
                 </div>

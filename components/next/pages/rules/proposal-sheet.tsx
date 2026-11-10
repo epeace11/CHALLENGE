@@ -7,11 +7,7 @@ import type {
   RuleKind,
   Weekday,
 } from '@/lib/next/model';
-import {
-  formatDay,
-  formatDayShort,
-  formatWeekdays,
-} from '@/lib/next/selectors';
+import { formatDayShort, formatWeekdays } from '@/lib/next/selectors';
 import {
   Button,
   NumberField,
@@ -172,7 +168,6 @@ export function ProposalSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Propose a change"
-      description={`${partner} approves it before it counts.`}
       footer={
         <>
           {!!problem && (
@@ -304,9 +299,6 @@ export function ProposalSheet({
                 max={dates.last}
                 onChange={(e) => setOther(e.target.value)}
               />
-              {other >= dates.first && other <= dates.last && (
-                <p className="text-nx-2 text-nx-ink-2">{formatDay(other)}</p>
-              )}
             </div>
           )}
         </div>

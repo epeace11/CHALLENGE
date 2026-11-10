@@ -490,8 +490,6 @@ export type RunningSummary = {
   /** "Thursday, 4h 29m left", "All logged", "Nothing to log". */
   leftHint: string;
   waiting: number;
-  /** "From Jordan", "Nothing waiting". */
-  waitingHint: string;
 };
 
 /** Everything a page can show. The viewer is `me`; `partner` is the other person. */

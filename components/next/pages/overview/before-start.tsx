@@ -20,7 +20,7 @@ export function BeforeStart({ world }: { world: World }) {
         title={
           days === 1 ? 'Day 1 is tomorrow' : `Day 1 is ${formatDay(c.start)}`
         }
-        detail={`You’ve both signed. ${answerLine(world, c.start)}`}
+        detail={answerLine(world, c.start)}
       />
       <Enter index={1} className="flex flex-col gap-3">
         <Button

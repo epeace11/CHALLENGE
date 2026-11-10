@@ -173,7 +173,7 @@ export function SessionSheet({
       }
     >
       <p className="text-nx-body text-nx-ink-2">
-        Timed by mistake? Removing it takes it off today’s total.
+        Removing it takes it off today’s total.
       </p>
     </Sheet>
   );
@@ -438,9 +438,7 @@ export function HowSheet({
           <div className="flex flex-col">
             <h3 className="text-nx-body font-semibold text-nx-ink">Timer on</h3>
             {shared && (
-              <p className="text-nx-2 text-nx-ink-2">
-                For both of you. It doesn’t change what counts.
-              </p>
+              <p className="text-nx-2 text-nx-ink-2">For both of you.</p>
             )}
             <div className="mt-1 flex flex-col divide-y divide-nx-line">
               {minuteRules.map((r) => (

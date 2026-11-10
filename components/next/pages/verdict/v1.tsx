@@ -173,7 +173,7 @@ function resultTitle(v: VerdictView) {
   return `${won === 'me' ? 'You' : v.partner.person.name} won ${v.name}`;
 }
 
-/** "4 points to Jordan’s 7. Fewer points wins.", the winner first; each number opens how the gifts were set. */
+/** "4 points to Jordan’s 7.", the winner first; each number opens how the gifts were set. */
 function ResultLine({ v, onOpen }: { v: VerdictView; onOpen: () => void }) {
   const won = outcome(v),
     partner = v.partner.person.name;
@@ -200,7 +200,7 @@ function ResultLine({ v, onOpen }: { v: VerdictView; onOpen: () => void }) {
           to <NumLink onClick={onOpen}>your {v.me.points}</NumLink>
         </>
       )}
-      . Fewer points wins.
+      .
     </>
   );
 }

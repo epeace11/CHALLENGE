@@ -243,7 +243,7 @@ function Limits({
               value={value}
               onChange={(v) => flow.setLimit(rule.id, v)}
               unit={rule.target?.unit}
-              hint={`${rule.target ? `Suggested: ${formatTarget(rule.target)}. ` : ''}${flow.other.name} sets their own and sees yours, and yours can’t change after you sign.`}
+              hint={`${rule.target ? `Suggested: ${formatTarget(rule.target)}. ` : ''}Yours can’t change after you sign.`}
               error={
                 shown && !(value !== null && value > 0)
                   ? `Enter your ${word}.`
@@ -333,15 +333,10 @@ function Signed({ flow, focus }: { flow: PactFlow; focus: boolean }) {
   return (
     <div className="flex flex-col gap-8 pt-2">
       {flow.bothSigned && flow.started ? (
-        // Read back after Day 1 (Rules and help's The pact): what was signed, and by whom.
-        <header className="flex flex-col gap-2">
-          <h1 ref={ref} tabIndex={-1} className="nx-page-title outline-none">
-            The {c.name} pact
-          </h1>
-          <p className="text-nx-body text-nx-ink-2">
-            Signed by you and {flow.theirs.person.name}.
-          </p>
-        </header>
+        // Read back after Day 1 (Rules and help's The pact): the signatures under it say by whom.
+        <h1 ref={ref} tabIndex={-1} className="nx-page-title outline-none">
+          The {c.name} pact
+        </h1>
       ) : flow.bothSigned ? (
         // The heading is the countdown itself, and the countdown opens what happens on Day 1.
         <h1
@@ -361,11 +356,12 @@ function Signed({ flow, focus }: { flow: PactFlow; focus: boolean }) {
           <h1 ref={ref} tabIndex={-1} className="nx-page-title outline-none">
             You signed
           </h1>
-          <p className="text-nx-body text-nx-ink-2">
-            {flow.partnerPending
-              ? `Now invite ${flow.theirs.person.name} to sign.`
-              : `Waiting for ${flow.theirs.person.name} to sign.`}
-          </p>
+          {/* Before the partner joins, the Invite button below says what is next. */}
+          {!flow.partnerPending && (
+            <p className="text-nx-body text-nx-ink-2">
+              Waiting for {flow.theirs.person.name} to sign.
+            </p>
+          )}
         </header>
       )}
 

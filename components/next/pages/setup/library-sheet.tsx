@@ -38,7 +38,6 @@ export function LibrarySheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Add a rule"
-      description="Rules you add are for both of you. Edit one to change who it’s for."
       footer={
         <Button variant="primary" onClick={() => onOpenChange(false)}>
           Done

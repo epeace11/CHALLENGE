@@ -1,6 +1,6 @@
 'use client';
 import { ChevronRight } from 'lucide-react';
-import { RULE_ICON, iconOf, keepTogether, type Choice } from './choices';
+import type { Choice } from './choices';
 import styles from './start.module.css';
 import { cx } from './cx';
 
@@ -45,35 +45,9 @@ export function Facts({
   );
 }
 
-/** The sample rule a card shows, with its icon. */
-export function SampleRule({
-  choice,
-  className,
-}: {
-  choice: Choice;
-  className?: string;
-}) {
-  const Icon = RULE_ICON[iconOf(choice.sample)];
-  return (
-    <span
-      className={cx(
-        'flex items-start gap-2 text-nx-2 text-nx-ink-2',
-        className,
-      )}
-    >
-      <Icon
-        size={18}
-        className="mt-0.5 shrink-0 text-nx-accent"
-        aria-hidden="true"
-      />
-      <span className="min-w-0">{keepTogether(choice.sample.title)}</span>
-    </span>
-  );
-}
-
 /**
- * A theme or saved challenge as one wide row: the look swatch, the name, days and number of rules,
- * and one sample rule. Opens the sheet.
+ * A theme or saved challenge as one wide row: the look swatch, the name, and days and number of
+ * rules. Opens the sheet, which lists every rule.
  */
 export function ChoiceRow({
   choice,
@@ -115,7 +89,6 @@ export function ChoiceRow({
           }
           className="text-nx-2 text-nx-ink-2"
         />
-        <SampleRule choice={choice} className="mt-0.5" />
       </span>
       <ChevronRight className="nx-row-chevron" size={22} aria-hidden="true" />
     </button>

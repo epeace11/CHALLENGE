@@ -64,7 +64,6 @@ export function StakesFields({
             )
           }
           label="Cap each gift"
-          description="No gift goes over the amount you set."
         />
         {capOn && (
           <NumberField
@@ -90,7 +89,7 @@ const capLine = (step: number, cap: number) =>
 
 /**
  * What the stakes preview stands for, under the number, so a big one reads plainly: "About 17
- * misses each · 10 would cost $275". With the cap reached, it says so instead.
+ * misses each". With the cap reached, it says so too.
  */
 export function stakesHint(stakes: Stakes, step: number, cap: number | null) {
   const people = stakes.perPerson;
@@ -101,8 +100,6 @@ export function stakesHint(stakes: Stakes, step: number, cap: number | null) {
   const each = `About ${plural(misses, 'miss', 'misses')} each`;
   if (cap !== null && misses >= pointsToCap(step, cap))
     return `${each}, so each gift reaches the cap`;
-  if (misses > 10)
-    return `${each} · 10 would cost ${formatMoney(giftTotal(10, step, cap))}`;
   return each;
 }
 

@@ -250,8 +250,8 @@ export function OpenDisputesRow({
       title={`${plural(count, 'dispute')} ${count === 1 ? 'is' : 'are'} still open`}
       detail={
         count === 1
-          ? 'Not a point unless it’s conceded. If it is, the gifts change.'
-          : 'None is a point unless it’s conceded. If one is, the gifts change.'
+          ? 'If it’s conceded, the gifts change.'
+          : 'If one is conceded, the gifts change.'
       }
       onClick={onOpen}
     />

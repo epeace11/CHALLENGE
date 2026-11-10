@@ -11,6 +11,7 @@ import {
 } from '@/lib/next/actions';
 import {
   appliesOn,
+  loggedSeconds,
   sessionsOf,
   timeableRules,
   timedDays,
@@ -76,6 +77,11 @@ export function useTimer() {
     progress: rule ? todayOf(rule) : null,
     /** The rule on screen asks something today. Time on another day is kept but isn't an answer. */
     asksToday: !!rule && appliesOn(rule, today, world.challenge),
+    /**
+     * Today's stopped sessions on the rule on screen, in seconds: what is logged so far. A session
+     * still going counts once it stops.
+     */
+    logged: rule ? loggedSeconds(world, me, rule.id, today) : 0,
     /** Today's finished sessions on the rule on screen, oldest first. */
     sessions: rule ? sessionsOf(world, me, rule.id, today) : [],
     /** Each day of the rule on screen so far, newest first: seconds, sessions and the answer saved. */

@@ -4,8 +4,6 @@ import { useState, type ReactNode } from 'react';
 import { ChevronRight, CircleHelp } from 'lucide-react';
 import type { Person, World } from '@/lib/next/model';
 import {
-  dateIn,
-  formatDate,
   formatDay,
   formatDayShort,
   formatMoney,
@@ -267,7 +265,6 @@ export function PointSheet({ sheet }: { sheet: SheetFor<OpenPoint> }) {
   const partner = world.partner;
   const mine = row.point.personId === world.me.id;
   const effect = forgiveEffect(world, row.point);
-  const drop = effect.now - effect.after;
   const waitingOnMe = !mine && !row.forgiven && !!row.pending;
 
   return (
@@ -298,8 +295,7 @@ export function PointSheet({ sheet }: { sheet: SheetFor<OpenPoint> }) {
         )}
         {row.forgiven ? (
           <p className="text-nx-body">
-            {mine ? `${partner.name} forgave it.` : 'You forgave it.'} It costs
-            nothing.
+            {mine ? `${partner.name} forgave it.` : 'You forgave it.'}
           </p>
         ) : (
           <p className="text-nx-body">
@@ -308,20 +304,12 @@ export function PointSheet({ sheet }: { sheet: SheetFor<OpenPoint> }) {
               : 'If you forgive it, the gift you get goes from '}
             <b className="font-semibold">{formatMoney(effect.now)}</b> to{' '}
             <b className="font-semibold">{formatMoney(effect.after)}</b>.
-            {drop !== row.cost && (
-              <span className="text-nx-ink-2">
-                {' '}
-                The points after it each move down one place.
-              </span>
-            )}
           </p>
         )}
         {row.pending && (
           <>
             <p className="nx-kicker">
-              {mine
-                ? `You asked on ${formatDate(dateIn(world.challenge.timeZone, row.pending.createdAt))}`
-                : `${partner.name} asks you to forgive it`}
+              {mine ? 'You asked' : `${partner.name} asks you to forgive it`}
             </p>
             <Quote person={mine ? world.me : partner} className="-mt-2">
               {row.pending.reason}

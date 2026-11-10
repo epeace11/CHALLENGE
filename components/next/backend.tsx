@@ -103,8 +103,15 @@ export type SetupDraft = {
 export type Host = {
   /** Sends commands to the database in order (their change is already on screen), then reloads once. */
   send: (commands: Command[]) => Promise<boolean>;
-  /** Asks for a screenshot and uploads it; null when the person cancels. */
-  pickProof: (day: DateString) => Promise<Proof | null>;
+  /**
+   * Uploads the screenshots chosen for `day`, at most `room` of them (saying so when more were
+   * chosen), and returns the ones that uploaded, in order. Says which failed, if any.
+   */
+  uploadProofs: (
+    day: DateString,
+    files: File[],
+    room: number,
+  ) => Promise<Proof[]>;
   /** 'in' when signed in at once, 'confirm' when the email has to be confirmed first. */
   signUp: (a: {
     name: string;

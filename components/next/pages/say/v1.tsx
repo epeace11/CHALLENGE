@@ -57,11 +57,7 @@ export default function SayV1() {
   return (
     <PlainFrame back={{ to: 'start' }}>
       <div className="flex flex-col gap-8">
-        <Title
-          ref={title}
-          title="Say your rules"
-          detail="Say what you both want, in your own words. You check every rule before anything starts."
-        />
+        <Title ref={title} title="Say your rules" />
 
         {stage !== 'check' ? (
           <div className="flex flex-col gap-4">

@@ -18,7 +18,7 @@ export { useToast } from './toast';
 export { Menu, type MenuItem } from './menu';
 export { YesNo, SegmentedControl, Toggle } from './choice';
 export { TextField, NumberField } from './fields';
-export { ProofStrip, ProofViewer } from './proofs';
+export { ProofStrip, ProofViewer, useImagePicker } from './proofs';
 export { DayIcon, type DayTone } from './day';
 export {
   DayCheckins,

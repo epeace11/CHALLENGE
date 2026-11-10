@@ -78,19 +78,17 @@ type Open =
   | null;
 
 /**
- * A group of settings under one heading that says what it applies to: this challenge, or all of
- * them. It's the first thing read, so nobody has to guess which is which.
+ * A group of settings under one heading that says what it applies to: this challenge (its name), or
+ * all of them. It's the first thing read, so nobody has to guess which is which.
  */
 function Scope({
   icon: Icon,
   title,
-  detail,
   index,
   children,
 }: {
   icon: LucideIcon;
   title: string;
-  detail: string;
   index: number;
   children: ReactNode;
 }) {
@@ -105,12 +103,9 @@ function Scope({
         <span className={styles.scopeIcon}>
           <Icon size={22} aria-hidden="true" />
         </span>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h2 id={id} className="font-nx-serif text-nx-h2">
-            {title}
-          </h2>
-          <p className="text-nx-body text-nx-ink-2">{detail}</p>
-        </div>
+        <h2 id={id} className="min-w-0 font-nx-serif text-nx-h2">
+          {title}
+        </h2>
       </header>
       {children}
     </section>
@@ -204,12 +199,7 @@ export default function SettingsV1() {
         <PageTitle title="Settings" />
 
         {c.id && (
-          <Scope
-            icon={Flag}
-            title={c.name}
-            detail={`With ${partner}. These are for this challenge only.`}
-            index={1}
-          >
+          <Scope icon={Flag} title={c.name} index={1}>
             <div className="flex flex-col gap-2.5">
               <RowButton
                 title="Rename this challenge"
@@ -252,21 +242,15 @@ export default function SettingsV1() {
                 />
               }
               title="Export this challenge"
-              detail="A file of your answers, points and notes"
               onClick={account.exportData}
             />
-            {!later &&
-              (proposal ? (
-                <ProposalCard
-                  partner={partner}
-                  changes={changesOf(now, proposal)}
-                  onWithdraw={() => setProposal(null)}
-                />
-              ) : (
-                <p className="text-nx-2 text-nx-ink-2">
-                  Changes here go to {partner} to accept.
-                </p>
-              ))}
+            {!later && proposal && (
+              <ProposalCard
+                partner={partner}
+                changes={changesOf(now, proposal)}
+                onWithdraw={() => setProposal(null)}
+              />
+            )}
             {/* Another challenge's settings are in that challenge. */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               {endControls}
@@ -287,7 +271,6 @@ export default function SettingsV1() {
         <Scope
           icon={CircleUser}
           title="For every challenge"
-          detail="These apply everywhere, not just to one challenge."
           index={c.id ? 2 : 1}
         >
           <RowButton
@@ -385,7 +368,6 @@ export default function SettingsV1() {
         label="Challenge name"
         missing="Give it a name."
         maxLength={60}
-        hint={`${partner} sees the new name too.`}
         onSave={(name) => {
           backend.act({ type: 'renameChallenge', name: name.trim() }, (w) =>
             renameChallenge(w, name),
@@ -456,7 +438,6 @@ function NameSheet({
   label = 'Name',
   missing = 'Enter your name.',
   maxLength = 30,
-  hint = 'Your partner sees it on every answer.',
   onSave,
 }: {
   open: boolean;
@@ -466,7 +447,6 @@ function NameSheet({
   label?: string;
   missing?: string;
   maxLength?: number;
-  hint?: string;
   onSave: (name: string) => void;
 }) {
   const [draft, setDraft] = useDraft(open, name);
@@ -509,7 +489,6 @@ function NameSheet({
           }}
           autoComplete="off"
           maxLength={maxLength}
-          hint={hint}
           error={error ?? undefined}
         />
       </form>
@@ -536,7 +515,6 @@ function TimesSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Reminder times"
-      description="Each evening, only if something is still left to log."
       footer={
         <>
           <Button onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -596,7 +574,9 @@ function TermsSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Propose a change"
-      description={`${world.partner.name} accepts it before anything changes.${start === now ? '' : ' This replaces the change still waiting.'}`}
+      description={
+        start === now ? undefined : 'This replaces the change still waiting.'
+      }
       footer={
         <>
           <Button onClick={() => onOpenChange(false)}>Cancel</Button>

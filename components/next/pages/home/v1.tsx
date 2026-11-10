@@ -138,7 +138,6 @@ export default function HomeV2() {
         return {
           id,
           name: past.challenge.name,
-          detail: finishedLine(past),
           restore: () => hidePast(id, false),
           remove: () =>
             ask({
@@ -168,7 +167,6 @@ export default function HomeV2() {
         (s): HiddenItem => ({
           id: s.id,
           name: s.name,
-          detail: sizeLine(s),
           restore: () => setSavedHidden(s.id, false),
           remove: () =>
             ask({
@@ -618,7 +616,6 @@ function OpenCard({
             </span>
           }
           title="To review"
-          detail={run.waitingHint}
           onClick={() => open('review')}
         />
       </Rows>

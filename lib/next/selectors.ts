@@ -606,7 +606,6 @@ export function runningSummary(w: World): RunningSummary {
         ? `${formatWeekday(day)}, ${formatDuration(timeLeft(w, day))} left`
         : 'All logged',
     waiting,
-    waitingHint: waiting ? `From ${w.partner.name}` : 'Nothing waiting',
   };
 }
 
@@ -1300,6 +1299,18 @@ export const sessionsOf = (
     )
     .sort((a, b) => ms(a.startedAt) - ms(b.startedAt));
 
+/**
+ * Seconds in `personId`'s stopped sessions on a timed rule for `day`: what is logged so far. A timer
+ * still going isn't, until it stops.
+ */
+export const loggedSeconds = (
+  w: World,
+  personId: string,
+  ruleId: string,
+  day: DateString,
+) =>
+  sessionsOf(w, personId, ruleId, day).reduce((sum, s) => sum + s.seconds, 0);
+
 /** Seconds timed on a rule on `day`: its finished sessions, plus a timer still going for that day. */
 export function timedSeconds(
   w: World,
@@ -1308,10 +1319,7 @@ export function timedSeconds(
   day: DateString,
   now: Instant | number = w.now,
 ) {
-  const done = sessionsOf(w, personId, ruleId, day).reduce(
-    (sum, s) => sum + s.seconds,
-    0,
-  );
+  const done = loggedSeconds(w, personId, ruleId, day);
   const run = timerOf(w, personId);
   return run && run.ruleId === ruleId && run.day === day
     ? done + timerSeconds(run, now)
@@ -1335,8 +1343,23 @@ export function timedProgress(
   day: DateString,
   now: Instant | number = w.now,
 ) {
+  return progressOf(
+    rule,
+    personId,
+    timedSeconds(w, personId, rule.id, day, now),
+  );
+}
+
+/** timedProgress for the stopped sessions only: what is logged so far, a timer still going left out. */
+export const loggedProgress = (
+  w: World,
+  personId: string,
+  rule: Rule,
+  day: DateString,
+) => progressOf(rule, personId, loggedSeconds(w, personId, rule.id, day));
+
+function progressOf(rule: Rule, personId: string, seconds: number) {
   const target = targetFor(rule, personId);
-  const seconds = timedSeconds(w, personId, rule.id, day, now);
   const targetSeconds = (target?.value ?? 0) * 60;
   const minutes = timedMinutes(seconds);
   return {

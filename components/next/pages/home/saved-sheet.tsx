@@ -5,14 +5,7 @@ import { plural } from '@/lib/next/selectors';
 import { useWorld } from '@/components/next/world';
 import { Button, Sheet } from '@/components/next/ui';
 import { ShareLink } from './share-link';
-import {
-  ruleLine,
-  rulesByWho,
-  savedLine,
-  sourceLine,
-  stakesLine,
-  startLabel,
-} from './helpers';
+import { ruleLine, rulesByWho, stakesLine, startLabel } from './helpers';
 
 /**
  * A saved challenge in full, one tap from its card: how long it runs, its stakes, and its rules
@@ -35,13 +28,6 @@ export function SavedSheet({
       open={open && !!saved}
       onOpenChange={onOpenChange}
       title={saved?.name ?? 'Saved challenge'}
-      description={
-        saved
-          ? saved.source === 'link'
-            ? sourceLine(saved)
-            : savedLine(saved)
-          : undefined
-      }
       footer={
         saved && (
           <Button variant="primary" onClick={onStart}>

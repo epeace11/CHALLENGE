@@ -182,15 +182,13 @@ function NoteItem({
   );
 }
 
-/** Notes as a list that grows and shrinks smoothly. */
+/** Notes as a list that grows and shrinks smoothly. With none it shows nothing: Add a note says what to do. */
 export function NoteList({
   notes,
   actions,
-  empty,
 }: {
   notes: JournalNote[];
   actions: NoteActions;
-  empty: string;
 }) {
   return (
     <div className="relative flex flex-col gap-2">
@@ -201,9 +199,6 @@ export function NoteList({
           </Item>
         ))}
       </Presence>
-      {notes.length === 0 && (
-        <p className="text-nx-body text-nx-ink-2">{empty}</p>
-      )}
     </div>
   );
 }
@@ -250,7 +245,7 @@ export function DayJournal({
         )
       }
     >
-      <NoteList notes={notes} actions={actions} empty="No notes yet." />
+      <NoteList notes={notes} actions={actions} />
       {writing && (
         <div ref={box}>
           <Card className="nx-enter flex flex-col gap-3">
@@ -260,7 +255,7 @@ export function DayJournal({
               maxLength={1000}
               value={text}
               onChange={setText}
-              hint={`${partner} can read it. Notes never change points.`}
+              hint={`${partner} can read it.`}
             />
             <div className="flex flex-wrap items-center justify-end gap-2">
               <WhyLine id={why.id} className="w-full">
@@ -311,7 +306,7 @@ export function JournalSheet({
       open={open}
       onOpenChange={close}
       title={`${formatWeekday(day)}’s journal`}
-      description={`${partner} can read it. Notes never change points.`}
+      description={`${partner} can read it.`}
       footer={
         <>
           <Button onClick={() => close(false)}>Close</Button>
@@ -336,7 +331,7 @@ export function JournalSheet({
       }
     >
       <div className="flex flex-col gap-5">
-        <NoteList notes={notes} actions={actions} empty="No notes yet." />
+        <NoteList notes={notes} actions={actions} />
         <div ref={box}>
           <TextField
             label="New note"

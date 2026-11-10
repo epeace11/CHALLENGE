@@ -68,11 +68,6 @@ export function GoalsSheet({
       onOpenChange={onOpenChange}
       initialFocus={first}
       title="Your goals"
-      description={
-        goals.hasPartner
-          ? `For this challenge. ${goals.partner.name} can see them too.`
-          : 'For this challenge.'
-      }
       footer={
         <Button variant="primary" size="lg" full loading={busy} onClick={save}>
           Save

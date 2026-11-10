@@ -29,7 +29,6 @@ import {
   MAX_DAYS,
   MIN_DAYS,
   deadlineId,
-  deadlineLine,
   draftCap,
   draftDays,
   rangeLine,
@@ -195,10 +194,7 @@ export default function SetupV1() {
       value: deadlineZoneLine(draft),
       body: (
         <>
-          <Labeled
-            label="Log each day by 11:59 pm"
-            hint={deadlineLine(draft.deadline)}
-          >
+          <Labeled label="Log each day by 11:59 pm">
             <SegmentedControl
               label="Log each day by 11:59 pm"
               value={deadlineId(draft.deadline)}
@@ -323,14 +319,9 @@ export default function SetupV1() {
   );
 }
 
-/** "Step 2 of 2 · Rules from Dry Month": says where the rules already in the list came from. */
-function setupDetail(world: World) {
-  const theme = world.themes.find((t) => t.id === world.challenge.theme);
-  const who = `With ${world.partner.name}`;
-  return theme
-    ? `Step 2 of 2 · ${who} · Rules from ${theme.name}`
-    : `Step 2 of 2 · ${who}`;
-}
+/** "Step 2 of 2 · With Jordan". */
+const setupDetail = (world: World) =>
+  `Step 2 of 2 · With ${world.partner.name}`;
 
 /** The first screen: one empty name field and Continue (Enter works too). */
 function NameStep({

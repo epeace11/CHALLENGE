@@ -4,7 +4,7 @@ import type { Rule } from '@/lib/next/model';
 import {
   appliesOn,
   formatNumber,
-  timedProgress,
+  loggedProgress,
   timedRules,
   timerDay,
   timerOf,
@@ -17,9 +17,9 @@ import { shortTitle } from './data';
 
 /**
  * How far the viewer is today on their timed rules, as one row that opens the Timer page: "Arabic",
- * "12 of 20 min today"; with several, a line each ("Arabic: 12 of 20 min today"). A timer going
- * adds its time as it runs (the top bar shows its clock, so this row doesn't repeat it). Nothing
- * when no rule asked today has the timer on.
+ * "12 of 20 min today"; with several, a line each ("Arabic: 12 of 20 min today"). Only stopped
+ * sessions count: a timer going adds its time when it stops (the top bar shows its clock meanwhile).
+ * Nothing when no rule asked today has the timer on.
  */
 export function TimerRow({ index }: { index: number }) {
   const world = useWorld();
@@ -39,7 +39,7 @@ export function TimerRow({ index }: { index: number }) {
    * and "65 min today, over 60".
    */
   const sofar = (r: Rule) => {
-    const p = timedProgress(world, me, r, today, now);
+    const p = loggedProgress(world, me, r, today);
     const min = `${p.minutes} min today`;
     if (!p.target) return min;
     const target = formatNumber(p.target.value);

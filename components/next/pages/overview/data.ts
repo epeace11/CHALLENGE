@@ -142,8 +142,7 @@ export function overviewOf(w: World) {
     /** The day being logged, and its name to someone reading today's date: "yesterday" or "Wednesday". */
     day,
     dayName: day ? relativeDay(w, day) : '',
-    /** Check-ins Maya still has to answer for it. */
-    open,
+    /** How many check-ins Maya still has to answer for it. */
     left: open.length,
     /** Time left to log it, in ms, and "11:59 pm tonight". */
     msLeft: timeLeft(w),

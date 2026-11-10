@@ -345,7 +345,6 @@ export function StakesRows({ glass = true }: { glass?: boolean }) {
           glass={glass}
           leading={lead(ScrollText)}
           title="The pact"
-          detail={`What you and ${world.partner.name} signed`}
           onClick={() => navigate('pact')}
         />
       )}

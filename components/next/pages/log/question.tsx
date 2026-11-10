@@ -28,6 +28,7 @@ import {
   ProofStrip,
   ReasonSheet,
   TextField,
+  useImagePicker,
   YesNo,
 } from '@/components/next/ui';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,7 @@ import { Bar } from './bar';
 import { timedLine, TimedSheet } from './timed';
 import {
   fieldControls,
+  MAX_PROOFS,
   outcomeOf,
   stepFor,
   unitLabel,
@@ -88,7 +90,7 @@ export function Eyebrow({ rule }: { rule: Rule }) {
   );
 }
 
-/** The question as asked, in Georgia, and what counts. `size="lg"` for a full-screen card (larger on laptops). */
+/** The question as asked, in Georgia. `size="lg"` for a full-screen card (larger on laptops). */
 export function QuestionHead({
   rule,
   headingRef,
@@ -117,14 +119,7 @@ export function QuestionHead({
       >
         {rule.question}
       </h2>
-      <p
-        className={cn(
-          'text-nx-ink-2',
-          size === 'lg' ? 'text-nx-body lg:text-nx-lead' : 'text-nx-body',
-        )}
-      >
-        {rule.description}
-      </p>
+      {/* The question is enough: the rule's description is on Rules and help */}
     </div>
   );
 }
@@ -175,6 +170,9 @@ export function QuestionFields({
     : 0;
   const more = week ? Math.max(0, week.need - have) : 0;
   const shots = draft.proofs.length;
+  /** The live app opens the photo picker (several at once); the preview adds a sample screenshot. */
+  const picker = useImagePicker((files) => ci.addFiles(rule, files));
+  const addShot = () => (ci.picksFiles ? picker.open() : ci.addProof(rule));
   /** Where a timed rule's number came from: its sessions, opened in a sheet. */
   const timed = timedLine(ci, rule);
   /** The miss card can show here: a late answer never asks to forgive, and a weekly No costs nothing. */
@@ -207,6 +205,8 @@ export function QuestionFields({
         className,
       )}
     >
+      {/* Out of sight and out of the layout; it stays while the tile and the button trade places. */}
+      {rule.proof !== 'none' && ci.picksFiles && picker.input}
       <div {...field('answer')} className="sm:col-start-1 sm:row-start-1">
         {rule.kind === 'number' ? (
           <>
@@ -279,10 +279,9 @@ export function QuestionFields({
               </p>
               <ProofStrip
                 proofs={draft.proofs}
-                // The database takes six at most.
-                max={6}
+                max={MAX_PROOFS}
                 busy={ci.uploadingFor(rule)}
-                onAdd={() => ci.addProof(rule)}
+                onAdd={addShot}
                 onRemove={(id) => ci.removeProof(rule, id)}
               />
             </div>
@@ -299,11 +298,12 @@ export function QuestionFields({
                   <span className="text-nx-body font-semibold text-nx-ink">
                     {have} of {week.need} this week
                   </span>
-                  <span className="text-nx-2 text-nx-ink-2">
-                    {more > 0
-                      ? `${more} more by ${formatWeekday(week.week.end)}`
-                      : 'Done for this week'}
-                  </span>
+                  {/* When the week ends; a full week says so with its full bar. */}
+                  {more > 0 && (
+                    <span className="text-nx-2 text-nx-ink-2">
+                      {more} more by {formatWeekday(week.week.end)}
+                    </span>
+                  )}
                 </span>
                 <ChevronRight
                   size={20}
@@ -332,7 +332,7 @@ export function QuestionFields({
                         you give.
                       </LinkLine>
                     )}
-                    {/* The reason is asked in a sheet, as on Review; the sheet says what forgiving does. */}
+                    {/* The reason is asked in a sheet, as on Review. */}
                     <LinkLine
                       icon={HandHeart}
                       popup
@@ -383,7 +383,6 @@ export function QuestionFields({
             open={asking}
             onOpenChange={setAsking}
             title={`Ask ${partner} to forgive it`}
-            description={`If ${partner} agrees, the point costs nothing.`}
             label="Your reason"
             initial={draft.reason}
             maxLength={500}
@@ -416,7 +415,7 @@ export function QuestionFields({
                 variant="quiet"
                 icon={ImagePlus}
                 loading={ci.uploadingFor(rule)}
-                onClick={() => ci.addProof(rule)}
+                onClick={addShot}
               >
                 Add screenshot
               </Button>

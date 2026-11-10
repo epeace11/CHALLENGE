@@ -8,7 +8,7 @@
   /* The heading of a group: what these settings apply to, this challenge or all of them. */
   .scope {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 14px;
     padding-bottom: 14px;
     border-bottom: 1px solid var(--nx-line);

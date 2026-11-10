@@ -267,8 +267,8 @@ export function AskEndSheet({
       title={`Ask ${partner} to end ${c.name}?`}
       description={
         early
-          ? `It’s deleted once ${partner} agrees, since no day has counted yet. Until then, nothing changes.`
-          : `It ends once ${partner} agrees: the days that are over count, and the verdict opens. Until then, nothing changes.`
+          ? `It’s deleted once ${partner} agrees, since no day has counted yet.`
+          : `It ends once ${partner} agrees: the days that are over count, and the verdict opens.`
       }
       footer={
         <>
@@ -344,12 +344,9 @@ export function EndAskCard({
         className,
       )}
     >
-      <div className="flex flex-col gap-1">
-        <p className="text-nx-body font-semibold text-nx-ink">
-          {partner} asks to end {world.challenge.name} now
-        </p>
-        <p className="text-nx-2 text-nx-ink-2">It ends only if you agree.</p>
-      </div>
+      <p className="text-nx-body font-semibold text-nx-ink">
+        {partner} asks to end {world.challenge.name} now
+      </p>
       <div className="flex flex-wrap gap-2">
         <Button onClick={onKeep}>Keep going</Button>
         <Button variant="danger" icon={LogOut} onClick={onEnd}>
@@ -437,7 +434,7 @@ function SettleFirst({
       open={open}
       onOpenChange={onOpenChange}
       title={`Settle ${plural(openDisputes(world), 'dispute')} first`}
-      description={`${world.challenge.name} can’t end with a dispute open. The person who answered concedes, or the person who disputed it withdraws.`}
+      description={`${world.challenge.name} can’t end with a dispute open.`}
       footer={
         <>
           <Button onClick={() => onOpenChange(false)}>Keep going</Button>

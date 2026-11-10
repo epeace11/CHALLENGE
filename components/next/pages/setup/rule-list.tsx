@@ -61,11 +61,7 @@ export function RuleList({
     ? [...rules.slice(0, gone.index), gone.rule, ...rules.slice(gone.index)]
     : rules;
   if (shown.length === 0)
-    return (
-      <Card className="text-nx-body text-nx-ink-2">
-        No rules yet. Add one from the library or build your own.
-      </Card>
-    );
+    return <Card className="text-nx-body text-nx-ink-2">No rules yet.</Card>;
   return (
     <div
       data-rule-list

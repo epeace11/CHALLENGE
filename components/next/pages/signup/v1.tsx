@@ -95,18 +95,10 @@ export default function SignupV2() {
             />
           ) : (
             <div className="flex flex-col gap-5">
-              <header className="nx-enter flex flex-col gap-2">
+              <header className="nx-enter">
                 <h1 className="nx-page-title">
                   {signup ? 'Create your account' : 'Sign in'}
                 </h1>
-                {signup && (
-                  <p className="text-nx-body text-nx-ink-2">
-                    {/* Someone who opened an invite has their challenge already: the pact is next. */}
-                    {invited
-                      ? `Then sign the pact with ${world.partner.name}.`
-                      : 'Then pick a challenge and invite your partner.'}
-                  </p>
-                )}
               </header>
               <Enter index={1}>
                 <GlassCard>

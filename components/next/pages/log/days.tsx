@@ -80,7 +80,7 @@ export function DaySheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { world, me, partner } = ci;
+  const { world, me } = ci;
   const closed = recentClosedDays(world);
   const pick = (d: DateString) => {
     ci.pickDay(d);
@@ -117,15 +117,10 @@ export function DaySheet({
         )}
         {closed.length > 0 && (
           <section className="flex flex-col gap-2.5">
-            <div className="flex flex-col gap-1">
-              <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
-                Closed
-              </h3>
-              <p className="text-nx-2 text-nx-ink-2">
-                A change now is a late answer. It counts once {partner} approves
-                it.
-              </p>
-            </div>
+            {/* A closed day's page says what a change there means. */}
+            <h3 className="font-nx-sans text-nx-2 font-semibold text-nx-ink-2">
+              Closed
+            </h3>
             {/* One row of day squares, oldest first, drawn like the calendar's days. */}
             <ul
               className={styles.strip}

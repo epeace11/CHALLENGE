@@ -121,13 +121,13 @@ function RuleSheet({ flow }: { flow: InviteFlow }) {
 /* ── Dates ──────────────────────────────────────────────────────────────── */
 
 function DatesSheet({ flow }: { flow: InviteFlow }) {
-  const c = flow.challenge;
   return (
     <Sheet
       open={flow.sheet === 'dates'}
       onOpenChange={onOpenChange(flow)}
       title="Dates"
-      description={`${c.name} runs ${c.days} days, on ${flow.place} time.`}
+      // Its length is on the Starts tile that opens it.
+      description={`On ${flow.place} time.`}
       footer={
         <>
           {flow.canSuggest && (
@@ -278,7 +278,6 @@ function SuggestSheet({ flow }: { flow: InviteFlow }) {
       open={flow.sheet === 'suggest'}
       onOpenChange={onOpenChange(flow)}
       title="Suggest a change"
-      description={`${name} can change the challenge before Day 1.`}
       footer={
         <>
           <Button onClick={flow.close}>Cancel</Button>

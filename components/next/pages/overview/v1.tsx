@@ -1,6 +1,6 @@
 // Your goals first, in a card of their own: the one tinted card on the page, under the day's title, each goal a small numbered card side by side; then the check-ins as one big number with the Log button, number buttons for review, gym and both gifts, and the week.
 'use client';
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowRight, CircleCheck, Clock3, Square } from 'lucide-react';
 import type { DateString } from '@/lib/next/model';
 import {
@@ -205,15 +205,7 @@ function Running() {
                         left to log
                       </span>
                     </p>
-                    {/* Which ones, as plain words (they are not buttons); a name never breaks. */}
-                    <p className="text-nx-body text-nx-ink">
-                      {o.open.map((r, i) => (
-                        <Fragment key={r.id}>
-                          {i > 0 && '\u00a0· '}
-                          <span className="inline-block">{shortTitle(r)}</span>
-                        </Fragment>
-                      ))}
-                    </p>
+                    {/* Only how many: which ones come up on Check in, one at a time. */}
                     <p className="flex items-center gap-1.5 text-nx-2 text-nx-ink-2">
                       <Clock3
                         size={16}
@@ -246,19 +238,12 @@ function Running() {
                   <span className="grid size-12 shrink-0 place-items-center rounded-full bg-nx-done-soft text-nx-done">
                     <CircleCheck size={26} aria-hidden="true" />
                   </span>
-                  <div className="min-w-0">
-                    <p className="font-nx-serif text-nx-h3">
-                      {o.day
-                        ? `${o.dayName[0].toUpperCase()}${o.dayName.slice(1)} is logged`
-                        : 'Nothing to log'}
-                    </p>
-                    {/* With something to review, the button under the card says what is next. */}
-                    {o.waiting === 0 && (
-                      <p className="text-nx-2 text-nx-ink-2">
-                        Nothing waits for you either.
-                      </p>
-                    )}
-                  </div>
+                  {/* The button under the card says what is next; Waiting for you says what waits. */}
+                  <p className="min-w-0 font-nx-serif text-nx-h3">
+                    {o.day
+                      ? `${o.dayName[0].toUpperCase()}${o.dayName.slice(1)} is logged`
+                      : 'Nothing to log'}
+                  </p>
                 </GlassCard>
                 {o.waiting > 0 ? (
                   <Button
@@ -325,7 +310,7 @@ function Running() {
                   label="Waiting for you"
                   value={o.waiting}
                   tone={o.waiting > 0 ? 'wait' : 'default'}
-                  hint={o.waiting > 0 ? o.waitingSummary : 'Nothing to review'}
+                  hint={o.waiting > 0 ? o.waitingSummary : undefined}
                   onClick={() => navigate('review')}
                 />
               )}
@@ -345,10 +330,9 @@ function Running() {
                         label={`${gym.name} this week: ${gym.me.have} of ${gym.me.need}`}
                         className="mt-1 mb-2 w-36"
                       />
+                      {/* A week already met says so with its colour and full bar. */}
                       {[
-                        gym.me.met
-                          ? 'Done for the week'
-                          : `${plural(gym.me.daysLeft, 'day')} left`,
+                        !gym.me.met && `${plural(gym.me.daysLeft, 'day')} left`,
                         gym.partner &&
                           `${partner} ${gym.partner.have} of ${gym.partner.need}`,
                       ]

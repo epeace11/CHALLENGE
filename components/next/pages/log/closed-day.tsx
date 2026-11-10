@@ -41,7 +41,7 @@ export function ClosedDay({
       <PageTitle
         kicker="Late answers"
         title={formatDay(day)}
-        detail={`Closed. A change counts once ${partner} approves it.`}
+        detail={`A change counts once ${partner} approves it.`}
         action={
           <IconButton
             icon={CalendarDays}
@@ -78,7 +78,6 @@ export function ClosedDay({
         }}
         // The question is the title, so the body doesn't ask it again under the rule's name.
         title={shown?.question ?? 'Late answer'}
-        description={`${formatDay(day)}. It counts once ${partner} approves it.`}
         footer={
           shown && (
             <>
@@ -96,12 +95,7 @@ export function ClosedDay({
           )
         }
       >
-        {shown && (
-          <div className="flex flex-col gap-5">
-            <p className="text-nx-body text-nx-ink-2">{shown.description}</p>
-            <QuestionFields ci={ci} rule={shown} />
-          </div>
-        )}
+        {shown && <QuestionFields ci={ci} rule={shown} />}
       </Sheet>
     </div>
   );

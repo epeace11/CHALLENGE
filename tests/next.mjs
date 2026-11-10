@@ -977,7 +977,17 @@ for (const file of styles) {
   // 5 + 13 minutes on the clock: with this morning's 12, today is 30 minutes, 10 past the target.
   const live = S.timedProgress(x, MAYA, arabic, '2026-11-20', at('01:13'));
   assert.deepEqual([live.minutes, live.diff, live.met], [30, 600, true]);
+  // What's logged leaves the session going out until it stops: still this morning's 12.
+  assert.equal(S.loggedSeconds(x, MAYA, 'arabic', '2026-11-20'), 720);
+  assert.deepEqual(
+    [
+      S.loggedProgress(x, MAYA, arabic, '2026-11-20').minutes,
+      S.loggedProgress(x, MAYA, arabic, '2026-11-20').met,
+    ],
+    [12, false],
+  );
   x = T.stopTimer(x, MAYA, at('01:13'));
+  assert.equal(S.loggedProgress(x, MAYA, arabic, '2026-11-20').minutes, 30);
   assert.equal(S.timerOf(x, MAYA), null);
   const last = x.sessions[x.sessions.length - 1];
   assert.deepEqual(

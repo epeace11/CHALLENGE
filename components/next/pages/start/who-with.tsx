@@ -44,11 +44,6 @@ export function WhoWith({
           Someone new
         </label>
       </div>
-      {value === 'new' && (
-        <p className="text-nx-2 text-nx-ink-2">
-          You’ll invite them once it’s set up.
-        </p>
-      )}
     </fieldset>
   );
 }

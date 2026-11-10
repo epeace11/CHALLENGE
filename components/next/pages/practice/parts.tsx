@@ -53,7 +53,7 @@ const unitLabel = (rule: Rule) => {
   return unit ? unit[0].toUpperCase() + unit.slice(1) : 'Number';
 };
 
-/** One sample check-in: the question, what counts, and the answer (Yes or No, or a number with its screenshot). */
+/** One sample check-in, as on Check in: the question and the answer (Yes or No, or a number with its screenshot). */
 export function Question({
   p,
   index,
@@ -70,16 +70,14 @@ export function Question({
     p.setAnswer(index, patch);
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <h2
-          id={headingId}
-          tabIndex={headingId ? -1 : undefined}
-          className="font-nx-serif text-nx-h2"
-        >
-          {rule.question}
-        </h2>
-        <p className="text-nx-body text-nx-ink-2">{rule.description}</p>
-      </div>
+      {/* The question is enough: the rule's description is on Rules and help, as on Check in. */}
+      <h2
+        id={headingId}
+        tabIndex={headingId ? -1 : undefined}
+        className="font-nx-serif text-nx-h2"
+      >
+        {rule.question}
+      </h2>
       {rule.kind === 'number' ? (
         // From 640px the screenshot sits beside the number, as in Check in.
         <div className="flex flex-col gap-5 sm:grid sm:grid-cols-2 sm:gap-6">

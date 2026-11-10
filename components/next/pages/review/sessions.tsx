@@ -45,15 +45,15 @@ const lengthOf = (seconds: number) =>
   seconds < 60 ? 'Under 1 min' : formatMinutes(seconds);
 
 /**
- * The line over the sessions: "From the timer: 2 sessions" while the answer is what they add up to
- * (the answer already says the total), else "Timed 30 min in 2 sessions" (changed by hand).
+ * The line over the sessions: "From the timer" while the answer is what they add up to (the answer
+ * already says the total, and the list shows the sessions), else "Timed 30 min in 2 sessions"
+ * (changed by hand).
  */
 export function sessionsLine(sessions: TimerSession[], value?: number) {
   const seconds = sessions.reduce((sum, s) => sum + s.seconds, 0);
-  const count = plural(sessions.length, 'session');
   return value === timedMinutes(seconds)
-    ? `From the timer: ${count}`
-    : `Timed ${formatMinutes(seconds)} in ${count}`;
+    ? 'From the timer'
+    : `Timed ${formatMinutes(seconds)} in ${plural(sessions.length, 'session')}`;
 }
 
 /**

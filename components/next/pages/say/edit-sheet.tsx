@@ -85,7 +85,6 @@ export function EditSheet({
           value={value.preset}
           onChange={(preset) => onChange({ preset })}
           options={DAY_PRESETS}
-          hint={value.preset === '' ? 'Not set yet.' : undefined}
         />
         {rule.target && (
           <NumberField

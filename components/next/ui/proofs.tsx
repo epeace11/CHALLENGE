@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { ChevronLeft, ChevronRight, ImagePlus, X } from 'lucide-react';
 import type { Proof } from '@/lib/next/model';
@@ -7,6 +7,34 @@ import { cn } from '@/lib/utils';
 import { IconButton } from './button';
 import { usePortalContainer } from './root';
 import { useZoom } from './use-zoom';
+
+/**
+ * The phone's photo picker, several screenshots at a time: put `input` on the page and call `open()`
+ * from a tap. `onFiles` gets what was chosen. Closing the picker without choosing does nothing, and
+ * nothing waits for it (phones don't all say when it closes). The input stays on the page, like the
+ * original app's, so a picker that's slow to answer still lands.
+ */
+export function useImagePicker(onFiles: (files: File[]) => void) {
+  const ref = useRef<HTMLInputElement>(null);
+  const input = (
+    <input
+      ref={ref}
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      multiple
+      tabIndex={-1}
+      aria-hidden="true"
+      className="sr-only"
+      onChange={(e) => {
+        const files = Array.from(e.currentTarget.files ?? []);
+        // Cleared, so choosing the same screenshot again still counts as a change.
+        e.currentTarget.value = '';
+        if (files.length) onFiles(files);
+      }}
+    />
+  );
+  return { input, open: () => ref.current?.click() };
+}
 
 /**
  * Screenshot thumbnails. Tapping one opens every screenshot full screen, with arrows (and ←/→) to

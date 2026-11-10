@@ -72,18 +72,16 @@ export function DateField({
 }
 
 /**
- * A visible label and hint around a kit control that names itself for screen readers
- * (SegmentedControl, Toggle), so the label is not read twice.
+ * A visible label around a kit control that names itself for screen readers (SegmentedControl,
+ * Toggle), so the label is not read twice.
  */
 export function Labeled({
   label,
-  hint,
   error,
   className,
   children,
 }: {
   label: ReactNode;
-  hint?: ReactNode;
   error?: ReactNode;
   className?: string;
   children: ReactNode;
@@ -94,13 +92,11 @@ export function Labeled({
         {label}
       </p>
       {children}
-      {error ? (
+      {error && (
         <p className="nx-field-error" role="alert">
           {error}
         </p>
-      ) : hint ? (
-        <p className="nx-field-hint">{hint}</p>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -157,13 +153,11 @@ export function WeekdayPicker({
   value,
   onChange,
   label,
-  hint,
   error,
 }: {
   value: Weekday[];
   onChange: (days: Weekday[]) => void;
   label: string;
-  hint?: ReactNode;
   error?: ReactNode;
 }) {
   const toggle = (day: Weekday) =>
@@ -189,13 +183,11 @@ export function WeekdayPicker({
           </label>
         ))}
       </div>
-      {error ? (
+      {error && (
         <p className="nx-field-error mt-2" role="alert">
           {error}
         </p>
-      ) : hint ? (
-        <p className="nx-field-hint mt-2">{hint}</p>
-      ) : null}
+      )}
     </fieldset>
   );
 }

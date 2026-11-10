@@ -4,7 +4,7 @@ import { Flame } from 'lucide-react';
 import { useNav } from '@/components/next/nav';
 import { Enter } from '@/components/next/ui';
 import { plural } from '@/lib/next/selectors';
-import { DaySquares, dayTally } from './day-squares';
+import { DaySquares } from './day-squares';
 import { NextActions, shortTitle, streakAfter } from './end';
 import { CheckinPage, type EndProps } from './page';
 import { LinkLine } from './question';
@@ -17,7 +17,6 @@ function AtAGlance({ ci, headingRef }: EndProps) {
   const { navigate } = useNav();
   const day = ci.day ?? '';
   const streak = streakAfter(ci.world, ci.me, day);
-  const tally = dayTally(ci);
   // Compact on phones, so the streak shows above the pinned bar at 375×812 without scrolling.
   return (
     <section className="flex flex-col gap-4 pt-2 pb-4 sm:gap-5 sm:pt-4">
@@ -46,9 +45,10 @@ function AtAGlance({ ci, headingRef }: EndProps) {
             </span>
           </LinkLine>
         )}
-        {tally && (
+        {/* The squares show how each answer stands; the line says until when one can change. */}
+        {ci.rules.length > 0 && (
           <p className="text-nx-2 text-nx-ink-2">
-            {tally}. You can change an answer until {ci.lockLabel(day)}.
+            You can change an answer until {ci.lockLabel(day)}.
           </p>
         )}
       </Enter>

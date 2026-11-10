@@ -53,7 +53,7 @@ export type VerdictSide = {
   /** The gift this person receives, set by the partner's points. */
   gets: number;
   owes: number;
-  streak: { title: string; description: string; days: number; all: boolean };
+  streak: { title: string; days: number; all: boolean };
   badges: { id: string; title: string; how: string }[];
 };
 
@@ -91,7 +91,6 @@ export function verdictOf(seen: World, past: PastChallenge | undefined) {
       owes: p.owes,
       streak: {
         title: rule?.title ?? 'A habit',
-        description: rule?.description ?? '',
         days: p.bestStreak.days,
         all: !!rule && p.bestStreak.days >= daysAsked,
       },

@@ -60,7 +60,6 @@ export function TimeZoneSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Time zone"
-      description="Days and deadlines follow this time zone."
       footer={
         <Footer
           onCancel={() => onOpenChange(false)}

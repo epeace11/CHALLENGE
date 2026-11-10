@@ -17,7 +17,7 @@ import {
 } from '@/components/next/ui';
 import { plural } from '@/lib/next/selectors';
 import { RuleIcon, SaveButton, SharedBy, SharedSheets } from './details';
-import { costExample, costSequence, ruleFacts, sharedChallenge } from './facts';
+import { costSequence, ruleFacts, sharedChallenge } from './facts';
 import { useSaveForLater } from './use-save-for-later';
 
 const days = (n: number) => plural(Math.round(n), 'day');
@@ -66,7 +66,6 @@ export default function SharedV1() {
               label="What a point costs"
               value={costSequence(shared.step)}
               tone="accent"
-              hint={costExample(shared)}
               onClick={() => setSheet('cost')}
             />
           </div>

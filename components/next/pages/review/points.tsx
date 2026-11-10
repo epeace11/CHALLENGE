@@ -9,7 +9,6 @@ import {
   formatMoney,
   gets,
   pendingRequestFor,
-  plural,
   ruleById,
 } from '@/lib/next/selectors';
 import {
@@ -35,30 +34,6 @@ function openPoints(w: World, personId: string): Open[] {
       : undefined;
     return [{ point, rule, why: missWhy(w, point, rule, entry) }];
   });
-}
-
-/**
- * "You have 6 points", or "9 points · 8 not asked about yet" under a row whose title already names
- * whose they are: the total always matches Overview and Gifts.
- */
-function pointsDetail(total: number, open: number, who?: string) {
-  const has = who ? `${who} ${plural(total, 'point')}` : plural(total, 'point');
-  return open === total ? has : `${has} · ${open} not asked about yet`;
-}
-
-/**
- * What forgiving one of the partner's points does to the gift the viewer gets. Any one does the
- * same, since a gift is set by how many points there are.
- */
-function forgiveCost(w: World, rows: Open[]) {
-  const now = gets(w, w.me.id);
-  const off = rows[0]
-    ? now - gets(forgivePoint(w, rows[0].point.id), w.me.id)
-    : 0;
-  const which = rows.length === 1 ? 'Forgiving it' : 'Forgiving any one';
-  return off > 0
-    ? `${which} takes ${formatMoney(off)} off the gift you get.`
-    : `${which} leaves the gift you get at ${formatMoney(now)}.`;
 }
 
 /**
@@ -137,11 +112,6 @@ export function PointActions({ review }: { review: Review }) {
           glass={false}
           leading={<Avatar person={world.me} decorative />}
           title={`Ask ${partner.name} to forgive a point`}
-          detail={pointsDetail(
-            activePoints(world, world.me.id).length,
-            mine.length,
-            'You have',
-          )}
           onClick={() => openList('mine')}
         />
       )}
@@ -151,10 +121,6 @@ export function PointActions({ review }: { review: Review }) {
           glass={false}
           leading={<Avatar person={partner} decorative />}
           title={`Forgive one of ${partner.name}’s points`}
-          detail={pointsDetail(
-            activePoints(world, partner.id).length,
-            theirs.length,
-          )}
           onClick={() => openList('theirs')}
         />
       )}
@@ -166,11 +132,6 @@ export function PointActions({ review }: { review: Review }) {
           shownList === 'mine'
             ? 'Which of your points?'
             : `Which of ${partner.name}’s points?`
-        }
-        description={
-          shownList === 'theirs' && rows.length > 0
-            ? forgiveCost(world, rows)
-            : undefined
         }
         footer={<Button onClick={() => setList(null)}>Cancel</Button>}
       >

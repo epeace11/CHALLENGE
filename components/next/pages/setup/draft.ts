@@ -133,20 +133,6 @@ export function clock(time: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
 }
 
-/**
- * An example of the deadline: "Thursday’s check-ins close on Friday." The time is in the label
- * above it ("Log each day by 11:59 pm"), so it is not said again.
- */
-export function deadlineLine(d: Deadline) {
-  const when =
-    d.daysAfter === 0
-      ? 'that night'
-      : d.daysAfter === 1
-        ? 'on Friday'
-        : `${d.daysAfter} days later`;
-  return `Thursday’s check-ins close ${when}.`;
-}
-
 /* ── Time zones ────────────────────────────────────────────────────────── */
 
 export const TIME_ZONES: { id: string; city: string; region: string }[] = [

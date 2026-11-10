@@ -114,13 +114,11 @@ export function ChipGroup({
   options,
   value,
   onChange,
-  hint,
 }: {
   label: string;
   options: { id: string; label: string }[];
   value: string;
   onChange: (id: string) => void;
-  hint?: string;
 }) {
   const name = useId();
   return (
@@ -149,7 +147,6 @@ export function ChipGroup({
           </label>
         ))}
       </div>
-      {hint && <p className="nx-field-hint">{hint}</p>}
     </div>
   );
 }

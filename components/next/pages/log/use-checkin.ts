@@ -52,6 +52,9 @@ export type Draft = {
   reason: string;
 };
 
+/** The database takes six screenshots on one answer at most. */
+export const MAX_PROOFS = 6;
+
 /** What the draft amounts to: a Yes, a miss (a point), a weekly No (costs nothing), or nothing yet. */
 export type Outcome = 'yes' | 'miss' | 'rest' | null;
 
@@ -453,24 +456,35 @@ export function useCheckin({ top, heading }: Anchors) {
     setSkipped([]);
   };
 
-  const addProof = async (rule: Rule) => {
-    const d = draftOf(rule);
-    const k = key(rule);
-    if (uploading === k) return;
-    shots.current += 1;
-    setUploading(k);
-    const proof = await (backend.host
-      ? day
-        ? backend.host.pickProof(day)
-        : null
-      : sampleShot(rule, d.value, day ?? '', shots.current));
-    setUploading((u) => (u === k ? null : u));
-    if (!proof) return;
-    const base = baseOf(rule);
+  /** Adds screenshots to a check-in's draft; Save attaches them to the answer. */
+  const addTo = (rule: Rule, added: Proof[]) => {
+    if (!added.length) return;
+    const k = key(rule),
+      base = baseOf(rule);
     setDrafts((all) => {
       const was = all[k] ?? base;
-      return { ...all, [k]: { ...was, proofs: [...was.proofs, proof] } };
+      return { ...all, [k]: { ...was, proofs: [...was.proofs, ...added] } };
     });
+  };
+  /** The preview: a sample screenshot, with no picker. The live app uses addFiles. */
+  const addProof = (rule: Rule) => {
+    shots.current += 1;
+    addTo(rule, [
+      sampleShot(rule, draftOf(rule).value, day ?? '', shots.current),
+    ]);
+  };
+  /** The live app: uploads the screenshots chosen in the photo picker, as many as still fit. */
+  const addFiles = async (rule: Rule, files: File[]) => {
+    const k = key(rule);
+    if (!backend.host || !day || uploading === k) return;
+    setUploading(k);
+    const added = await backend.host.uploadProofs(
+      day,
+      files,
+      MAX_PROOFS - draftOf(rule).proofs.length,
+    );
+    setUploading((u) => (u === k ? null : u));
+    addTo(rule, added);
   };
   const removeProof = (rule: Rule, proofId: string) =>
     change(rule, {
@@ -521,8 +535,11 @@ export function useCheckin({ top, heading }: Anchors) {
     cancel,
     pickDay,
     showCurrent,
+    /** True in the live app, where adding a screenshot opens the photo picker (addFiles). */
+    picksFiles: !!backend.host,
     addProof,
-    /** True while `rule`'s screenshot uploads. */
+    addFiles,
+    /** True while `rule`'s screenshots upload. */
     uploadingFor: (rule: Rule) => uploading === key(rule),
     removeProof,
     lockLabel,
