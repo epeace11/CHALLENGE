@@ -1,6 +1,5 @@
 // Version 1's dial: today's time as a stopwatch, inside a ring that closes at the day's target.
 'use client';
-import type { ReactNode } from 'react';
 import type { TimerFlow } from './use-timer';
 import { formatClock, formatNumber } from '@/lib/next/selectors';
 import { cn } from '@/lib/utils';
@@ -25,24 +24,19 @@ export function overOf(p: Progress) {
 
 /**
  * The dial: the day's time on the clock (earlier sessions plus the one going), with the target
- * under it. The ring fills toward the target, turns the done colour once it is reached (the
- * missed colour once a limit is passed), and time past it goes round again on top, darker.
+ * under it, and nothing else, so a small phone's ring never crowds. The ring fills toward the
+ * target, turns the done colour once it is reached (the missed colour once a limit is passed), and
+ * time past it goes round again on top, darker.
  */
 export function Dial({
   progress: p,
   state,
   label,
-  status,
-  top,
 }: {
   progress: Progress;
   state: 'idle' | 'running' | 'paused';
   /** What the ring measures, for screen readers: "Arabic today". */
   label: string;
-  /** The third line: the session going, or what's left to go. */
-  status?: ReactNode;
-  /** Above the clock, inside the ring: which rule it times (a small dropdown with several). */
-  top?: ReactNode;
 }) {
   const tone = toneOf(p);
   const over = overOf(p);
@@ -102,7 +96,6 @@ export function Dial({
         </g>
       </svg>
       <div className={styles.face}>
-        {top && <div className="mb-1 max-w-[80%]">{top}</div>}
         <span
           className={styles.digits}
           data-long={clock.length > 5 || undefined}
@@ -112,9 +105,6 @@ export function Dial({
         </span>
         <span aria-hidden="true" className="contents">
           <FaceLine progress={p} tone={tone} over={over} target={target} />
-        </span>
-        <span className="mt-1 flex min-h-[22px] items-center justify-center gap-2 text-nx-2 text-nx-ink-2">
-          {status}
         </span>
       </div>
     </div>

@@ -609,6 +609,8 @@ Pick: 1, November 9, 2026 (Erin), with one change: the Today line shows the tota
 
 Change, November 10, 2026 (Erin): nothing counts as logged until the timer stops. The Today line adds only stopped sessions and first shows after the first one stops; Overview's timer row does the same. While a session runs, its time is on the dial only.
 
+Change, November 11, 2026 (Erin, on her phone): Past days is gone (the day tiles under the timer, the day sheet and Every day); a day's answer is on Check in and Progress. The clock sits in the middle of the space between the top bar and the tab bar, and the page never scrolls: the dial grows to fill a tall phone and gives way on a short one, and today's session chips stay on one row that scrolls sideways. Only the time and the target are inside the ring now, since a small phone squeezed four lines into it: the rule's dropdown (with several timed rules) is above the dial, and the session going or what's left to go is under it.
+
 ### Rules and help (`rules`)
 
 1. One page: rules as rows grouped Both of you / Maya / Jordan, then the deadline and stakes, then short expandable answers; Propose a change pinned at the bottom.

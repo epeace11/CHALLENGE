@@ -14,7 +14,6 @@ import {
   loggedSeconds,
   sessionsOf,
   timeableRules,
-  timedDays,
   timedProgress,
   timedRules,
   timerDay,
@@ -84,8 +83,6 @@ export function useTimer() {
     logged: rule ? loggedSeconds(world, me, rule.id, today) : 0,
     /** Today's finished sessions on the rule on screen, oldest first. */
     sessions: rule ? sessionsOf(world, me, rule.id, today) : [],
-    /** Each day of the rule on screen so far, newest first: seconds, sessions and the answer saved. */
-    history: rule ? timedDays(world, me, rule, now) : [],
     /** The viewer's rules counted in minutes that the timer could be turned on for. */
     timeable: timeableRules(world, me),
 

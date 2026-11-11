@@ -1,4 +1,4 @@
-/* Timer, version 1 (the clock first): the dial, the session chips and the past days. Tokens only, so
+/* Timer, version 1 (the clock first): the dial in the middle of the page and the session chips. Tokens only, so
    light, dark and every look work; motion uses the --nx-* durations, which are 0 under reduced
    motion. */
 /* Tailwind's layer order, stated first: if this sheet is registered before app/globals.css, the
@@ -6,11 +6,25 @@
 @layer properties, theme, base, components, utilities;
 
 @layer components {
+  /* ── The page: the space between the top bar and the tab bar, clock in the middle ── */
+  :global(.nx-frame):has(.page) {
+    display: flex;
+    flex-direction: column;
+  }
+  :global(.nx-frame):has(.page) > :global(.nx-main) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .page {
+    flex: 1;
+  }
+
   /* ── The dial: today's time inside a ring that closes at the target ──────── */
   /* The dial gives way on short screens (a short laptop window, a small phone), so the page
      still fits without scrolling. */
   .dial {
-    --dial-size: min(220px, 60vw, max(184px, 100dvh - 600px));
+    --dial-size: min(272px, 72vw, max(184px, 100dvh - 500px));
     --dial-arc: var(--nx-accent);
     --dial-track: var(--nx-sunken);
     --dial-lap: var(--nx-accent-strong);
@@ -21,7 +35,7 @@
   }
   @media (min-width: 640px) {
     .dial {
-      --dial-size: min(288px, max(176px, 100dvh - 488px));
+      --dial-size: min(300px, max(176px, 100dvh - 440px));
     }
   }
   .dial[data-tone='done'] {
@@ -143,7 +157,7 @@
   }
 
   /* ── Labels and today's sessions ──────────────────────────────────────── */
-  /* "Today", "Past days": small labels, so the dial stays the one big thing. */
+  /* "Today": a small label, so the dial stays the one big thing. */
   .label {
     font-family: var(--nx-font-sans);
     font-size: 15px;
@@ -172,41 +186,5 @@
   .session:hover {
     border-color: var(--nx-accent-line);
     background: var(--nx-accent-soft);
-  }
-
-  /* ── Past days: one tile per day, the minutes and how the answer stands ── */
-  .days {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    min-width: 0;
-    padding: 0 0 4px;
-    border-radius: 12px;
-    color: var(--nx-ink-2);
-    font-size: 14px;
-    line-height: 1.2;
-  }
-  .tile:hover .square {
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.35),
-      0 0 0 2px var(--nx-accent-line);
-  }
-  /* An nx-day square (laid out with Tailwind's flex classes): the minutes over the icon. */
-  .square {
-    gap: 3px;
-    width: 100%;
-    max-width: 52px;
-    aspect-ratio: 1;
-    font-size: 17px;
-    font-weight: 600;
-    line-height: 1;
-    transition: box-shadow var(--nx-base) var(--nx-ease);
   }
 }
