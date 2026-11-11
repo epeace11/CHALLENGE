@@ -36,7 +36,7 @@ import type { TimerFlow } from './use-timer';
 import styles from './v1.module.css';
 
 /** "Arabic" from "Arabic, 20 min": the rule's name without its target. */
-export const shortTitle = (rule: Rule) => rule.title.split(',')[0];
+export const shortTitle = (rule: Rule) => rule.title.split(', ')[0];
 
 /** "7:10 – 7:22 am"; "11:50 am – 12:10 pm" across noon; "7:30 pm" when both are the same minute. */
 export function timeRange(from: Instant, to: Instant, timeZone: string) {

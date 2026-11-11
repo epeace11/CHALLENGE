@@ -8,7 +8,7 @@ import { Button } from '@/components/next/ui';
 import type { EndActionsProps } from './page';
 
 /** "Social media and games" for "Social media and games, 60 min or less". */
-export const shortTitle = (rule: Rule) => rule.title.split(',')[0];
+export const shortTitle = (rule: Rule) => rule.title.split(', ')[0];
 
 /**
  * The longest daily streak still going once `day` is answered (3 days or more), like

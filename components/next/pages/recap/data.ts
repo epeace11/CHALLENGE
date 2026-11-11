@@ -19,7 +19,7 @@ import {
  */
 
 /** "Gym" from "Gym, 4 days a week". */
-export const shortTitle = (rule: Rule) => rule.title.split(',')[0];
+export const shortTitle = (rule: Rule) => rule.title.split(', ')[0];
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 

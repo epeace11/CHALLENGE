@@ -560,7 +560,7 @@ export function settlingStep(
 ) {
   const partner = w.partner.name;
   const timer = (run: TimerRun) =>
-    (ruleById(w.challenge, run.ruleId)?.title ?? 'timed').split(',')[0];
+    (ruleById(w.challenge, run.ruleId)?.title ?? 'timed').split(', ')[0];
   if (over.disputes)
     return `Settle ${plural(over.disputes, 'dispute')} to see who won`;
   if (over.toReview)
