@@ -2,7 +2,11 @@
 import type { CSSProperties } from 'react';
 import { ChevronRight, FlaskConical } from 'lucide-react';
 import type { PracticeScript, Rule } from '@/lib/next/model';
-import { formatDeadline, formatMoney } from '@/lib/next/selectors';
+import {
+  askedQuestion,
+  formatDeadline,
+  formatMoney,
+} from '@/lib/next/selectors';
 import {
   Button,
   CountUp,
@@ -76,7 +80,7 @@ export function Question({
         tabIndex={headingId ? -1 : undefined}
         className="font-nx-serif text-nx-h2"
       >
-        {rule.question}
+        {askedQuestion(rule)}
       </h2>
       {rule.kind === 'number' ? (
         // From 640px the screenshot sits beside the number, as in Check in.
@@ -115,7 +119,7 @@ export function Question({
         </div>
       ) : (
         <YesNo
-          label={rule.question}
+          label={askedQuestion(rule)}
           value={a.done}
           onChange={(done) => set({ done })}
           onTap={(done) => p.choose(index, done)}

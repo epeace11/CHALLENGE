@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
 import {
+  askedQuestion,
   countsForWeek,
   formatMoney,
   formatWeekday,
@@ -117,7 +118,7 @@ export function QuestionHead({
           size === 'lg' ? 'text-nx-h2 lg:text-nx-h1' : 'text-nx-h2',
         )}
       >
-        {rule.question}
+        {askedQuestion(rule)}
       </h2>
       {/* The question is enough: the rule's description is on Rules and help */}
     </div>
@@ -239,7 +240,7 @@ export function QuestionFields({
           </>
         ) : (
           <YesNo
-            label={rule.question}
+            label={askedQuestion(rule)}
             value={draft.done}
             onChange={(done) => ci.change(rule, { done })}
             onTap={(done) => ci.answer(rule, done)}

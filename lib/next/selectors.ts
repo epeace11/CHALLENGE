@@ -1249,6 +1249,18 @@ export function nextBadge(w: World, personId: string) {
   );
 }
 
+/**
+ * A rule's question as a check-in asks it. A check-in often answers an earlier day, so a "today" at
+ * the start or end of the question is left out: "Did you pray today?" asks "Did you pray?".
+ */
+export function askedQuestion(rule: Pick<Rule, 'question'>): string {
+  const q = rule.question
+    .trim()
+    .replace(/^today,?\s+/i, '')
+    .replace(/,?\s+today(?=[?.!]*$)/i, '');
+  return q ? q.charAt(0).toUpperCase() + q.slice(1) : rule.question;
+}
+
 /* ── Timer ─────────────────────────────────────────────────────────────── */
 
 /** Units a timer counts in: "min", "mins", "minute", "minutes". */

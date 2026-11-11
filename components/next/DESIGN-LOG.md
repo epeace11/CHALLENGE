@@ -16,6 +16,9 @@ Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write
   - Settings: the lines under each section heading and under name fields, "Until then, nothing changes".
   - Progress, Verdict, Rules, Your challenges, Pact and Invite: lines that repeated what the row, button or signatures already show.
 
+- **Check-ins never say "today" (November 11).** A check-in often answers yesterday, so a "today" at the start or end of a rule's question is left out wherever a day is answered (Check in, late answers, the practice day): "Did you pray today?" asks "Did you pray?" (`askedQuestion` in `lib/next/selectors.ts`). Rules, the pact and the invite still show the question as written.
+- **A comma inside a number stays in a rule's short name (November 11).** Short names cut a title at ", " only, so "8,000 steps" no longer shows as "8" under Check in's squares, on the Timer or in the recap.
+
 ## Decisions, November 5, 2026 (ninth audit and eighth critique, and everything they found)
 
 Erin asked to rerun both after the last round of fixes. The audit came back 14/20 with no critical issues and one major one (from one critical and five major), and the critique 29/40 (trend 27, 29, 30, 28, 29). Of the last round's six fixes, two fully held and four partly did. All of it is fixed here.

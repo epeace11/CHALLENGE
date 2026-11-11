@@ -2,7 +2,12 @@
 import { useState } from 'react';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
 import type { Rule } from '@/lib/next/model';
-import { formatDay, formatWeekday, openCheckins } from '@/lib/next/selectors';
+import {
+  askedQuestion,
+  formatDay,
+  formatWeekday,
+  openCheckins,
+} from '@/lib/next/selectors';
 import {
   Button,
   GlassCard,
@@ -77,7 +82,7 @@ export function ClosedDay({
           if (!open) ci.cancel();
         }}
         // The question is the title, so the body doesn't ask it again under the rule's name.
-        title={shown?.question ?? 'Late answer'}
+        title={shown ? askedQuestion(shown) : 'Late answer'}
         footer={
           shown && (
             <>

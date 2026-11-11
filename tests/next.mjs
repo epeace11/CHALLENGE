@@ -986,6 +986,19 @@ for (const file of styles) {
     ],
     [12, false],
   );
+  // A check-in can answer yesterday, so it never asks "today".
+  const asked = (question) => S.askedQuestion({ question });
+  assert.equal(asked('Did you pray today?'), 'Did you pray?');
+  assert.equal(
+    asked('Did you walk at least 10,000 steps today?'),
+    'Did you walk at least 10,000 steps?',
+  );
+  assert.equal(asked('Today, did you stretch?'), 'Did you stretch?');
+  assert.equal(
+    asked('Did you hit today’s target?'),
+    'Did you hit today’s target?',
+  );
+  assert.equal(asked('Today?'), 'Today?');
   x = T.stopTimer(x, MAYA, at('01:13'));
   assert.equal(S.loggedProgress(x, MAYA, arabic, '2026-11-20').minutes, 30);
   assert.equal(S.timerOf(x, MAYA), null);
