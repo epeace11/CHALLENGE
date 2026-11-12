@@ -18,6 +18,8 @@ Erin picks one version of every page at `/preview` with the 1 2 3 buttons. Write
 
 - **Check-ins never say "today" (November 11).** A check-in often answers yesterday, so a "today" at the start or end of a rule's question is left out wherever a day is answered (Check in, late answers, the practice day): "Did you pray today?" asks "Did you pray?" (`askedQuestion` in `lib/next/selectors.ts`). Rules, the pact and the invite still show the question as written.
 - **A comma inside a number stays in a rule's short name (November 11).** Short names cut a title at ", " only, so "8,000 steps" no longer shows as "8" under Check in's squares, on the Timer or in the recap.
+- **A weekly No can ask to be forgiven (November 12).** Answering No to a weekly rule ("Did you work out?") now shows "Ask Jordan to forgive it" under the week card, like a miss does, while the week still needs that day. The sheet says what it does: if Jordan forgives it, it counts as one of your 4 this week (`supabase/next/weekly-forgiveness.sql`). On Review the request says how the week changes ("the week goes from 0 of 4 to 1 of 4"). On a weekly No a screenshot is optional, as on a miss, so it no longer says Required.
+- **The Monday recap lives on Overview (November 12).** It's no longer in More. Once a week is over, Overview brings its recap as a card under what matters now ("You won last week · Points: you 2, Jordan 3"), until it's opened; after that it's one line, Last week's recap, under This week.
 
 ## Decisions, November 5, 2026 (ninth audit and eighth critique, and everything they found)
 

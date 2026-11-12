@@ -209,10 +209,15 @@ export type Point = {
   createdAt: Instant;
 };
 
-/** Someone asks their partner to forgive one of their points. */
+/**
+ * Someone asks their partner to forgive one of their points, or a weekly rule's No (which costs
+ * nothing on its own day): forgiven, that day counts toward the week like a Yes. One of the two ids.
+ */
 export type ForgivenessRequest = {
   id: string;
-  pointId: string;
+  pointId?: string;
+  /** A weekly rule's No. */
+  entryId?: string;
   /** The person asking: the point's owner. */
   from: string;
   reason: string;

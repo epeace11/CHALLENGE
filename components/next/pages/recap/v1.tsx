@@ -1,7 +1,7 @@
 // The Monday notification comes first, as it arrived, then the score and the gifts as four big numbers and one card for each result.
 'use client';
 import { useBackend } from '@/components/next/backend';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   CalendarCheck,
@@ -32,6 +32,7 @@ import {
   type RecapView,
 } from './data';
 import { NotificationCard, NotificationSheet } from './notification';
+import { markRecapSeen } from './seen';
 import { IconBubble, WeekBar } from './parts';
 import styles from './recap.module.css';
 
@@ -45,6 +46,11 @@ export default function RecapV2() {
   const [sheet, setSheet] = useState(false);
   const v = recapOf(world);
   const partner = world.partner.name;
+  // Opened: Overview stops bringing this week's recap as a card and keeps it as a line.
+  const week = v?.recap.weekStart;
+  useEffect(() => {
+    if (week) markRecapSeen(world.challenge.id, week);
+  }, [world.challenge.id, week]);
 
   if (!v)
     return (

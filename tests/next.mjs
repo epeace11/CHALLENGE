@@ -202,7 +202,7 @@ assert.equal(steps.proofs.length, 1);
 assert.match(steps.proofs[0].src, /^data:image\/svg\+xml/);
 assert.equal(formatAnswer(queue.answers[0].rule, steps), '11,240 steps');
 assert.equal(queue.forgiveness.length, 1);
-assert.equal(queue.forgiveness[0].point.ruleId, 'eating-out');
+assert.equal(queue.forgiveness[0].point?.ruleId, 'eating-out');
 assert.equal(queue.disputes.length, 1);
 assert.equal(queue.disputes[0].entry.personId, MAYA);
 assert.equal(queue.disputes[0].dispute.raisedBy, JORDAN);
@@ -520,6 +520,50 @@ assert.equal(entryFor(x, MAYA, 'gym', '2026-11-19').status, 'confirmed');
 assert.equal(owes(x, MAYA), 21);
 assert.deepEqual(openCheckins(x, MAYA), []);
 assert.equal(dayColor(x, MAYA, '2026-11-19'), 'review');
+// A weekly No can ask to be forgiven: one request on the answer, reworded by saving again; forgiven,
+// the day counts toward the week like a Yes. A Yes drops a request still waiting.
+const gymNo = (world, forgiveness) =>
+  saveCheckin(world, {
+    personId: MAYA,
+    ruleId: 'gym',
+    day: '2026-11-19',
+    done: false,
+    ...(forgiveness ? { forgiveness } : {}),
+  });
+let g = gymNo(gymNo(w, 'Sprained ankle'), 'Sprained my ankle');
+const gymEntry = entryFor(g, MAYA, 'gym', '2026-11-19');
+const gymAsks = reviewQueue(g, JORDAN).forgiveness;
+assert.equal(gymAsks.length, 1);
+assert.equal(gymAsks[0].request.reason, 'Sprained my ankle');
+assert.equal(gymAsks[0].point, undefined);
+assert.equal(gymAsks[0].day, '2026-11-19');
+assert.equal(gymAsks[0].personId, MAYA);
+assert.equal(
+  entryPill(g, ruleById(w.challenge, 'gym'), gymEntry, '2026-11-19').label,
+  'Forgiveness asked',
+);
+const gymBefore = weekProgress(g, MAYA, 'gym', '2026-11-19').have;
+g = decideForgiveness(g, gymAsks[0].request.id, 'approved');
+assert.equal(entryFor(g, MAYA, 'gym', '2026-11-19').status, 'excused');
+assert.equal(weekProgress(g, MAYA, 'gym', '2026-11-19').have, gymBefore + 1);
+assert.equal(
+  gymNo(g).entries.find((e) => e.id === gymEntry.id).status,
+  'excused',
+  'a note keeps it forgiven',
+);
+assert.equal(
+  reviewQueue(
+    saveCheckin(gymNo(w, 'Sick'), {
+      personId: MAYA,
+      ruleId: 'gym',
+      day: '2026-11-19',
+      done: true,
+      proofs: [shot],
+    }),
+    JORDAN,
+  ).forgiveness.length,
+  0,
+);
 // A No can carry a forgiveness request.
 let y = saveCheckin(w, {
   personId: MAYA,

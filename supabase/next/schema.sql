@@ -166,17 +166,22 @@ create table public.points(
 );
 create index points_challenge on public.points(challenge_id);
 
+-- A request is about a point, or about a weekly rule's No (entry_id), which costs nothing yet: forgiven,
+-- that day counts toward the week like a Yes.
 create table public.forgiveness_requests(
   id uuid primary key default gen_random_uuid(),
   challenge_id uuid not null references public.challenges on delete cascade,
-  point_id uuid not null references public.points on delete cascade,
+  point_id uuid references public.points on delete cascade,
+  entry_id uuid references public.entries on delete cascade,
   from_id uuid not null references public.profiles,
   reason text not null check (length(trim(reason)) between 1 and 2000),
   status text not null default 'pending' check (status in ('pending','approved','denied')),
   created_at timestamptz not null default now(),
-  decided_at timestamptz
+  decided_at timestamptz,
+  constraint forgiveness_requests_one_target check (num_nonnulls(point_id, entry_id) = 1)
 );
 create unique index forgiveness_one_pending on public.forgiveness_requests(point_id) where status = 'pending';
+create unique index forgiveness_one_pending_entry on public.forgiveness_requests(entry_id) where status = 'pending';
 create index forgiveness_challenge on public.forgiveness_requests(challenge_id);
 
 create table public.disputes(
@@ -383,6 +388,7 @@ begin
   end if;
 
   -- Weekly shortfalls, once a week's last day has closed: one point per visit short of the target.
+  -- A No the partner forgave counts as a visit.
   for wr in select * from rules where challenge_id = c.id and kind = 'weekly' loop
     for wk in
       with s as (
@@ -397,7 +403,7 @@ begin
       for mem in select person_id from couple_members where couple_id = c.couple_id and (wr.who is null or wr.who = person_id) loop
         select count(*) into visits from entries
         where person_id = mem.person_id and rule_id = wr.id and day between wk.ws and wk.we
-          and done is true and status in ('confirmed','pending','disputed');
+          and ((done is true and status in ('confirmed','pending','disputed')) or status = 'excused');
         for i in 1..coalesce(target, 0) loop
           insert into points(challenge_id, person_id, rule_id, day, reason, slot, voided)
           values (c.id, mem.person_id, wr.id, wk.we, 'weekly', i, i > greatest(0, target - visits))
@@ -763,7 +769,10 @@ begin
   insert into entries(challenge_id, person_id, rule_id, day, done, value, status, note, proofs, logged_at, from_timer)
   values (c.id, auth.uid(), r.id, p_day, v_done, case when r.kind = 'number' then p_value end,
           case when v_done then 'pending' when r.kind = 'weekly' then 'confirmed' else 'missed' end, v_note, v_proofs, nx_now(), false)
-  on conflict (person_id, rule_id, day) do update set done = excluded.done, value = excluded.value, status = excluded.status,
+  on conflict (person_id, rule_id, day) do update set done = excluded.done, value = excluded.value,
+    -- A weekly No that was forgiven stays forgiven when only its note or screenshots change.
+    status = case when entries.status = 'excused' and excluded.status = 'confirmed' and excluded.done is false
+                  then 'excused' else excluded.status end,
     note = excluded.note, proofs = excluded.proofs, logged_at = excluded.logged_at, from_timer = false,
     correction_done = null, correction_value = null, correction_note = null, correction_proofs = null, correction_at = null
   returning * into e;
@@ -775,6 +784,13 @@ begin
     end if;
   else
     perform nx_void_point_of(e.id);
+    -- A weekly No can ask to be forgiven; a Yes drops the request.
+    if e.done then
+      delete from forgiveness_requests where entry_id = e.id and status = 'pending';
+    elsif ask is not null and e.status = 'confirmed' then
+      insert into forgiveness_requests(challenge_id, entry_id, from_id, reason) values (c.id, e.id, auth.uid(), left(ask, 2000))
+      on conflict (entry_id) where status = 'pending' do update set reason = excluded.reason;
+    end if;
   end if;
   perform nx_tick(c.id);
 end $$;
@@ -799,10 +815,12 @@ begin
       -- The late answer was typed by hand: the timer no longer changes it.
       update entries set done = correction_done, value = correction_value, note = coalesce(correction_note, ''),
         proofs = coalesce(correction_proofs, '[]'), logged_at = nx_now(), from_timer = false,
-        status = case when correction_done or r.kind = 'weekly' then 'confirmed' else 'missed' end,
+        status = case when correction_done then 'confirmed' when r.kind <> 'weekly' then 'missed'
+                      when status = 'excused' then 'excused' else 'confirmed' end,
         correction_done = null, correction_value = null, correction_note = null, correction_proofs = null, correction_at = null
       where id = e.id returning * into e;
       if e.status = 'missed' then perform nx_add_point(e, 'missed'); else perform nx_void_point_of(e.id); end if;
+      if e.done then delete from forgiveness_requests where entry_id = e.id and status = 'pending'; end if;
     end if;
   elsif p_action = 'reject' then
     if e.correction_at is null then raise exception 'There''s no late answer to turn down.'; end if;
@@ -874,7 +892,8 @@ begin
   insert into forgiveness_requests(challenge_id, point_id, from_id, reason) values (p.challenge_id, p.id, auth.uid(), left(trim(p_reason), 2000));
 end $$;
 
--- The partner decides a forgiveness request.
+-- The partner decides a forgiveness request. A weekly No they forgive counts toward its week, which
+-- can take back a point for a week already over (nx_tick).
 create function public.nx_decide_forgiveness(p_request uuid, p_approve boolean) returns void language plpgsql security definer set search_path = public as $$
 declare q forgiveness_requests;
 begin
@@ -885,7 +904,11 @@ begin
   if q.from_id = auth.uid() then raise exception 'Only your partner can decide this.'; end if;
   if q.status <> 'pending' then raise exception 'This was already decided.'; end if;
   update forgiveness_requests set status = case when p_approve then 'approved' else 'denied' end, decided_at = nx_now() where id = q.id;
-  if p_approve then perform nx_forgive(q.point_id); end if;
+  if p_approve and q.point_id is not null then perform nx_forgive(q.point_id); end if;
+  if p_approve and q.entry_id is not null then
+    update entries set status = 'excused' where id = q.entry_id and done is false and status = 'confirmed';
+    perform nx_tick(q.challenge_id);
+  end if;
 end $$;
 
 -- The partner forgives a point without being asked.

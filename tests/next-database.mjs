@@ -44,10 +44,16 @@ await db.exec(
 await db.exec(
   readFileSync(new URL('../supabase/next/schema.sql', import.meta.url), 'utf8'),
 );
-// The functions timer.sql, rule-limit.sql and goals.sql replace, as the fresh install defines them.
+// The functions timer.sql, rule-limit.sql, goals.sql and weekly-forgiveness.sql replace, as the fresh
+// install defines them.
 const timerFunctions = [
   ...new Set(
-    ['timer.sql', 'rule-limit.sql', 'goals.sql'].flatMap((script) =>
+    [
+      'timer.sql',
+      'rule-limit.sql',
+      'goals.sql',
+      'weekly-forgiveness.sql',
+    ].flatMap((script) =>
       [
         ...readFileSync(
           new URL(`../supabase/next/${script}`, import.meta.url),
@@ -84,6 +90,7 @@ for (const script of [
   'timer.sql',
   'rule-limit.sql',
   'goals.sql',
+  'weekly-forgiveness.sql',
 ])
   await db.exec(
     readFileSync(
@@ -462,6 +469,54 @@ await clock('2026-11-07T10:00:00-05:00');
 await as(maya, `select nx_sync($1)`, [fall]);
 assert.equal((await entry(jordan, pray, '2026-11-04')).status, 'confirmed');
 
+// A weekly No can ask to be forgiven in the same Save; it costs nothing, so the request is about the
+// answer. A Yes drops a request still waiting.
+await as(
+  jordan,
+  `select nx_save_checkin($1,$2,'2026-11-06',false,p_forgiveness=>'Flight')`,
+  [fall, gym],
+);
+const gymAsk = async (person) =>
+  one(
+    maya,
+    `select q.* from forgiveness_requests q join entries e on e.id = q.entry_id
+     where e.person_id=$1 and e.rule_id=$2 and q.status='pending'`,
+    [person, gym],
+  );
+assert.equal((await gymAsk(jordan)).reason, 'Flight');
+assert.equal((await gymAsk(jordan)).point_id, null);
+await as(jordan, `select nx_save_checkin($1,$2,'2026-11-06',true)`, [
+  fall,
+  gym,
+]);
+assert.equal(await gymAsk(jordan), undefined);
+await as(jordan, `select nx_save_checkin($1,$2,'2026-11-06',false)`, [
+  fall,
+  gym,
+]);
+assert.equal(await gymAsk(jordan), undefined);
+await fails(
+  as(
+    maya,
+    `select nx_save_checkin($1,$2,'2026-11-06',true,p_forgiveness=>'Hm')`,
+    [fall, gym],
+  ),
+  /only be asked for with a No/,
+);
+await as(
+  maya,
+  `select nx_save_checkin($1,$2,'2026-11-06',false,p_forgiveness=>'Sprained ankle')`,
+  [fall, gym],
+);
+await as(
+  maya,
+  `select nx_save_checkin($1,$2,'2026-11-06',false,p_forgiveness=>'Sprained my ankle')`,
+  [fall, gym],
+);
+const mayaGymAsk = await gymAsk(maya);
+assert.equal(mayaGymAsk.reason, 'Sprained my ankle', 'one request, reworded');
+assert.equal((await entry(maya, gym, '2026-11-06')).status, 'confirmed');
+
 // The first week runs Mon Nov 2 – Sun Nov 8 (week starts Monday). It closes 11:59 pm Monday Nov 9.
 // Jordan went to the gym once (Nov 2), so is 3 short; Maya never went, so is 4 short.
 await clock('2026-11-10T09:00:00-05:00');
@@ -478,6 +533,16 @@ assert.equal(await weekly(jordan), 3);
 assert.equal(await weekly(maya), 4);
 await as(maya, `select nx_sync($1)`, [fall]);
 assert.equal(await weekly(maya), 4, 'ticking again changes nothing');
+// Jordan forgives Maya's gym No from Nov 6 once the week is over: that day counts, so one point goes.
+await fails(
+  as(maya, `select nx_decide_forgiveness($1,true)`, [mayaGymAsk.id]),
+  /Only your partner/,
+);
+await as(jordan, `select nx_decide_forgiveness($1,true)`, [mayaGymAsk.id]);
+assert.equal((await entry(maya, gym, '2026-11-06')).status, 'excused');
+assert.equal(await weekly(maya), 3);
+await as(maya, `select nx_sync($1)`, [fall]);
+assert.equal(await weekly(maya), 3, 'ticking again changes nothing');
 
 // Journal.
 const { nx_add_note: note } = await one(

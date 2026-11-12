@@ -128,7 +128,8 @@ export function QuestionHead({
 /**
  * Everything one check-in asks, as a draft until Save (a plain Yes saves on tap): Yes or No or a number (pass or fail shown
  * as you type), the week so far for weekly rules, screenshots, a note, and with a miss what it
- * costs and "Ask Jordan to forgive this".
+ * costs and "Ask Jordan to forgive this". A weekly No costs nothing, but can ask too: forgiven, the
+ * day counts toward the week.
  */
 export function QuestionFields({
   ci,
@@ -180,10 +181,22 @@ export function QuestionFields({
   const canMiss = !late && rule.kind !== 'weekly';
   const missed = canMiss && outcome === 'miss';
   /**
-   * On a miss a screenshot is optional, so until one is added it is a small button beside "Add a
-   * note" instead of a tile, and the miss's card fits under the answer.
+   * A weekly No can ask to be forgiven (then it counts toward the week) while the week still needs
+   * it and it isn't forgiven already. A late answer never asks.
    */
-  const shotButton = rule.proof !== 'none' && shots === 0 && outcome === 'miss';
+  const weekAsk =
+    !late &&
+    outcome === 'rest' &&
+    !!week &&
+    have < week.need &&
+    entry?.status !== 'excused';
+  /** Any No: a miss, or a weekly No. */
+  const no = outcome === 'miss' || outcome === 'rest';
+  /**
+   * With a No a screenshot is optional, so until one is added it is a small button beside "Add a
+   * note" instead of a tile, and the No's card fits under the answer.
+   */
+  const shotButton = rule.proof !== 'none' && shots === 0 && no;
   /** What goes with the answer: its screenshot, the week so far, what a miss costs. */
   const side = (rule.proof !== 'none' && !shotButton) || !!week || missed;
   /** Two columns from 640px whenever the right one can have something in it. */
@@ -267,14 +280,12 @@ export function QuestionFields({
                   <span
                     className={cn(
                       'text-nx-2',
-                      rule.proof === 'required' && outcome !== 'miss'
+                      rule.proof === 'required' && !no
                         ? 'font-semibold text-nx-wait'
                         : 'text-nx-ink-2',
                     )}
                   >
-                    {rule.proof === 'required' && outcome !== 'miss'
-                      ? 'Required'
-                      : 'Optional'}
+                    {rule.proof === 'required' && !no ? 'Required' : 'Optional'}
                   </span>
                 )}
               </p>
@@ -316,12 +327,12 @@ export function QuestionFields({
             </button>
           )}
 
-          {missed && (
+          {(missed || weekAsk) && (
             <div ref={missCard}>
               <Card pad="sm" className="nx-enter flex flex-col gap-1">
                 {!draft.forgive ? (
                   <>
-                    {!hasPoint && (
+                    {missed && !hasPoint && (
                       <LinkLine
                         icon={Gift}
                         tone="missed"
@@ -384,6 +395,14 @@ export function QuestionFields({
             open={asking}
             onOpenChange={setAsking}
             title={`Ask ${partner} to forgive it`}
+            // What forgiving a weekly No does isn't obvious: the day counts toward the week.
+            description={
+              week && rule.kind === 'weekly'
+                ? week.need === 1
+                  ? `If ${partner} forgives it, it counts for this week.`
+                  : `If ${partner} forgives it, it counts as one of your ${week.need} this week.`
+                : undefined
+            }
             label="Your reason"
             initial={draft.reason}
             maxLength={500}

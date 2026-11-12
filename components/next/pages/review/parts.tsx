@@ -19,6 +19,7 @@ import {
   settling,
   settlingLine,
   titleSays,
+  weekProgress,
   whenUnlessTitled,
 } from '@/lib/next/selectors';
 import { useNav } from '@/components/next/nav';
@@ -472,37 +473,62 @@ export function AnswerBody({
   );
 }
 
-/** The partner asks to forgive one of their points: what was missed, why, and what forgiving does to the viewer's gift. */
+/**
+ * The partner asks to forgive one of their points: what was missed, why, and what forgiving does to
+ * the viewer's gift. For a weekly No (no point yet), what forgiving does to their week instead.
+ */
 export function ForgivenessBody({
   world,
   item,
   size = 'md',
   hideTitle,
 }: BodyProps & { item: ForgiveItem }) {
-  const effect = forgiveEffect(world, item);
+  const { point } = item;
+  const effect = point ? forgiveEffect(world, item) : null;
+  const week = point
+    ? null
+    : weekProgress(world, item.personId, item.rule.id, item.day);
   return (
     <div className="flex flex-col gap-4">
       <div>
         <p className="nx-kicker">{world.partner.name} asks you to forgive</p>
         {!hideTitle && <Title size={size}>{item.rule.title}</Title>}
         <p className="mt-1 text-nx-2 text-nx-ink-2">
-          {formatDay(item.point.day)} ·{' '}
-          {missWhy(world, item.point, item.rule, item.entry)}
+          {formatDay(item.day)} ·{' '}
+          {point ? missWhy(world, point, item.rule, item.entry) : 'Answered No'}
         </p>
       </div>
       <Quote person={world.partner}>{item.request.reason}</Quote>
-      <GiftsLink>
-        If you forgive it, the gift you get goes from{' '}
-        <b className="font-semibold text-nx-ink">{formatMoney(effect.now)}</b>{' '}
-        to{' '}
-        <b className="font-semibold text-nx-ink">{formatMoney(effect.after)}</b>
-        .
-      </GiftsLink>
+      {effect && (
+        <GiftsLink>
+          If you forgive it, the gift you get goes from{' '}
+          <b className="font-semibold text-nx-ink">{formatMoney(effect.now)}</b>{' '}
+          to{' '}
+          <b className="font-semibold text-nx-ink">
+            {formatMoney(effect.after)}
+          </b>
+          .
+        </GiftsLink>
+      )}
+      {/* A forgiven weekly No counts toward its week like a Yes (nothing changes once it's met). */}
+      {week && !week.met && (
+        <GiftsLink>
+          If you forgive it, the week goes from{' '}
+          <b className="font-semibold text-nx-ink">
+            {week.have} of {week.need}
+          </b>{' '}
+          to{' '}
+          <b className="font-semibold text-nx-ink">
+            {week.have + 1} of {week.need}
+          </b>
+          .
+        </GiftsLink>
+      )}
     </div>
   );
 }
 
-/** What a decision does to a gift, as a line that opens Gifts (every number leads somewhere). */
+/** What a decision does to a gift (or a week), as a line that opens Progress (every number leads somewhere). */
 function GiftsLink({ children }: { children: ReactNode }) {
   const { navigate } = useNav();
   return (
@@ -899,7 +925,7 @@ export function WaitingForPartner({
                 <div>
                   {answer(
                     i.rule,
-                    `${formatDay(i.point.day)} · You asked to forgive it`,
+                    `${formatDay(i.day)} · You asked to forgive it`,
                   )}
                 </div>
                 <Quote person={world.me}>{i.request.reason}</Quote>

@@ -52,7 +52,7 @@ const KIND: Record<ReviewItem['kind'], string> = {
 };
 
 const dayOf = (item: ReviewItem) =>
-  item.kind === 'forgiveness' ? item.point.day : item.entry.day;
+  item.kind === 'forgiveness' ? item.day : item.entry.day;
 
 /** Two decision buttons side by side: the other choice first, the main one on the right. */
 function Choices({

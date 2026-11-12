@@ -128,7 +128,9 @@ export type PointRow = {
 export type RequestRow = {
   id: string;
   challenge_id: string;
-  point_id: string;
+  point_id: string | null;
+  /** A weekly rule's No; present once weekly-forgiveness.sql has run. */
+  entry_id?: string | null;
   from_id: string;
   reason: string;
   status: ForgivenessRequest['status'];
@@ -408,7 +410,8 @@ export const pointOf = (p: PointRow): Point => ({
 
 export const requestOf = (r: RequestRow): ForgivenessRequest => ({
   id: r.id,
-  pointId: r.point_id,
+  ...(r.point_id ? { pointId: r.point_id } : {}),
+  ...(r.entry_id ? { entryId: r.entry_id } : {}),
   from: r.from_id,
   reason: r.reason,
   status: r.status,

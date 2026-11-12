@@ -57,6 +57,37 @@ function voidPointOf(w: World, entryId: string): World {
   };
 }
 
+/** Drops a pending forgiveness request on a weekly No (it became a Yes). */
+const dropAskOn = (w: World, entryId: string): World => ({
+  ...w,
+  requests: w.requests.filter(
+    (r) => !(r.entryId === entryId && r.status === 'pending'),
+  ),
+});
+
+/** Asks the partner to forgive a weekly No, or rewords the request already waiting. */
+function askOn(w: World, entry: Entry, reason: string): World {
+  const waiting = w.requests.find(
+    (r) => r.entryId === entry.id && r.status === 'pending',
+  );
+  if (waiting)
+    return { ...w, requests: replace(w.requests, waiting.id, { reason }) };
+  return {
+    ...w,
+    requests: [
+      ...w.requests,
+      {
+        id: newId('request', w.requests),
+        entryId: entry.id,
+        from: entry.personId,
+        reason,
+        status: 'pending',
+        createdAt: w.now,
+      },
+    ],
+  };
+}
+
 /** Adds a point for an entry's miss. */
 function addPoint(w: World, entry: Entry, reason: Point['reason']): World {
   const point: Point = {
@@ -90,7 +121,9 @@ export type CheckinInput = {
 /**
  * One whole check-in, like the app's Save. Before the deadline it is the answer: a Yes waits for
  * the partner's review, a No is a point (with an optional forgiveness request), and a weekly
- * rule's No costs nothing. After the deadline it is a late answer the partner has to approve.
+ * rule's No costs nothing (its request, if any, asks for the day to count toward the week; a
+ * forgiven one stays forgiven when only its note changes). After the deadline it is a late answer
+ * the partner has to approve.
  */
 export function saveCheckin(w: World, input: CheckinInput): World {
   const c = w.challenge,
@@ -132,7 +165,13 @@ export function saveCheckin(w: World, input: CheckinInput): World {
     day: input.day,
     done,
     ...(value !== undefined ? { value } : {}),
-    status: done ? 'pending' : rule.kind === 'weekly' ? 'confirmed' : 'missed',
+    status: done
+      ? 'pending'
+      : rule.kind !== 'weekly'
+        ? 'missed'
+        : existing?.status === 'excused'
+          ? 'excused'
+          : 'confirmed',
     note,
     proofs,
     loggedAt: w.now,
@@ -143,9 +182,14 @@ export function saveCheckin(w: World, input: CheckinInput): World {
       ? next.entries.map((e) => (e.id === entry.id ? entry : e))
       : [...next.entries, entry],
   };
-  if (entry.status !== 'missed') return next;
-  next = addPoint(next, entry, 'missed');
   const reason = input.forgiveness?.trim();
+  if (entry.status !== 'missed') {
+    if (done) return dropAskOn(next, entry.id);
+    return reason && entry.status === 'confirmed'
+      ? askOn(next, entry, reason)
+      : next;
+  }
+  next = addPoint(next, entry, 'missed');
   if (!reason) return next;
   const point = next.points[next.points.length - 1];
   return askForgiveness(next, point.id, reason);
@@ -172,14 +216,17 @@ export function approve(w: World, entryId: string): World {
     loggedAt: w.now,
     status: done
       ? 'confirmed'
-      : rule?.kind === 'weekly'
-        ? 'confirmed'
-        : 'missed',
+      : rule?.kind !== 'weekly'
+        ? 'missed'
+        : e.status === 'excused'
+          ? 'excused'
+          : 'confirmed',
   };
   let next: World = {
     ...w,
     entries: w.entries.map((x) => (x.id === e.id ? updated : x)),
   };
+  if (done) next = dropAskOn(next, e.id);
   if (done && hadPoint) next = voidPointOf(next, e.id);
   if (!done && !hadPoint && updated.status === 'missed')
     next = addPoint(next, updated, 'missed');
@@ -300,7 +347,7 @@ function forgive(w: World, pointId: string): World {
   };
 }
 
-/** The partner decides a forgiveness request. */
+/** The partner decides a forgiveness request. A weekly No they forgive counts toward its week. */
 export function decideForgiveness(
   w: World,
   requestId: string,
@@ -315,7 +362,12 @@ export function decideForgiveness(
       decidedAt: w.now,
     }),
   };
-  return decision === 'approved' ? forgive(next, r.pointId) : next;
+  if (decision !== 'approved') return next;
+  if (r.pointId) return forgive(next, r.pointId);
+  const e = next.entries.find((x) => x.id === r.entryId);
+  return e && e.done === false && e.status === 'confirmed'
+    ? { ...next, entries: replace(next.entries, e.id, { status: 'excused' }) }
+    : next;
 }
 
 /** The partner forgives a point without being asked. */

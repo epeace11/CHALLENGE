@@ -47,7 +47,7 @@ export type Draft = {
   /** The note field is open (a note already written keeps it open). */
   noteOpen: boolean;
   proofs: Proof[];
-  /** With a miss: send "Ask Jordan to forgive this" along with the answer. */
+  /** With a miss or a weekly No: send "Ask Jordan to forgive this" along with the answer. */
   forgive: boolean;
   reason: string;
 };
@@ -376,7 +376,11 @@ export function useCheckin({ top, heading }: Anchors) {
     // A card still gliding away keeps its buttons for a moment; only the one on screen saves.
     if (!day || rule.id !== current?.id || !canSave(rule, d)) return;
     const o = outcomeOf(rule, d);
-    const ask = o === 'miss' && !late && d.forgive ? d.reason.trim() : '';
+    // A miss, or a weekly No, can ask to be forgiven; a late answer can't.
+    const ask =
+      (o === 'miss' || o === 'rest') && !late && d.forgive
+        ? d.reason.trim()
+        : '';
     const input: CheckinInput = {
       personId: me,
       ruleId: rule.id,

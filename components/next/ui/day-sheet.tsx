@@ -106,9 +106,9 @@ export function waitingOn(
   match: { day?: DateString; ruleId?: string },
 ) {
   return reviewQueue(w, w.me.id).items.filter((item) => {
-    const day = item.kind === 'forgiveness' ? item.point.day : item.entry.day;
+    const day = item.kind === 'forgiveness' ? item.day : item.entry.day;
     const owner =
-      item.kind === 'forgiveness' ? item.point.personId : item.entry.personId;
+      item.kind === 'forgiveness' ? item.personId : item.entry.personId;
     return (
       owner === personId &&
       (match.day === undefined || day === match.day) &&
@@ -545,9 +545,12 @@ export function CheckinDetail({
     ? world.disputes.filter((d) => d.entryId === entry.id)
     : [];
   const point = pointOn(world, personId, ruleId, day);
-  const requests = point
-    ? world.requests.filter((r) => r.pointId === point.id)
-    : [];
+  // Requests on its point, or on the answer itself (a weekly No).
+  const requests = world.requests.filter(
+    (r) =>
+      (!!point && r.pointId === point.id) ||
+      (!!entry && r.entryId === entry.id),
+  );
   // A reason often starts with the note; then the note isn't shown again.
   const note =
     entry?.note && !requests.some((r) => r.reason.includes(entry.note.trim()))

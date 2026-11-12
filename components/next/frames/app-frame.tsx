@@ -2,7 +2,6 @@
 import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import {
   BookOpen,
-  CalendarCheck,
   ChartNoAxesColumn,
   ChevronRight,
   ChevronsUpDown,
@@ -37,11 +36,13 @@ const TABS: { id: PageId; label: string; icon: LucideIcon }[] = [
   { id: 'progress', label: 'Progress', icon: ChartNoAxesColumn },
 ];
 
-/** Reached from More. Timer is listed only while the viewer has a timed rule or a timer going. */
+/**
+ * Reached from More. Timer is listed only while the viewer has a timed rule or a timer going. The
+ * Monday recap isn't here: Overview brings it once a week is over (`overview/recap-card.tsx`).
+ */
 export const MORE_PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
   { id: 'timer', label: 'Timer', icon: Timer },
   { id: 'rules', label: 'Rules and help', icon: BookOpen },
-  { id: 'recap', label: 'Monday recap', icon: CalendarCheck },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'home', label: 'Your challenges', icon: LayoutGrid },
 ];
@@ -49,8 +50,8 @@ export const MORE_PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
 /**
  * The frame for pages inside a running challenge: the challenge's name and day at the top (the day
  * opens Progress), and the navigation: Overview, Check in, Review (with a count when something
- * waits) and Progress, plus More for Timer (with a timed rule), Gifts, Rules and help, Monday
- * recap, Settings and Your challenges. A tab bar at the bottom on phones, tabs in the top bar from
+ * waits) and Progress, plus More for Timer (with a timed rule), Rules and help, Settings and Your
+ * challenges. A tab bar at the bottom on phones, tabs in the top bar from
  * 1024px. While the viewer has a timer going, the top bar shows it (TimerChip) on every page but
  * the Timer page.
  *

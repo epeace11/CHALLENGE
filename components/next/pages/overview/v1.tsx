@@ -35,6 +35,7 @@ import { BeforeStart } from './before-start';
 import { TimerRow } from './timer-row';
 import { DaySheet, WeekLegend, WeekStrip } from './week';
 import { GoalsFirst } from './goals-card';
+import { LastWeek } from './recap-card';
 
 /**
  * Overview: your goals lead the page, as the first thing read each day. Everything under
@@ -271,6 +272,8 @@ function Running() {
           </Enter>
 
           <div className="-mt-5 flex flex-col gap-8">
+            {/* Last week's recap, once that week is over, until it's opened (then it's under the week). */}
+            <LastWeek />
             {/* Today's timed minutes, under what matters now: a row, so Log stays the one main action. */}
             <TimerRow index={2} />
             {/* On Day 1 nobody has a point or anything to review yet, so those numbers wait. */}
@@ -364,6 +367,7 @@ function Running() {
               />
               <WeekLegend days={o.week} className="px-1 pb-1" />
             </GlassCard>
+            <LastWeek quiet />
           </Section>
         </div>
       </div>

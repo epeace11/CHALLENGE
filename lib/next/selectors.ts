@@ -262,12 +262,16 @@ export function checkinProgress(
   return { day, due, answered: due - left, left };
 }
 
-/** A weekly visit counts once it is a Yes that is not conceded or waiting on a late approval. */
+/**
+ * A weekly visit counts once it is a Yes that is not conceded or waiting on a late approval, or a No
+ * the partner forgave.
+ */
 export const countsForWeek = (e: Entry) =>
-  e.done === true &&
-  (e.status === 'confirmed' ||
-    e.status === 'pending' ||
-    e.status === 'disputed');
+  e.status === 'excused' ||
+  (e.done === true &&
+    (e.status === 'confirmed' ||
+      e.status === 'pending' ||
+      e.status === 'disputed'));
 
 /** How an answer reads: "Yes", "No", "11,240 steps", or "Not logged". */
 export function formatAnswer(rule: Rule, e: Pick<Entry, 'done' | 'value'>) {
@@ -383,7 +387,11 @@ export type ReviewItem =
       id: string;
       at: Instant;
       request: ForgivenessRequest;
-      point: Point;
+      /** The day it is about, and whose: the point's, or a weekly No's. */
+      day: DateString;
+      personId: string;
+      /** None for a weekly No, which is the entry. */
+      point?: Point;
       rule: Rule;
       entry?: Entry;
     }
@@ -399,6 +407,10 @@ export type ReviewItem =
 /** The pending forgiveness request on a point, if any. */
 export const pendingRequestFor = (w: World, pointId: string) =>
   w.requests.find((r) => r.pointId === pointId && r.status === 'pending');
+
+/** The pending forgiveness request on a weekly No, if any. */
+export const pendingAskOn = (w: World, entryId: string) =>
+  w.requests.find((r) => r.entryId === entryId && r.status === 'pending');
 
 /** The active (unforgiven, unvoided) point an entry produced, if any. */
 export const pointOfEntry = (w: World, entryId: string) =>
@@ -485,18 +497,26 @@ export function reviewQueue(w: World, personId: string) {
       });
   }
   for (const request of w.requests) {
-    const point = w.points.find((p) => p.id === request.pointId),
-      r = point && rule(point.ruleId);
-    if (request.status !== 'pending' || request.from !== other || !point || !r)
-      continue;
+    if (request.status !== 'pending' || request.from !== other) continue;
+    const point = request.pointId
+      ? w.points.find((p) => p.id === request.pointId)
+      : undefined;
+    const entry = w.entries.find(
+      (e) => e.id === (point ? point.entryId : request.entryId),
+    );
+    const about = point ?? entry,
+      r = about && rule(about.ruleId);
+    if (!about || !r || (request.pointId && !point)) continue;
     forgiveness.push({
       kind: 'forgiveness',
       id: `forgiveness:${request.id}`,
       at: request.createdAt,
       request,
-      point,
+      day: about.day,
+      personId: about.personId,
+      ...(point ? { point } : {}),
       rule: r,
-      entry: w.entries.find((e) => e.id === point.entryId),
+      ...(entry ? { entry } : {}),
     });
   }
   disputes.push(...openDisputesOn(w, personId, false));
@@ -909,6 +929,8 @@ export function entryPill(
     return { status: 'review', label: 'Waiting for review' };
   if (e.status === 'disputed') return { status: 'disputed', label: 'Disputed' };
   if (e.status === 'excused') return { status: 'forgiven', label: 'Forgiven' };
+  if (!e.done && rule.kind === 'weekly' && pendingAskOn(w, e.id))
+    return { status: 'review', label: 'Forgiveness asked' };
   if (MISS.has(e.status) || (!e.done && rule.kind !== 'weekly')) {
     const point = pointOfEntry(w, e.id);
     if (point && pendingRequestFor(w, point.id))

@@ -161,7 +161,7 @@ Page ids: `landing signup shared start say setup home invite pact practice overv
 
 Each version renders its frame (see `components/next/pages/meta.ts` for which one; the placeholder already uses it).
 
-- **`<AppFrame>`** for pages inside the running challenge (Your challenges, Overview, Check in, Timer, Rules and help, Review, Progress, Monday recap, Settings). It shows the challenge's name and "Day 19 of 30" (which opens Progress) and the navigation: Overview, Check in, Review (with the count of what waits), Progress, and More (Timer, Rules and help, Monday recap, Settings, Your challenges). Bottom tab bar on phones, tabs in the top bar from 1024px. Content is 720px wide.
+- **`<AppFrame>`** for pages inside the running challenge (Your challenges, Overview, Check in, Timer, Rules and help, Review, Progress, Monday recap, Settings). It shows the challenge's name and "Day 19 of 30" (which opens Progress) and the navigation: Overview, Check in, Review (with the count of what waits), Progress, and More (Timer, Rules and help, Settings, Your challenges; the Monday recap opens from Overview). Bottom tab bar on phones, tabs in the top bar from 1024px. Content is 720px wide.
 - **`<PlainFrame back? aside? center?>`** for everything before or outside a running challenge (Landing, Sign up, Shared link, Start, Say your rules, Set up, Invite, Pact, Practice, Verdict). A quiet top bar with "The Challenge", or a Back button with `back={{ to: 'start' }}`; `aside` for something small on the right; `center` centres short content vertically. Content is 720px wide.
 
 Every page, in either frame, is the same width (720px) with the same side margins, on phones and laptops (Kazzy's pick). There is no wider or narrower page and no two-column laptop layout.
