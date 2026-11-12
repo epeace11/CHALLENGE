@@ -2,6 +2,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 import type { DateString, Rule, World } from '@/lib/next/model';
+import { forgivePoint } from '@/lib/next/actions';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import {
@@ -120,13 +122,17 @@ function footerOf(
   w: World,
   view: DetailView,
   go: (page: MainAction['page']) => void,
+  forgive: (pointId: string) => void,
 ): ReactNode {
   if (view.kind === 'day') return dayFooter(w, view.day, go);
   if (view.kind === 'checkin')
-    return dayFooter(w, view.day, go, {
-      personId: view.personId,
-      ruleId: view.ruleId,
-    });
+    return dayFooter(
+      w,
+      view.day,
+      go,
+      { personId: view.personId, ruleId: view.ruleId },
+      forgive,
+    );
   const action =
     view.kind === 'habit'
       ? sheetAction(w, view.personId, { ruleId: view.ruleId })
@@ -157,6 +163,7 @@ export function DetailSheet({
 }) {
   const world = useWorld();
   const { navigate } = useNav();
+  const backend = useBackend();
   const top = detail.stack[detail.stack.length - 1];
   const prev = detail.stack[detail.stack.length - 2];
   const body = useRef<HTMLDivElement>(null);
@@ -172,6 +179,10 @@ export function DetailSheet({
     detail.close();
     navigate(page);
   };
+  const forgive = (pointId: string) =>
+    backend.act({ type: 'forgivePoint', pointId }, (w) =>
+      forgivePoint(w, pointId),
+    );
 
   return (
     <Sheet
@@ -186,7 +197,7 @@ export function DetailSheet({
           ? { label: backLabel(world, prev), onClick: detail.back }
           : undefined
       }
-      footer={footerOf(world, top, go)}
+      footer={footerOf(world, top, go, forgive)}
     >
       <div ref={body} tabIndex={-1} className="outline-none">
         {/* A day's chips switch whose check-ins show in place, so they don't glide. */}

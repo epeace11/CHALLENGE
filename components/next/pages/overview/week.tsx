@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { DateString, DayColor } from '@/lib/next/model';
 import { formatDay, ruleById } from '@/lib/next/selectors';
+import { forgivePoint } from '@/lib/next/actions';
+import { useBackend } from '@/components/next/backend';
 import { useNav } from '@/components/next/nav';
 import { useWorld } from '@/components/next/world';
 import { Avatar, DayIcon, Glide, Sheet } from '@/components/next/ui';
@@ -222,6 +224,11 @@ export function DaySheet({
     onClose();
     navigate(page);
   };
+  const backend = useBackend();
+  const forgive = (pointId: string) =>
+    backend.act({ type: 'forgivePoint', pointId }, (w) =>
+      forgivePoint(w, pointId),
+    );
 
   return (
     <Sheet
@@ -250,6 +257,7 @@ export function DaySheet({
               d,
               go,
               rule ? { personId: whose, ruleId: rule.id } : undefined,
+              forgive,
             )
           : undefined
       }

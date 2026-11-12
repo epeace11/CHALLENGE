@@ -153,6 +153,8 @@ export default function ReviewV2() {
   const page = useRef<HTMLDivElement>(null);
   const stack = useRef<HTMLDivElement>(null);
   const focusLater = useFocusLater();
+  /** The Undo line sits in the progress row's place while there's a card under it. */
+  const undoInRow = !!current && !!review.held && review.held.from !== 'points';
   const focusCard = () =>
     focusLater(() => {
       showCard(stack.current, cardHeading(page.current));
@@ -228,41 +230,62 @@ export default function ReviewV2() {
             <PageTitle title="Review" />
 
             {current && (
-              <Enter index={1} className="flex items-center gap-2">
-                <IconButton
-                  icon={ChevronLeft}
-                  label="Previous"
-                  className="disabled:cursor-not-allowed disabled:opacity-35"
-                  disabled={!prev}
-                  onClick={() => prev && setPick(prev)}
-                />
-                <button
-                  type="button"
-                  className="nx-press flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-nx-sm px-2 py-1.5 hover:bg-nx-accent-soft"
-                  onClick={() => setListOpen(true)}
+              // The Undo line takes the progress row's place while it shows, in the same space, so a
+              // decision never pushes the card down or makes the page scroll.
+              <Enter index={1} className="grid min-h-13">
+                <div
+                  className={cn(
+                    'col-start-1 row-start-1 flex items-center gap-2',
+                    undoInRow && 'invisible',
+                  )}
+                  inert={undoInRow}
                 >
-                  <span className="flex w-full gap-1.5" aria-hidden="true">
-                    {known.map((id) => (
-                      <span
-                        key={id}
-                        className={cn(
-                          'h-2 flex-1 rounded-full transition-colors duration-300 ease-nx',
-                          stepColour(id),
-                        )}
-                      />
-                    ))}
-                  </span>
-                  <span className="text-nx-2 font-semibold text-nx-accent">
-                    {position} · See all
-                  </span>
-                </button>
-                <IconButton
-                  icon={ChevronRight}
-                  label="Next"
-                  className="disabled:cursor-not-allowed disabled:opacity-35"
-                  disabled={!next}
-                  onClick={() => next && setPick(next)}
-                />
+                  <IconButton
+                    icon={ChevronLeft}
+                    label="Previous"
+                    className="disabled:cursor-not-allowed disabled:opacity-35"
+                    disabled={!prev}
+                    onClick={() => prev && setPick(prev)}
+                  />
+                  <button
+                    type="button"
+                    className="nx-press flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-nx-sm px-2 py-1.5 hover:bg-nx-accent-soft"
+                    onClick={() => setListOpen(true)}
+                  >
+                    <span className="flex w-full gap-1.5" aria-hidden="true">
+                      {known.map((id) => (
+                        <span
+                          key={id}
+                          className={cn(
+                            'h-2 flex-1 rounded-full transition-colors duration-300 ease-nx',
+                            stepColour(id),
+                          )}
+                        />
+                      ))}
+                    </span>
+                    <span className="text-nx-2 font-semibold text-nx-accent">
+                      {position} · See all
+                    </span>
+                  </button>
+                  <IconButton
+                    icon={ChevronRight}
+                    label="Next"
+                    className="disabled:cursor-not-allowed disabled:opacity-35"
+                    disabled={!next}
+                    onClick={() => next && setPick(next)}
+                  />
+                </div>
+                {undoInRow && review.held && (
+                  <UndoLine
+                    held={review.held}
+                    className="col-start-1 row-start-1 self-center [&>output]:truncate"
+                    onUndo={() => {
+                      review.undo();
+                      focusCard();
+                    }}
+                    onPause={review.pause}
+                  />
+                )}
               </Enter>
             )}
 
@@ -274,7 +297,7 @@ export default function ReviewV2() {
                 ref={stack}
                 className="flex scroll-mt-[calc(var(--nx-top-inset)_+_var(--nx-header-h,0px)_+_0.75rem)] scroll-mb-[calc(var(--nx-nav-h)_+_var(--nx-action-h,0px)_+_0.75rem)] flex-col gap-3"
               >
-                {review.held && review.held.from !== 'points' && (
+                {review.held && review.held.from !== 'points' && !current && (
                   <UndoLine
                     held={review.held}
                     onUndo={() => {

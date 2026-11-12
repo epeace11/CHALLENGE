@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Dumbbell,
   Footprints,
+  HandHeart,
   House,
   Moon,
   PiggyBank,
@@ -149,17 +150,33 @@ export function rowLeadsTo(
   return { to: 'checkin', ask: false };
 }
 
+/** The partner's point on a check-in that the viewer can forgive: it counts and nobody has asked. */
+export function forgivablePoint(
+  w: World,
+  personId: string,
+  ruleId: string,
+  day: DateString,
+) {
+  if (personId === w.me.id) return undefined;
+  const point = pointOn(w, personId, ruleId, day);
+  return point && !point.forgiven && !pendingRequestFor(w, point.id)
+    ? point
+    : undefined;
+}
+
 /**
  * The buttons under a day (or one of its check-ins, with `only`): Log this day while the viewer has
- * check-ins open on it, and Open Review while something from it waits for them. The same whichever
- * chip is chosen, so the sheet keeps its height. Undefined when there is nothing to do: the sheet's
- * close button is enough.
+ * check-ins open on it, and Open Review while something from it waits for them. On one of the
+ * partner's misses, Forgive this point (with `onForgive`): the pill turns Forgiven, no pop-up. The
+ * same whichever chip is chosen, so the sheet keeps its height. Undefined when there is nothing to
+ * do: the sheet's close button is enough.
  */
 export function dayFooter(
   w: World,
   day: DateString,
   onGo: (page: DayPage) => void,
   only?: { personId: string; ruleId: string },
+  onForgive?: (pointId: string) => void,
 ): ReactNode {
   const log =
     (!only || only.personId === w.me.id) &&
@@ -168,10 +185,23 @@ export function dayFooter(
   const review = only
     ? waitingOn(w, only.personId, { day, ruleId: only.ruleId }).length > 0
     : [w.me.id, w.partner.id].some((id) => waitingOn(w, id, { day }).length);
-  if (!log && !review) return undefined;
+  const forgive =
+    only && onForgive
+      ? forgivablePoint(w, only.personId, only.ruleId, day)
+      : undefined;
+  if (!log && !review && !forgive) return undefined;
   // Two buttons sit side by side on phones too, so the day's rows keep the room.
   return (
     <div className="grid auto-cols-fr grid-flow-col gap-2.5 sm:flex sm:justify-end">
+      {forgive && onForgive && (
+        <Button
+          variant={review ? 'secondary' : 'primary'}
+          icon={HandHeart}
+          onClick={() => onForgive(forgive.id)}
+        >
+          Forgive this point
+        </Button>
+      )}
       {review && (
         <Button
           variant={log ? 'secondary' : 'primary'}

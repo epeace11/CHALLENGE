@@ -582,6 +582,16 @@ Round, November 9, 2026: goals. Each person writes a few goals for the challenge
 
 Pick: none of the first three as they were; version 2, reworked as above, November 9, 2026 (Erin). Built: Overview opens with the goals card (`goals-card.tsx`), Jordan's goals sheet shows the same numbered goals, and versions 1 and 3 are deleted.
 
+Round, November 11, 2026: five designs for the goals card, as versions 2–6 beside the card as it was (1), with the rest of Overview the same in each. Erin wanted it more beautiful.
+
+2. **Written.** No box: a rounded accent rule down the left, "Your goals" with Jordan's goals and the pencil on its line, and the goals as a list in a larger serif (19px), each number hanging in the accent colour.
+3. **Glow.** A card lit from two corners with the look's glow colours; each goal a row under a hairline, its number in a thin accent ring.
+4. **Big numbers.** Each goal a tile with its number large in the serif (40px) and the goal under it, side by side.
+5. **Together.** Yours and Jordan's side by side in one card, each under its avatar, so neither is a tap away.
+6. **One line.** The goals as one line of italic serif under the day's title, with accent dots between them; tapping it changes them.
+
+Pick: 2, Written, November 11, 2026 (Erin). Built in `goals-card.tsx`; the other versions are deleted.
+
 ### Check in (`log`)
 
 1. Step by step: a '3 left' card on top, one question card at a time with Save on the card, gliding to the next; the journal below; a calendar button opens the day switcher.
@@ -626,6 +636,8 @@ Pick: 1
 
 Pick: 2
 
+Change, November 11, 2026 (Erin, on the test address): a decision no longer moves the page. The Undo line ("Approved · Pray once a day · Undo") takes the progress row's place while it shows, in the same 52px, instead of appearing above the card and pushing it down, so the page never scrolls after Approve. The card's heading still takes focus after each decision, without a focus ring.
+
 ### Gifts (`gifts`)
 
 1. Both recipient-first gift cards (Maya gets $45, Jordan gets $21, next miss, who is ahead); tapping one shows that payer's points below, newest first, with Jordan's forgiveness request above.
@@ -665,6 +677,8 @@ Colour round, October 21, 2026: softened kit colours were "not pretty"; Erin wan
 3. Dusk: teal, coral, peach and lilac.
 
 Pick: none of the three. Erin chose her own palette, the same in light and dark, with dark dates on every square and done #86C79C, forgiven #B4D7E3, missed #CC718A, waiting #E2BD71, open #8D9AD0. Then "more glassmorphic": each square is frosted colour (lighter top-left, see-through toward the bottom right, a white hairline and a soft glow of its colour), and days not yet come are plain glass like the cards, not white. A check-in in a day's sheet now opens that check-in (the answer, its screenshots full screen on tap, the note, a correction or dispute, when it was logged, and Every day of this habit) instead of jumping to the habit's calendar. Built: it is the page's only palette, and versions 2 and 3 are deleted. The calendar in each habit's sheet now uses the same plain squares and palette, with no ✓, ✗ or other marks ("there should not be characters on this"); days a weekly habit had no visit are an outlined square, and days a habit doesn't ask for are faint.
+
+Change, November 11, 2026 (Erin): one of Jordan's misses in a day's sheet (here and on Overview's week) has Forgive this point under it, so a point can be forgiven from the day itself, not only from Review. The pill turns Forgiven; no pop-up.
 
 ### Monday recap (`recap`)
 

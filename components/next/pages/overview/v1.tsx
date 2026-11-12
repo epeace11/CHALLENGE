@@ -1,4 +1,4 @@
-// Your goals first, in a card of their own: the one tinted card on the page, under the day's title, each goal a small numbered card side by side; then the check-ins as one big number with the Log button, number buttons for review, gym and both gifts, and the week.
+// Your goals first, as a written list under the day's title with an accent rule down its left; then the check-ins as one big number with the Log button, number buttons for review, gym and both gifts, and the week.
 'use client';
 import { useMemo, useState } from 'react';
 import { ArrowRight, CircleCheck, Clock3, Square } from 'lucide-react';

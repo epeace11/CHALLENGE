@@ -256,7 +256,12 @@ const titleClass = (size: Size) =>
 function Title({ size, children }: { size: Size; children: ReactNode }) {
   if (size === 'lg')
     return (
-      <h2 tabIndex={-1} data-card-heading className={titleClass(size)}>
+      <h2
+        tabIndex={-1}
+        data-card-heading
+        // Focus lands here after each decision as a starting point, not a control: no ring.
+        className={cn(titleClass(size), 'outline-none')}
+      >
         {children}
       </h2>
     );
